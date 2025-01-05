@@ -3,6 +3,10 @@ import { MenuItem, Order, ScreenType } from './types';
 import WaitressScreen from './screens/WaitressScreen';
 import TableInput from './screens/TableInput';
 import CategoryMenu from './screens/CategoryMenu';
+import DrinkMenu from './screens/DrinkMenu';
+import MealMenu from './screens/MealMenu';
+import RecapOrder from './screens/RecapOrder';
+import CuisineScreen from './screens/CuisineScreen';
 import PendingOrdersScreen from './screens/PendingOrdersScreen';
 import CompletedOrdersScreen from './screens/CompletedOrdersScreen';
 
@@ -152,19 +156,56 @@ const RestaurantApp: React.FC = () => {
   }
 
   if (currentScreen === 'boissons') {
-    return <DrinkMenu />;
+    return (
+      <DrinkMenu
+        setCurrentScreen={setCurrentScreen}
+        drinksMenu={drinksMenu}
+        setDrinksMenu={setDrinksMenu}
+        order={order}
+        setOrder={setOrder}
+        tableNumber={tableNumber}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
   if (currentScreen === 'repas') {
-    return <MealMenu />;
+    return (
+      <MealMenu
+        setCurrentScreen={setCurrentScreen}
+        mealsMenu={mealsMenu}
+        setMealsMenu={setMealsMenu}
+        order={order}
+        setOrder={setOrder}
+        tableNumber={tableNumber}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
   if (currentScreen === 'recap') {
-      return <RecapOrder />;
+    return (
+      <RecapOrder
+        setCurrentScreen={setCurrentScreen}
+        order={order}
+        tableNumber={tableNumber}
+        handleLogout={handleLogout}
+        setPendingOrders={setPendingOrders}
+        pendingOrders={pendingOrders}
+      />
+    );
   }
 
   if (currentScreen === 'cuisine') {
-     return <CuisineScreen />;
+    return (
+      <CuisineScreen
+        pendingOrders={pendingOrders}
+        completedOrders={completedOrders}
+        setPendingOrders={setPendingOrders}
+        setCompletedOrders={setCompletedOrders}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
   return null;
