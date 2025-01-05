@@ -1,9 +1,9 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Order } from '../types';
+import { Order, ScreenType } from '../types';
 
 interface PendingOrdersScreenProps {
-  setCurrentScreen: (screen: string) => void;
+  setCurrentScreen: (screen: ScreenType) => void;
   pendingOrders: Order[];
 }
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MenuItem, Order, ScreenType } from './types';
 import WaitressScreen from './screens/WaitressScreen';
 import TableInput from './screens/TableInput';
+import CategoryMenu from './screens/CategoryMenu';
 import PendingOrdersScreen from './screens/PendingOrdersScreen';
 import CompletedOrdersScreen from './screens/CompletedOrdersScreen';
 
@@ -141,7 +142,13 @@ const RestaurantApp: React.FC = () => {
   }
 
   if (currentScreen === 'category') {
-    return <CategoryMenu />;
+    return (
+      <CategoryMenu
+        tableNumber={tableNumber}
+        setCurrentScreen={setCurrentScreen}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
   if (currentScreen === 'boissons') {
