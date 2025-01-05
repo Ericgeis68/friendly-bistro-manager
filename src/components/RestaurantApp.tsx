@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Beer, UtensilsCrossed, FileText, ArrowLeft } from 'lucide-react';
+import { Beer, UtensilsCrossed, FileText, ArrowLeft, Plus, Loader, Check } from 'lucide-react';
 
 type MenuItem = {
   id: number;
@@ -107,7 +107,6 @@ const RestaurantApp: React.FC = () => {
   };
 
   const WaitressScreen: React.FC = () => {
-
     const handleNewOrder = () => {
       setCurrentScreen('table');
     }
@@ -128,25 +127,26 @@ const RestaurantApp: React.FC = () => {
         <div className="p-4 space-y-4">
           <button
             onClick={handleNewOrder}
-            className="w-full bg-blue-500 p-6 rounded-2xl shadow flex flex-col items-center active:bg-blue-600"
+            className="w-full bg-[#F97316] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#F97316]/90"
           >
+            <Plus size={48} className="mb-3 text-white" />
             <span className="text-lg text-white">Nouvelle commande</span>
           </button>
 
            <button
             onClick={handlePendingOrder}
-            className="w-full bg-white p-6 rounded-2xl shadow flex flex-col items-center active:bg-gray-50"
+            className="w-full bg-[#0EA5E9] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#0EA5E9]/90"
           >
-
-            <span className="text-lg text-gray-800">Commande en cours</span>
+            <Loader size={48} className="mb-3 text-white animate-spin" />
+            <span className="text-lg text-white">Commande en cours</span>
           </button>
 
            <button
             onClick={handleCompletedOrder}
-            className="w-full bg-white p-6 rounded-2xl shadow flex flex-col items-center active:bg-gray-50"
+            className="w-full bg-[#22C55E] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#22C55E]/90"
           >
-
-            <span className="text-lg text-gray-800">Commande terminé</span>
+            <Check size={48} className="mb-3 text-white" />
+            <span className="text-lg text-white">Commande terminée</span>
           </button>
         </div>
       </div>
@@ -766,3 +766,4 @@ const RestaurantApp: React.FC = () => {
 };
 
 export default RestaurantApp;
+
