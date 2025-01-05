@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Beer, UtensilsCrossed, FileText, ArrowLeft, Plus, Loader, Check } from 'lucide-react';
+import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCircle2 } from 'lucide-react';
 
 type MenuItem = {
   id: number;
@@ -71,7 +71,6 @@ const RestaurantApp: React.FC = () => {
     setTempMeals([])
   };
 
-  // Login Component
   const LoginScreen: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
@@ -117,6 +116,8 @@ const RestaurantApp: React.FC = () => {
         setCurrentScreen('cuisine');
     }
 
+    const allOrders = [...pendingOrders, ...completedOrders];
+
     return (
       <div className="min-h-screen bg-gray-100">
         <div className="bg-white p-4 flex justify-between items-center">
@@ -127,9 +128,9 @@ const RestaurantApp: React.FC = () => {
         <div className="p-4 space-y-4">
           <button
             onClick={handleNewOrder}
-            className="w-full bg-[#F97316] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#F97316]/90"
+            className="w-full bg-[#0EA5E9] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#0EA5E9]/90"
           >
-            <Plus size={48} className="mb-3 text-white" />
+            <ShoppingBag size={48} className="mb-3 text-white" />
             <span className="text-lg text-white">Nouvelle commande</span>
           </button>
 
@@ -137,24 +138,43 @@ const RestaurantApp: React.FC = () => {
             onClick={handlePendingOrder}
             className="w-full bg-[#0EA5E9] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#0EA5E9]/90"
           >
-            <Loader size={48} className="mb-3 text-white animate-spin" />
-            <span className="text-lg text-white">Commande en cours</span>
+            <Clock size={48} className="mb-3 text-white" />
+            <span className="text-lg text-white">Commandes en cours</span>
           </button>
 
            <button
             onClick={handleCompletedOrder}
-            className="w-full bg-[#22C55E] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#22C55E]/90"
+            className="w-full bg-[#0EA5E9] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#0EA5E9]/90"
           >
-            <Check size={48} className="mb-3 text-white" />
-            <span className="text-lg text-white">Commande terminée</span>
+            <CheckCircle2 size={48} className="mb-3 text-white" />
+            <span className="text-lg text-white">Commandes terminées</span>
           </button>
         </div>
+
+        {currentScreen === 'cuisine' && (
+          <div className="p-4">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">Toutes les commandes</h2>
+            {allOrders.map((order, index) => (
+              <div key={index} className={`bg-white rounded-2xl p-4 shadow mb-4 ${completedOrders.includes(order) ? 'border-l-4 border-green-500' : ''}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium text-gray-800">Commande #{index + 1}</h3>
+                  {completedOrders.includes(order) && (
+                    <span className="text-green-500 flex items-center">
+                      <CheckCircle2 size={20} className="mr-1" />
+                      Terminée
+                    </span>
+                  )}
+                </div>
+                {/* ... keep existing code (order details display) */}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
-   const CuisineScreen: React.FC = () => {
-
+  const CuisineScreen: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-100">
           <div className="bg-white p-4 flex justify-between items-center">
@@ -243,7 +263,6 @@ const RestaurantApp: React.FC = () => {
     );
   };
 
-  // TableInput Component
   const TableInput: React.FC = () => {
     const [localTableNumber, setLocalTableNumber] = useState('');
 
@@ -284,7 +303,6 @@ const RestaurantApp: React.FC = () => {
     );
   };
 
-  // CategoryMenu Component
   const CategoryMenu: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -322,7 +340,6 @@ const RestaurantApp: React.FC = () => {
     );
   };
 
-  // DrinkMenu Component
   const DrinkMenu: React.FC = () => {
 
     const updateQuantity = (id: number, increment: number) => {
@@ -404,8 +421,7 @@ const RestaurantApp: React.FC = () => {
     );
   };
 
-  // MealMenu Component
-   const MealMenu: React.FC = () => {
+  const MealMenu: React.FC = () => {
     const [selectedMeal, setSelectedMeal] = useState<number | null>(null);
     const [showCookingDialog, setShowCookingDialog] = useState(false);
     const [localMealsMenu, setLocalMealsMenu] = useState([...mealsMenu]);
@@ -606,128 +622,125 @@ const RestaurantApp: React.FC = () => {
   };
 
 
-  // RecapOrder Component
-    const RecapOrder: React.FC = () => {
-        const { drinks = [], meals = [] } = order;
-        const [amountReceived, setAmountReceived] = useState('');
+  const RecapOrder: React.FC = () => {
+      const { drinks = [], meals = [] } = order;
+      const [amountReceived, setAmountReceived] = useState('');
 
 
-        const drinkTotal = drinks.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const mealTotal = meals.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const totalAmount = drinkTotal + mealTotal;
-        const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
+      const drinkTotal = drinks.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const mealTotal = meals.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const totalAmount = drinkTotal + mealTotal;
+      const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
 
-      const handleSubmitOrder = () => {
-        if (meals.length === 0 && drinks.length === 0) {
-            return;
-        }
-        setPendingOrders([...pendingOrders, order]);
-          setDrinksMenu([
-              { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
-              { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
-              { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
-              { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
-          ]);
-        setMealsMenu([
-          { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
-          { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
-          { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
-          { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
-          { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
+    const handleSubmitOrder = () => {
+      if (meals.length === 0 && drinks.length === 0) {
+          return;
+      }
+      setPendingOrders([...pendingOrders, order]);
+      setDrinksMenu([
+          { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
+          { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
+          { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
+          { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
       ]);
-         setTempMeals([]);
-        setOrder({ drinks: [], meals: [] });
-        setCurrentScreen('waitress');
-    };
-    const groupedMeals = meals.reduce((acc, meal) => {
-        const key = `${meal.name}-${meal.cooking || 'none'}`;
-        if (acc[key]) {
-            acc[key].quantity += meal.quantity;
-        } else {
-            acc[key] = { ...meal };
-        }
-        return acc;
-    }, {} as { [key: string]: MenuItem });
+      setMealsMenu([
+        { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
+        { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
+        { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
+        { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
+        { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
+    ]);
+     setTempMeals([]);
+    setOrder({ drinks: [], meals: [] });
+    setCurrentScreen('waitress');
+  };
+  const groupedMeals = meals.reduce((acc, meal) => {
+      const key = `${meal.name}-${meal.cooking || 'none'}`;
+      if (acc[key]) {
+          acc[key].quantity += meal.quantity;
+      } else {
+          acc[key] = { ...meal };
+      }
+      return acc;
+  }, {} as { [key: string]: MenuItem });
 
 
-        return (
-            <div className="h-screen flex flex-col bg-gray-100">
-                <div className="bg-blue-500 p-4 text-white flex items-center">
-                    <button onClick={() => setCurrentScreen('category')} className="mr-2">
-                        <ArrowLeft size={24} />
-                    </button>
-                    <div>
-                        <h1 className="text-xl font-bold">Addition</h1>
-                        <div className="text-sm">Table {tableNumber}</div>
-                    </div>
-                </div>
+      return (
+          <div className="h-screen flex flex-col bg-gray-100">
+              <div className="bg-blue-500 p-4 text-white flex items-center">
+                  <button onClick={() => setCurrentScreen('category')} className="mr-2">
+                      <ArrowLeft size={24} />
+                  </button>
+                  <div>
+                      <h1 className="text-xl font-bold">Addition</h1>
+                      <div className="text-sm">Table {tableNumber}</div>
+                  </div>
+              </div>
 
-                <div className="flex-1 p-4 overflow-auto">
-                    {drinks.length > 0 && (
-                        <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                            <h2 className="font-bold mb-2 text-lg border-b pb-2 text-gray-800">Boissons</h2>
-                            {drinks.map(item => (
-                                <div key={item.id} className="flex justify-between mb-2 text-gray-800">
-                                    <div>
-                                        <span className="font-medium">{item.name}</span>
+              <div className="flex-1 p-4 overflow-auto">
+                  {drinks.length > 0 && (
+                      <div className="bg-white rounded-xl shadow-md p-4 mb-4">
+                          <h2 className="font-bold mb-2 text-lg border-b pb-2 text-gray-800">Boissons</h2>
+                          {drinks.map(item => (
+                              <div key={item.id} className="flex justify-between mb-2 text-gray-800">
+                                  <div>
+                                      <span className="font-medium">{item.name}</span>
+                                      <span className="text-gray-600 text-sm"> x{item.quantity}</span>
+                                  </div>
+                                  <span>{(item.price * item.quantity).toFixed(2)} €</span>
+                              </div>
+                          ))}
+                          <div className="text-right text-gray-600 border-t pt-2 mt-2">
+                              Sous-total boissons: {drinkTotal.toFixed(2)} €
+                          </div>
+                      </div>
+                  )}
+                  {Object.values(groupedMeals).length > 0 && (
+                      <div className="bg-white rounded-xl shadow-md p-4 mb-4">
+                          <h2 className="font-bold mb-2 text-lg border-b pb-2 text-gray-800">Repas</h2>
+                          {Object.values(groupedMeals).map(item => (
+                              <div key={item.id} className="flex justify-between mb-2 text-gray-800">
+                                  <div>
+                                      <span className="font-medium">{item.name}</span>
                                         <span className="text-gray-600 text-sm"> x{item.quantity}</span>
-                                    </div>
-                                    <span>{(item.price * item.quantity).toFixed(2)} €</span>
-                                </div>
-                            ))}
-                            <div className="text-right text-gray-600 border-t pt-2 mt-2">
-                                Sous-total boissons: {drinkTotal.toFixed(2)} €
-                            </div>
-                        </div>
-                    )}
-                    {Object.values(groupedMeals).length > 0 && (
-                        <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                            <h2 className="font-bold mb-2 text-lg border-b pb-2 text-gray-800">Repas</h2>
-                            {Object.values(groupedMeals).map(item => (
-                                <div key={item.id} className="flex justify-between mb-2 text-gray-800">
-                                    <div>
-                                        <span className="font-medium">{item.name}</span>
-                                          <span className="text-gray-600 text-sm"> x{item.quantity}</span>
-                                        {item.cooking && <span className="text-gray-600 text-sm"> ({item.cooking})</span>}
-                                    </div>
-                                    <span>{(item.price * item.quantity).toFixed(2)} €</span>
-                                </div>
-                            ))}
-                            <div className="text-right text-gray-600 border-t pt-2 mt-2">
-                                Sous-total repas: {mealTotal.toFixed(2)} €
-                            </div>
-                        </div>
-                    )}
-
-
-                </div>
-                <div className="p-4 bg-white border-t">
-                    <div className="flex justify-between mb-4 text-lg font-medium text-gray-800">
-                        <span>Total</span>
-                        <span>{totalAmount.toFixed(2)} €</span>
-                    </div>
-                      <div className="mb-4">
-                            <input
-                                type="number"
-                                placeholder="Somme reçue"
-                                className="w-full mb-2 h-12 text-lg px-3 rounded-md border border-gray-300 text-gray-800"
-                                value={amountReceived}
-                                onChange={(e) => setAmountReceived(e.target.value)}
-                            />
-                           {amountReceived &&  <div className="text-right text-gray-600">
-                                Rendu: {change.toFixed(2)} €
-                            </div>}
-                        </div>
-                    <button
-                        onClick={handleSubmitOrder}
-                        className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                    >
-                        Valider la commande
-                    </button>
-                </div>
-            </div>
-        );
-    };
+                                      {item.cooking && <span className="text-gray-600 text-sm"> ({item.cooking})</span>}
+                                  </div>
+                                  <span>{(item.price * item.quantity).toFixed(2)} €</span>
+                              </div>
+                          ))}
+                          <div className="text-right text-gray-600 border-t pt-2 mt-2">
+                              Sous-total repas: {mealTotal.toFixed(2)} €
+                          </div>
+                      </div>
+                  )}
+              </div>
+              <div className="p-4 bg-white border-t">
+                  <div className="flex justify-between mb-4 text-lg font-medium text-gray-800">
+                      <span>Total</span>
+                      <span>{totalAmount.toFixed(2)} €</span>
+                  </div>
+                    <div className="mb-4">
+                          <input
+                              type="number"
+                              placeholder="Somme reçue"
+                              className="w-full mb-2 h-12 text-lg px-3 rounded-md border border-gray-300 text-gray-800"
+                              value={amountReceived}
+                              onChange={(e) => setAmountReceived(e.target.value)}
+                          />
+                         {amountReceived &&  <div className="text-right text-gray-600">
+                              Rendu: {change.toFixed(2)} €
+                          </div>}
+                      </div>
+                  <button
+                      onClick={handleSubmitOrder}
+                      className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+                  >
+                      Valider la commande
+                  </button>
+              </div>
+          </div>
+      );
+  };
 
 
   if(currentScreen === 'login'){
@@ -766,4 +779,3 @@ const RestaurantApp: React.FC = () => {
 };
 
 export default RestaurantApp;
-
