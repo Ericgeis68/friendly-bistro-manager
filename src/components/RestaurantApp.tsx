@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Beer, UtensilsCrossed, FileText, ArrowLeft } from 'lucide-react';
-import { MenuItem, Order } from './types';
+import { MenuItem, Order, ScreenType } from './types';
 import WaitressScreen from './screens/WaitressScreen';
+import TableInput from './screens/TableInput';
 import PendingOrdersScreen from './screens/PendingOrdersScreen';
 import CompletedOrdersScreen from './screens/CompletedOrdersScreen';
 
 const RestaurantApp: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'pending' | 'completed'>('login');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
   const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
   const [order, setOrder] = useState<Order>({
@@ -131,7 +131,13 @@ const RestaurantApp: React.FC = () => {
   }
 
   if (currentScreen === 'table') {
-    return <TableInput />;
+    return (
+      <TableInput
+        setTableNumber={setTableNumber}
+        setCurrentScreen={setCurrentScreen}
+        handleLogout={handleLogout}
+      />
+    );
   }
 
   if (currentScreen === 'category') {

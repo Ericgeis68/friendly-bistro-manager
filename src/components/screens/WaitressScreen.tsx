@@ -1,11 +1,11 @@
 import React from 'react';
 import { ShoppingBag, Clock, CheckCircle2 } from 'lucide-react';
-import { Order } from '../types';
+import { Order, ScreenType } from '../types';
 
 interface WaitressScreenProps {
   loggedInUser: string | null;
   handleLogout: () => void;
-  setCurrentScreen: (screen: string) => void;
+  setCurrentScreen: (screen: ScreenType) => void;
   pendingOrders: Order[];
   completedOrders: Order[];
 }
