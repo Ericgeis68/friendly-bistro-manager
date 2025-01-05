@@ -21,10 +21,10 @@ const RestaurantApp: React.FC = () => {
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [drinksMenu, setDrinksMenu] = useState<MenuItem[]>([
-      { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
-      { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
-      { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
-      { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
+    { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
+    { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
+    { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
+    { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
   ]);
   const [mealsMenu, setMealsMenu] = useState<MenuItem[]>([
     { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
@@ -33,7 +33,6 @@ const RestaurantApp: React.FC = () => {
     { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
     { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
   ]);
-  const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
 
   const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine') => {
     setLoggedInUser(user);
@@ -48,56 +47,53 @@ const RestaurantApp: React.FC = () => {
     setLoggedInUser(null);
     setCurrentScreen('login');
     setTableNumber('');
-    setOrder({drinks: [], meals: []});
-    setPendingOrders([]);
-    setCompletedOrders([]);
+    setOrder({ drinks: [], meals: [] });
     setDrinksMenu([
-        { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
-        { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
-        { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
-        { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
+      { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
+      { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
+      { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
+      { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
     ]);
     setMealsMenu([
-        { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
-        { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
-        { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
-        { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
-        { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
+      { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
+      { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
+      { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
+      { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
+      { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
     ]);
-    setTempMeals([]);
   };
 
   const LoginScreen: React.FC = () => {
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">Bienvenue</h2>
-                <button
-                    onClick={() => handleLogin('Celine')}
-                    className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-4"
-                >
-                    Celine
-                </button>
-                <button
-                    onClick={() => handleLogin('Audrey')}
-                    className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-4"
-                >
-                    Audrey
-                </button>
-                <button
-                    onClick={() => handleLogin('Stephanie')}
-                    className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-4"
-                >
-                    Stephanie
-                </button>
-                <button
-                    onClick={() => handleLogin('cuisine')}
-                    className="w-full h-12 text-lg bg-gray-400 hover:bg-gray-500 text-white rounded-md"
-                >
-                    Cuisine
-                </button>
-            </div>
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+          <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">Bienvenue</h2>
+          <button
+            onClick={() => handleLogin('Celine')}
+            className="w-full h-12 text-lg bg-[#0EA5E9] hover:bg-blue-600 text-white rounded-md mb-4"
+          >
+            Celine
+          </button>
+          <button
+            onClick={() => handleLogin('Audrey')}
+            className="w-full h-12 text-lg bg-[#0EA5E9] hover:bg-blue-600 text-white rounded-md mb-4"
+          >
+            Audrey
+          </button>
+          <button
+            onClick={() => handleLogin('Stephanie')}
+            className="w-full h-12 text-lg bg-[#0EA5E9] hover:bg-blue-600 text-white rounded-md mb-4"
+          >
+            Stephanie
+          </button>
+          <button
+            onClick={() => handleLogin('cuisine')}
+            className="w-full h-12 text-lg bg-gray-400 hover:bg-gray-500 text-white rounded-md"
+          >
+            Cuisine
+          </button>
         </div>
+      </div>
     );
   };
 

@@ -1,6 +1,8 @@
 import React from 'react';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { MenuItem, Order, ScreenType } from '../types';
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 interface RecapOrderProps {
   setCurrentScreen: (screen: ScreenType) => void;
@@ -19,13 +21,20 @@ const RecapOrder: React.FC<RecapOrderProps> = ({
   setPendingOrders,
   pendingOrders,
 }) => {
+  const { toast } = useToast();
+
   const calculateTotal = (items: MenuItem[]) => {
     return items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const handleSubmitOrder = () => {
     if (order.drinks.length > 0 || order.meals.length > 0) {
-      setPendingOrders([...pendingOrders, order]);
+      const orderWithTable = { ...order, tableNumber };
+      setPendingOrders([...pendingOrders, orderWithTable]);
+      toast({
+        title: "Commande envoyée",
+        description: "La commande a été envoyée avec succès",
+      });
       setCurrentScreen('waitress');
     }
   };
@@ -74,7 +83,10 @@ const RecapOrder: React.FC<RecapOrderProps> = ({
             <div className="bg-white rounded-lg shadow p-4 space-y-2">
               {order.meals.map((item) => (
                 <div key={item.id} className="flex justify-between">
-                  <span>{item.name} x{item.quantity}</span>
+                  <span>
+                    {item.name} x{item.quantity}
+                    {item.cooking && ` (${item.cooking})`}
+                  </span>
                   <span>{(item.price * item.quantity).toFixed(2)} €</span>
                 </div>
               ))}
@@ -97,14 +109,13 @@ const RecapOrder: React.FC<RecapOrderProps> = ({
           </div>
         </div>
 
-        <button
+        <Button
           onClick={handleSubmitOrder}
-          className="w-full bg-[#0EA5E9] text-white p-4 rounded-lg flex items-center justify-center space-x-2"
+          className="w-full bg-[#0EA5E9] text-white"
           disabled={order.drinks.length === 0 && order.meals.length === 0}
         >
-          <Send className="h-5 w-5" />
-          <span>Valider la commande</span>
-        </button>
+          Valider la commande
+        </Button>
       </div>
     </div>
   );
