@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCircle2 } from 'lucide-react';
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import CuisineScreen from './screens/CuisineScreen';
+import AdminScreen from './screens/AdminScreen';
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
-  const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | null>(null);
+  const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
   const [order, setOrder] = useState<Omit<Order, 'waitress'>>({
     drinks: [],
@@ -28,10 +29,12 @@ const RestaurantApp: React.FC = () => {
   ]);
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
 
-  const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine') => {
+  const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
     setLoggedInUser(user);
     if (user === 'cuisine') {
       setCurrentScreen('cuisine');
+    } else if (user === 'admin') {
+      setCurrentScreen('admin');
     } else {
       setCurrentScreen('waitress');
     }
@@ -85,9 +88,15 @@ const RestaurantApp: React.FC = () => {
           </button>
           <button
             onClick={() => handleLogin('cuisine')}
-            className="w-full h-12 text-lg bg-gray-400 hover:bg-gray-500 text-white rounded-md"
+            className="w-full h-12 text-lg bg-gray-400 hover:bg-gray-500 text-white rounded-md mb-4"
           >
             Cuisine
+          </button>
+          <button
+            onClick={() => handleLogin('admin')}
+            className="w-full h-12 text-lg bg-purple-500 hover:bg-purple-600 text-white rounded-md"
+          >
+            Admin
           </button>
         </div>
       </div>
@@ -674,6 +683,10 @@ const RestaurantApp: React.FC = () => {
         onLogout={handleLogout}
       />
     );
+  }
+
+  if (currentScreen === 'admin') {
+    return <AdminScreen />;
   }
 
   return null;
