@@ -63,6 +63,40 @@ const RestaurantApp: React.FC = () => {
     setTempMeals([]);
   };
 
+  const handleSubmitOrder = () => {
+    if (order.meals.length === 0 && order.drinks.length === 0) {
+      return;
+    }
+    
+    // Créer la nouvelle commande
+    const newOrder = { 
+      waitress: loggedInUser!, 
+      meals: [...order.meals],
+      drinks: [...order.drinks]
+    };
+
+    // Ajouter la commande à la liste des commandes en cours
+    setPendingOrders(prev => [...prev, newOrder]);
+
+    // Réinitialiser les menus et l'ordre actuel
+    setDrinksMenu([
+      { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
+      { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
+      { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
+      { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
+    ]);
+    setMealsMenu([
+      { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
+      { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
+      { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
+      { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
+      { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
+    ]);
+    setTempMeals([]);
+    setOrder({ drinks: [], meals: [] });
+    setCurrentScreen('waitress');
+  };
+
   const LoginScreen: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
