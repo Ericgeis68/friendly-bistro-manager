@@ -12,4 +12,4 @@ export type Order = {
   meals: MenuItem[];
 };
 
-export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'pending' | 'completed' | 'dashboard';
+export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine';

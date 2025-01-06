@@ -526,7 +526,11 @@ const RestaurantApp: React.FC = () => {
       if (meals.length === 0 && drinks.length === 0) {
         return;
       }
-      setPendingOrders([...pendingOrders, { waitress: loggedInUser!, meals }]);
+      setPendingOrders([...pendingOrders, { 
+        waitress: loggedInUser!, 
+        meals,
+        drinks: [] // Add empty drinks array for kitchen orders
+      }]);
       setDrinksMenu([
         { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
         { id: 2, name: 'Coca', price: 3.50, quantity: 0 },

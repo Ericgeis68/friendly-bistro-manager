@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
-import type { Order } from '../../types/restaurant';
+import type { MenuItem, Order } from '../../types/restaurant';
 
-const CuisineScreen: React.FC<{
+interface CuisineScreenProps {
   pendingOrders: Order[];
   completedOrders: Order[];
   setPendingOrders: (orders: Order[]) => void;
   setCompletedOrders: (orders: Order[]) => void;
   onLogout: () => void;
-}> = ({ pendingOrders, completedOrders, setPendingOrders, setCompletedOrders, onLogout }) => {
+}
+
+const CuisineScreen: React.FC<CuisineScreenProps> = ({
+  pendingOrders,
+  completedOrders,
+  setPendingOrders,
+  setCompletedOrders,
+  onLogout
+}) => {
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
