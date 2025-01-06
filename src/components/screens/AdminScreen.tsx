@@ -98,10 +98,11 @@ const AdminApp: React.FC = () => {
         setEditCategory(null);
     };
 
-    const handleAddItemSubmit = (newItem: MenuItem, category: 'drinks' | 'meals') => {
+    const handleAddItemSubmit = (newItem: Omit<MenuItem, 'id'>, category: 'drinks' | 'meals') => {
+        const id = Date.now();
         setMenuItems(prev => ({
             ...prev,
-            [category]: [...prev[category], {...newItem, id: Date.now()}]
+            [category]: [...prev[category], { ...newItem, id }]
         }));
         setCurrentScreen('editMenu');
     };
