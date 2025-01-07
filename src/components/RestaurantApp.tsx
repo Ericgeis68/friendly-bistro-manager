@@ -5,11 +5,6 @@ import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
 import LoginScreen from './screens/LoginScreen';
 import WaitressOrdersScreen from './screens/WaitressOrdersScreen';
-import TableInput from './screens/TableInput';
-import CategoryMenu from './screens/CategoryMenu';
-import DrinkMenu from './screens/DrinkMenu';
-import MealMenu from './screens/MealMenu';
-import RecapOrder from './screens/RecapOrder';
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -128,52 +123,23 @@ const RestaurantApp: React.FC = () => {
   }
 
   if (currentScreen === 'table') {
-    return (
-      <TableInput
-        tableNumber={tableNumber}
-        setTableNumber={setTableNumber}
-        setCurrentScreen={setCurrentScreen}
-      />
-    );
+    return <TableInput />;
   }
 
   if (currentScreen === 'category') {
-    return <CategoryMenu setCurrentScreen={setCurrentScreen} />;
+    return <CategoryMenu />;
   }
 
   if (currentScreen === 'boissons') {
-    return (
-      <DrinkMenu
-        drinksMenu={drinksMenu}
-        setDrinksMenu={setDrinksMenu}
-        order={order}
-        setOrder={setOrder}
-        setCurrentScreen={setCurrentScreen}
-      />
-    );
+    return <DrinkMenu />;
   }
 
   if (currentScreen === 'repas') {
-    return (
-      <MealMenu
-        mealsMenu={mealsMenu}
-        setMealsMenu={setMealsMenu}
-        order={order}
-        setOrder={setOrder}
-        setCurrentScreen={setCurrentScreen}
-      />
-    );
+    return <MealMenu />;
   }
 
   if (currentScreen === 'recap') {
-    return (
-      <RecapOrder
-        order={order}
-        tableNumber={tableNumber}
-        handleSubmitOrder={handleSubmitOrder}
-        setCurrentScreen={setCurrentScreen}
-      />
-    );
+    return <RecapOrder />;
   }
 
   if (currentScreen === 'cuisine'){
