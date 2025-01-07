@@ -3,7 +3,12 @@ import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCi
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
-import LoginScreen from './screens/LoginScreen';
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+
+const queryClient = new QueryClient();
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -69,6 +74,7 @@ const RestaurantApp: React.FC = () => {
       return;
     }
     
+    // Créer la nouvelle commande
     const newOrder = { 
       waitress: loggedInUser!, 
       meals: [...order.meals],
@@ -76,8 +82,10 @@ const RestaurantApp: React.FC = () => {
       table: tableNumber
     };
 
+    // Ajouter la commande à la liste des commandes en cours
     setPendingOrders(prev => [...prev, newOrder]);
 
+    // Réinitialiser les menus et l'ordre actuel
     setDrinksMenu([
       { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
       { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
@@ -102,6 +110,7 @@ const RestaurantApp: React.FC = () => {
       setCurrentScreen('table');
     }
 
+    // Filtrer les commandes pour n'afficher que celles de la serveuse connectée
     const waitressOrders = pendingOrders.filter(order => order.waitress === loggedInUser);
     const waitressCompletedOrders = completedOrders.filter(order => order.waitress === loggedInUser);
 
@@ -648,7 +657,7 @@ const RestaurantApp: React.FC = () => {
   };
 
   if(currentScreen === 'login'){
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen />;
   }
 
   if (currentScreen === 'waitress') {
