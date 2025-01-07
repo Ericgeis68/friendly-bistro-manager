@@ -3,6 +3,12 @@ import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCi
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+
+const queryClient = new QueryClient();
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -72,7 +78,8 @@ const RestaurantApp: React.FC = () => {
     const newOrder = { 
       waitress: loggedInUser!, 
       meals: [...order.meals],
-      drinks: [...order.drinks]
+      drinks: [...order.drinks],
+      table: tableNumber
     };
 
     // Ajouter la commande à la liste des commandes en cours
@@ -94,61 +101,18 @@ const RestaurantApp: React.FC = () => {
     ]);
     setTempMeals([]);
     setOrder({ drinks: [], meals: [] });
+    setTableNumber('');
     setCurrentScreen('waitress');
-  };
-
-  const LoginScreen: React.FC = () => {
-    return (
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-          <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">Bienvenue</h2>
-          <button
-            onClick={() => handleLogin('Celine')}
-            className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-4"
-          >
-            Celine
-          </button>
-          <button
-            onClick={() => handleLogin('Audrey')}
-            className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-4"
-          >
-            Audrey
-          </button>
-          <button
-            onClick={() => handleLogin('Stephanie')}
-            className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-4"
-          >
-            Stephanie
-          </button>
-          <button
-            onClick={() => handleLogin('cuisine')}
-            className="w-full h-12 text-lg bg-gray-400 hover:bg-gray-500 text-white rounded-md mb-4"
-          >
-            Cuisine
-          </button>
-          <button
-            onClick={() => handleLogin('admin')}
-            className="w-full h-12 text-lg bg-purple-500 hover:bg-purple-600 text-white rounded-md"
-          >
-            Admin
-          </button>
-        </div>
-      </div>
-    );
   };
 
   const WaitressScreen: React.FC = () => {
     const handleNewOrder = () => {
       setCurrentScreen('table');
     }
-    const handlePendingOrder = () => {
-      setCurrentScreen('cuisine');
-    }
-    const handleCompletedOrder = () => {
-      setCurrentScreen('cuisine');
-    }
 
-    const allOrders = [...pendingOrders, ...completedOrders];
+    // Filtrer les commandes pour n'afficher que celles de la serveuse connectée
+    const waitressOrders = pendingOrders.filter(order => order.waitress === loggedInUser);
+    const waitressCompletedOrders = completedOrders.filter(order => order.waitress === loggedInUser);
 
     return (
       <div className="min-h-screen bg-gray-100">
@@ -166,46 +130,59 @@ const RestaurantApp: React.FC = () => {
             <span className="text-lg text-white">Nouvelle commande</span>
           </button>
 
-          <button
-            onClick={handlePendingOrder}
-            className="w-full bg-[#0EA5E9] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#0EA5E9]/90"
-          >
-            <Clock size={48} className="mb-3 text-white" />
-            <span className="text-lg text-white">Commandes en cours</span>
-          </button>
-
-          <button
-            onClick={handleCompletedOrder}
-            className="w-full bg-[#0EA5E9] p-6 rounded-2xl shadow flex flex-col items-center active:bg-[#0EA5E9]/90"
-          >
-            <CheckCircle2 size={48} className="mb-3 text-white" />
-            <span className="text-lg text-white">Commandes terminées</span>
-          </button>
-        </div>
-
-        {currentScreen === 'cuisine' && (
-          <div className="p-4">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Toutes les commandes</h2>
-            {allOrders.map((order, index) => (
-              <div key={index} className={`bg-white rounded-2xl p-4 shadow mb-4 ${completedOrders.includes(order) ? 'border-l-4 border-green-500' : ''}`}>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-medium text-gray-800">Commande #{index + 1}</h3>
-                  {completedOrders.includes(order) && (
-                    <span className="text-green-500 flex items-center">
-                      <CheckCircle2 size={20} className="mr-1" />
-                      Terminée
-                    </span>
-                  )}
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">Mes commandes en cours</h2>
+            {waitressOrders.map((order, index) => (
+              <div key={index} className="border-b last:border-0 py-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Table {order.table}</span>
                 </div>
                 {order.meals.map((meal) => (
-                  <div key={meal.id} className="flex justify-between">
-                    <span>{meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}</span>
+                  <div key={meal.id} className="text-gray-600">
+                    {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+                  </div>
+                ))}
+                {order.drinks.map((drink) => (
+                  <div key={drink.id} className="text-gray-600">
+                    {drink.name} x{drink.quantity}
                   </div>
                 ))}
               </div>
             ))}
+            {waitressOrders.length === 0 && (
+              <div className="text-gray-500 text-center py-4">
+                Aucune commande en cours
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">Mes commandes terminées</h2>
+            {waitressCompletedOrders.map((order, index) => (
+              <div key={index} className="border-b last:border-0 py-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Table {order.table}</span>
+                  <span className="text-green-500">Terminée</span>
+                </div>
+                {order.meals.map((meal) => (
+                  <div key={meal.id} className="text-gray-600">
+                    {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+                  </div>
+                ))}
+                {order.drinks.map((drink) => (
+                  <div key={drink.id} className="text-gray-600">
+                    {drink.name} x{drink.quantity}
+                  </div>
+                ))}
+              </div>
+            ))}
+            {waitressCompletedOrders.length === 0 && (
+              <div className="text-gray-500 text-center py-4">
+                Aucune commande terminée
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
