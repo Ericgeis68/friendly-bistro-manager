@@ -4,6 +4,7 @@ import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
 import LoginScreen from './screens/LoginScreen';
+import PendingOrdersScreen from './screens/PendingOrdersScreen';
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -29,6 +30,7 @@ const RestaurantApp: React.FC = () => {
     { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
   ]);
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
+  const [showPendingOrders, setShowPendingOrders] = useState(false);
 
   const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
     setLoggedInUser(user);
@@ -103,7 +105,6 @@ const RestaurantApp: React.FC = () => {
     }
 
     const waitressOrders = pendingOrders.filter(order => order.waitress === loggedInUser);
-    const waitressCompletedOrders = completedOrders.filter(order => order.waitress === loggedInUser);
 
     return (
       <div className="min-h-screen bg-gray-100">
@@ -122,7 +123,7 @@ const RestaurantApp: React.FC = () => {
           </button>
 
           <button
-            onClick={() => {}}
+            onClick={() => setShowPendingOrders(true)}
             className="w-full bg-white p-6 rounded-2xl shadow flex flex-col items-center active:bg-gray-50"
           >
             <Clock size={48} className="mb-3 text-blue-500" />
@@ -615,6 +616,12 @@ const RestaurantApp: React.FC = () => {
   }
 
   if (currentScreen === 'waitress') {
+    if (showPendingOrders) {
+      return <PendingOrdersScreen 
+        orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
+        onBack={() => setShowPendingOrders(false)}
+      />;
+    }
     return <WaitressScreen />;
   }
 
