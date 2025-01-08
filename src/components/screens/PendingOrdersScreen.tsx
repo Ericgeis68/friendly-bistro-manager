@@ -41,7 +41,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
 
       <div className="p-4 space-y-4">
         {orders.map((order, index) => (
-          <div key={index} className="bg-white rounded-2xl p-4 shadow">
+          <div key={`${order.table}-${order.createdAt}`} className="bg-white rounded-2xl p-4 shadow">
             <div className="flex justify-between items-center mb-2">
               <div>
                 <span className="font-medium text-lg">Table {order.table}</span>

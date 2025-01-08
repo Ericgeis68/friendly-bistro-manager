@@ -97,6 +97,7 @@ const RestaurantApp: React.FC = () => {
 
     setPendingOrders(prev => [...prev, newOrder]);
 
+    // Reset states
     setDrinksMenu([
       { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
       { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
@@ -122,10 +123,12 @@ const RestaurantApp: React.FC = () => {
       order.createdAt !== completedOrder.createdAt
     ));
     
-    setCompletedOrders(prev => [...prev, { 
-      ...completedOrder, 
-      status: 'completed' 
-    }]);
+    const orderToComplete = {
+      ...completedOrder,
+      status: 'completed' as const
+    };
+    
+    setCompletedOrders(prev => [...prev, orderToComplete]);
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {
