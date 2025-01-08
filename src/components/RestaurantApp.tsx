@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCircle2 } from 'lucide-react';
+import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
 import LoginScreen from './screens/LoginScreen';
 import PendingOrdersScreen from './screens/PendingOrdersScreen';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -75,7 +77,9 @@ const RestaurantApp: React.FC = () => {
       waitress: loggedInUser!, 
       meals: [...order.meals],
       drinks: [...order.drinks],
-      table: tableNumber
+      table: tableNumber,
+      status: 'pending' as const,
+      createdAt: new Date()
     };
 
     setPendingOrders(prev => [...prev, newOrder]);
@@ -97,6 +101,16 @@ const RestaurantApp: React.FC = () => {
     setOrder({ drinks: [], meals: [] });
     setTableNumber('');
     setCurrentScreen('waitress');
+  };
+
+  const handleOrderComplete = (completedOrder: Order) => {
+    setPendingOrders(prev => prev.filter(order => order !== completedOrder));
+    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'completed' }]);
+  };
+
+  const handleOrderCancel = (cancelledOrder: Order) => {
+    setPendingOrders(prev => prev.filter(order => order !== cancelledOrder));
+    setCompletedOrders(prev => [...prev, { ...cancelledOrder, status: 'cancelled' }]);
   };
 
   const WaitressScreen: React.FC = () => {
@@ -620,6 +634,8 @@ const RestaurantApp: React.FC = () => {
       return <PendingOrdersScreen 
         orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
         onBack={() => setShowPendingOrders(false)}
+        onOrderComplete={handleOrderComplete}
+        onOrderCancel={handleOrderCancel}
       />;
     }
     return <WaitressScreen />;

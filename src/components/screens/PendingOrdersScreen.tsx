@@ -1,13 +1,22 @@
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface PendingOrdersScreenProps {
   orders: Order[];
   onBack: () => void;
+  onOrderComplete: (order: Order) => void;
+  onOrderCancel: (order: Order) => void;
 }
 
-const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({ orders, onBack }) => {
+const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({ 
+  orders, 
+  onBack,
+  onOrderComplete,
+  onOrderCancel 
+}) => {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-blue-500 p-4 text-white flex items-center">
@@ -21,7 +30,31 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({ orders, onBac
         {orders.map((order, index) => (
           <div key={index} className="bg-white rounded-2xl p-4 shadow">
             <div className="flex justify-between items-center mb-2">
-              <span className="font-medium text-lg">Table {order.table}</span>
+              <div>
+                <span className="font-medium text-lg">Table {order.table}</span>
+                <div className="text-sm text-gray-500 flex items-center mt-1">
+                  <Clock size={16} className="mr-1" />
+                  {order.createdAt ? (
+                    format(order.createdAt, 'HH:mm', { locale: fr })
+                  ) : 'Heure non disponible'}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onOrderComplete(order)}
+                  className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                  title="Terminer la commande"
+                >
+                  <CheckCircle2 size={24} />
+                </button>
+                <button
+                  onClick={() => onOrderCancel(order)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                  title="Annuler la commande"
+                >
+                  <XCircle size={24} />
+                </button>
+              </div>
             </div>
             {order.meals.map((meal, mealIndex) => (
               <div key={`${index}-${mealIndex}`} className="text-gray-600">
