@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -34,25 +34,21 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                 <span className="font-medium text-lg">Table {order.table}</span>
                 <div className="text-sm text-gray-500 flex items-center mt-1">
                   <Clock size={16} className="mr-1" />
-                  {order.createdAt ? (
-                    format(order.createdAt, 'HH:mm', { locale: fr })
-                  ) : 'Heure non disponible'}
+                  {format(new Date(order.createdAt!), 'HH:mm', { locale: fr })}
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => onOrderComplete(order)}
-                  className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
-                  title="Terminer la commande"
+                  className="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
                 >
-                  <CheckCircle2 size={24} />
+                  Terminé
                 </button>
                 <button
                   onClick={() => onOrderCancel(order)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                  title="Annuler la commande"
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
                 >
-                  <XCircle size={24} />
+                  Annulé
                 </button>
               </div>
             </div>

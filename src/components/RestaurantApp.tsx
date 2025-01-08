@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Beer, UtensilsCrossed, FileText, ArrowLeft, ShoppingBag, Clock, CheckCircle2 } from 'lucide-react';
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
@@ -16,8 +16,14 @@ const RestaurantApp: React.FC = () => {
     drinks: [],
     meals: []
   });
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>(() => {
+    const savedOrders = localStorage.getItem('pendingOrders');
+    return savedOrders ? JSON.parse(savedOrders) : [];
+  });
+  const [completedOrders, setCompletedOrders] = useState<Order[]>(() => {
+    const savedCompletedOrders = localStorage.getItem('completedOrders');
+    return savedCompletedOrders ? JSON.parse(savedCompletedOrders) : [];
+  });
   const [drinksMenu, setDrinksMenu] = useState<MenuItem[]>([
     { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
     { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
@@ -32,7 +38,15 @@ const RestaurantApp: React.FC = () => {
     { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
   ]);
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
-  const [showPendingOrders, setShowPendingOrders] = useState(false);
+
+  // Sauvegarder les commandes quand elles changent
+  React.useEffect(() => {
+    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
+  }, [pendingOrders]);
+
+  React.useEffect(() => {
+    localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
+  }, [completedOrders]);
 
   const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
     setLoggedInUser(user);
@@ -50,8 +64,6 @@ const RestaurantApp: React.FC = () => {
     setCurrentScreen('login');
     setTableNumber('');
     setOrder({drinks: [], meals: []});
-    setPendingOrders([]);
-    setCompletedOrders([]);
     setDrinksMenu([
       { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
       { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
@@ -679,5 +691,3 @@ const RestaurantApp: React.FC = () => {
 
   return null;
 };
-
-export default RestaurantApp;
