@@ -92,11 +92,10 @@ const RestaurantApp: React.FC = () => {
       drinks: [...order.drinks],
       table: tableNumber,
       status: 'pending' as const,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
 
     setPendingOrders(prev => [...prev, newOrder]);
-    localStorage.setItem('pendingOrders', JSON.stringify([...pendingOrders, newOrder]));
 
     setDrinksMenu([
       { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
@@ -118,17 +117,15 @@ const RestaurantApp: React.FC = () => {
   };
 
   const handleOrderComplete = (completedOrder: Order) => {
-    setPendingOrders(prev => {
-      const newPendingOrders = prev.filter(order => order !== completedOrder);
-      localStorage.setItem('pendingOrders', JSON.stringify(newPendingOrders));
-      return newPendingOrders;
-    });
+    setPendingOrders(prev => prev.filter(order => 
+      order.table !== completedOrder.table || 
+      order.createdAt !== completedOrder.createdAt
+    ));
     
-    setCompletedOrders(prev => {
-      const newCompletedOrders = [...prev, { ...completedOrder, status: 'completed' as const }];
-      localStorage.setItem('completedOrders', JSON.stringify(newCompletedOrders));
-      return newCompletedOrders;
-    });
+    setCompletedOrders(prev => [...prev, { 
+      ...completedOrder, 
+      status: 'completed' as const 
+    }]);
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {

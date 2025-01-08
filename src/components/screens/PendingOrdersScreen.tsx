@@ -20,10 +20,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   const formatOrderDate = (date: Date | string | undefined) => {
     if (!date) return 'Heure indisponible';
     try {
-      const orderDate = new Date(date);
-      if (isNaN(orderDate.getTime())) {
-        return 'Heure indisponible';
-      }
+      const orderDate = typeof date === 'string' ? new Date(date) : date;
       return format(orderDate, 'HH:mm', { locale: fr });
     } catch {
       return 'Heure indisponible';
