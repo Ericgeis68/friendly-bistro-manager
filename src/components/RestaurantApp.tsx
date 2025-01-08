@@ -12,6 +12,7 @@ const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
   const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
+  const [showPendingOrders, setShowPendingOrders] = useState(false);
   const [order, setOrder] = useState<Omit<Order, 'waitress'>>({
     drinks: [],
     meals: []
@@ -691,3 +692,5 @@ const RestaurantApp: React.FC = () => {
 
   return null;
 };
+
+export default RestaurantApp;
