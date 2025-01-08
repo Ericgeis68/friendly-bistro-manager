@@ -17,14 +17,17 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   onOrderComplete,
   onOrderCancel 
 }) => {
-  const formatOrderDate = (date: Date | undefined) => {
+  const formatOrderDate = (date: Date | string | undefined) => {
     if (!date) return 'Heure indisponible';
-    // Ensure we have a valid Date object
-    const orderDate = typeof date === 'string' ? new Date(date) : date;
-    if (!(orderDate instanceof Date) || isNaN(orderDate.getTime())) {
+    try {
+      const orderDate = new Date(date);
+      if (isNaN(orderDate.getTime())) {
+        return 'Heure indisponible';
+      }
+      return format(orderDate, 'HH:mm', { locale: fr });
+    } catch {
       return 'Heure indisponible';
     }
-    return format(orderDate, 'HH:mm', { locale: fr });
   };
 
   return (
@@ -42,7 +45,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
             <div className="flex justify-between items-center mb-2">
               <div>
                 <span className="font-medium text-lg">Table {order.table}</span>
-                <div className="text-sm text-gray-500 flex items-center mt-1">
+                <div className="text-sm text-gray-500 mt-1">
                   {formatOrderDate(order.createdAt)}
                 </div>
               </div>
@@ -61,16 +64,26 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                 </button>
               </div>
             </div>
-            {order.meals.map((meal, mealIndex) => (
-              <div key={`${index}-${mealIndex}`} className="text-gray-600">
-                {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+            {order.meals.length > 0 && (
+              <div className="mt-2">
+                <div className="font-medium mb-1">Repas:</div>
+                {order.meals.map((meal, mealIndex) => (
+                  <div key={`${index}-${mealIndex}`} className="text-gray-600 ml-2">
+                    {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+                  </div>
+                ))}
               </div>
-            ))}
-            {order.drinks.map((drink, drinkIndex) => (
-              <div key={`${index}-${drinkIndex}`} className="text-gray-600">
-                {drink.name} x{drink.quantity}
+            )}
+            {order.drinks.length > 0 && (
+              <div className="mt-2">
+                <div className="font-medium mb-1">Boissons:</div>
+                {order.drinks.map((drink, drinkIndex) => (
+                  <div key={`${index}-${drinkIndex}`} className="text-gray-600 ml-2">
+                    {drink.name} x{drink.quantity}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         ))}
         {orders.length === 0 && (

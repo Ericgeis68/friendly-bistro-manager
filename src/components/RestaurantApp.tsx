@@ -96,6 +96,7 @@ const RestaurantApp: React.FC = () => {
     };
 
     setPendingOrders(prev => [...prev, newOrder]);
+    localStorage.setItem('pendingOrders', JSON.stringify([...pendingOrders, newOrder]));
 
     setDrinksMenu([
       { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
@@ -117,8 +118,17 @@ const RestaurantApp: React.FC = () => {
   };
 
   const handleOrderComplete = (completedOrder: Order) => {
-    setPendingOrders(prev => prev.filter(order => order !== completedOrder));
-    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'completed' }]);
+    setPendingOrders(prev => {
+      const newPendingOrders = prev.filter(order => order !== completedOrder);
+      localStorage.setItem('pendingOrders', JSON.stringify(newPendingOrders));
+      return newPendingOrders;
+    });
+    
+    setCompletedOrders(prev => {
+      const newCompletedOrders = [...prev, { ...completedOrder, status: 'completed' as const }];
+      localStorage.setItem('completedOrders', JSON.stringify(newCompletedOrders));
+      return newCompletedOrders;
+    });
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {
