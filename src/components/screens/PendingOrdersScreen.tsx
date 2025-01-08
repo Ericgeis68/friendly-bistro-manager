@@ -11,16 +11,19 @@ interface PendingOrdersScreenProps {
   onOrderCancel: (order: Order) => void;
 }
 
-const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({ 
-  orders, 
+const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
+  orders,
   onBack,
   onOrderComplete,
-  onOrderCancel 
+  onOrderCancel
 }) => {
-  const formatOrderDate = (date: Date | string | undefined) => {
+  const formatOrderDate = (date: string | Date | undefined) => {
     if (!date) return 'Heure indisponible';
     try {
       const orderDate = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(orderDate.getTime())) {
+        return 'Heure indisponible';
+      }
       return format(orderDate, 'HH:mm', { locale: fr });
     } catch {
       return 'Heure indisponible';

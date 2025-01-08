@@ -13,7 +13,7 @@ export type Order = {
   drinks: MenuItem[];
   meals: MenuItem[];
   status?: 'pending' | 'completed' | 'cancelled';
-  createdAt?: Date;
+  createdAt?: string | Date;
 };
 
 export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'admin';

@@ -86,12 +86,12 @@ const RestaurantApp: React.FC = () => {
       return;
     }
     
-    const newOrder = { 
+    const newOrder: Order = { 
       waitress: loggedInUser!, 
       meals: [...order.meals],
       drinks: [...order.drinks],
       table: tableNumber,
-      status: 'pending' as const,
+      status: 'pending',
       createdAt: new Date().toISOString()
     };
 
@@ -124,7 +124,7 @@ const RestaurantApp: React.FC = () => {
     
     setCompletedOrders(prev => [...prev, { 
       ...completedOrder, 
-      status: 'completed' as const 
+      status: 'completed' 
     }]);
   };
 
