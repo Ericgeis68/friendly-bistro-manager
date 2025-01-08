@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Clock } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -17,6 +17,16 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   onOrderComplete,
   onOrderCancel 
 }) => {
+  const formatOrderDate = (date: Date | undefined) => {
+    if (!date) return 'Heure indisponible';
+    // Ensure we have a valid Date object
+    const orderDate = typeof date === 'string' ? new Date(date) : date;
+    if (!(orderDate instanceof Date) || isNaN(orderDate.getTime())) {
+      return 'Heure indisponible';
+    }
+    return format(orderDate, 'HH:mm', { locale: fr });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-blue-500 p-4 text-white flex items-center">
@@ -33,8 +43,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
               <div>
                 <span className="font-medium text-lg">Table {order.table}</span>
                 <div className="text-sm text-gray-500 flex items-center mt-1">
-                  <Clock size={16} className="mr-1" />
-                  {format(new Date(order.createdAt!), 'HH:mm', { locale: fr })}
+                  {formatOrderDate(order.createdAt)}
                 </div>
               </div>
               <div className="flex gap-2">
