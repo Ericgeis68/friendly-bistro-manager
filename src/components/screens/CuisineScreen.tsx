@@ -24,7 +24,13 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleOrderReady = (order: Order) => {
+    // Notifier la serveuse
     onOrderReady(order);
+    
+    // Déplacer la commande vers les commandes terminées
+    setPendingOrders(pendingOrders.filter(o => o.id !== order.id));
+    setCompletedOrders([...completedOrders, { ...order, status: 'completed' as const }]);
+    
     toast({
       title: "Notification envoyée",
       description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
@@ -104,10 +110,11 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         ))}
         
         {showOrders === 'completed' && (
-          <div>
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {completedOrders.map((order, index) => (
-              <div key={index} className="bg-white rounded-xl p-4 shadow mb-4">
+              <div key={index} className="bg-white rounded-xl p-4 shadow">
                 <h3 className="text-lg font-medium mb-2">Commande de {order.waitress}</h3>
+                <p className="text-sm text-gray-600 mb-2">Table {order.table}</p>
                 <ul className="list-disc pl-6">
                   {order.meals.map((meal, index) => (
                     <li key={`${order.id}-meal-${index}`} className="flex justify-between">
