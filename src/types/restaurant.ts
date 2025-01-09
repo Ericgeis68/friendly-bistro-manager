@@ -12,8 +12,9 @@ export type Order = {
   waitress: string;
   drinks: MenuItem[];
   meals: MenuItem[];
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled' | 'ready';
   createdAt: string;
+  notificationAcknowledged?: boolean;
 };
 
 export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'admin';

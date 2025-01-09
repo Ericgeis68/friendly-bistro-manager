@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
+import { toast } from "@/hooks/use-toast";
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -8,6 +9,7 @@ interface CuisineScreenProps {
   setPendingOrders: (orders: Order[]) => void;
   setCompletedOrders: (orders: Order[]) => void;
   onLogout: () => void;
+  onOrderReady: (order: Order) => void;
 }
 
 const CuisineScreen: React.FC<CuisineScreenProps> = ({
@@ -15,17 +17,18 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   completedOrders,
   setPendingOrders,
   setCompletedOrders,
-  onLogout
+  onLogout,
+  onOrderReady
 }) => {
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleCompleteOrder = (waitress: string) => {
-    const order = pendingOrders.find(order => order.waitress === waitress);
-    if(order){
-        setCompletedOrders([...completedOrders, order]);
-        setPendingOrders(pendingOrders.filter((o) => o.waitress !== waitress));
-    }
+  const handleOrderReady = (order: Order) => {
+    onOrderReady(order);
+    toast({
+      title: "Notification envoyée",
+      description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
+    });
   };
 
   const toggleMenu = () => {
@@ -78,12 +81,13 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       )}
 
       <div className="p-4 mt-4 flex space-x-8">
-        {showOrders === 'pending' && pendingOrders.map((order, index) => (
-          <div key={index} className="bg-white rounded-xl p-4 shadow w-64">
+        {showOrders === 'pending' && pendingOrders.map((order) => (
+          <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <h3 className="text-lg font-medium mb-2">Commande de {order.waitress}</h3>
+            <p className="text-sm text-gray-600 mb-2">Table {order.table}</p>
             <ul className="list-disc pl-6">
-              {order.meals.map((meal) => (
-                <li key={meal.id} className="flex justify-between">
+              {order.meals.map((meal, index) => (
+                <li key={`${order.id}-meal-${index}`} className="flex justify-between">
                   <span>
                     {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
                   </span>
@@ -91,10 +95,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
               ))}
             </ul>
             <button
-              onClick={() => handleCompleteOrder(order.waitress)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md mt-2"
+              onClick={() => handleOrderReady(order)}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md mt-2 w-full"
             >
-              Terminer
+              Prêt
             </button>
           </div>
         ))}
@@ -105,8 +109,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
               <div key={index} className="bg-white rounded-xl p-4 shadow mb-4">
                 <h3 className="text-lg font-medium mb-2">Commande de {order.waitress}</h3>
                 <ul className="list-disc pl-6">
-                  {order.meals.map((meal) => (
-                    <li key={meal.id} className="flex justify-between">
+                  {order.meals.map((meal, index) => (
+                    <li key={`${order.id}-meal-${index}`} className="flex justify-between">
                       <span>
                         {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
                       </span>

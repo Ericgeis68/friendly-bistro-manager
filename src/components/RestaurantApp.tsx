@@ -12,6 +12,7 @@ import DrinkMenuScreen from './screens/DrinkMenuScreen';
 import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import { generateOrderId } from '../utils/orderUtils';
+import { toast } from "@/hooks/use-toast";
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -46,6 +47,7 @@ const RestaurantApp: React.FC = () => {
     { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
   ]);
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
+  const [pendingNotifications, setPendingNotifications] = useState<Order[]>([]);
 
   // Sauvegarder les commandes quand elles changent
   React.useEffect(() => {
@@ -121,6 +123,17 @@ const RestaurantApp: React.FC = () => {
     setCompletedOrders(prev => [...prev, { ...cancelledOrder, status: 'cancelled' as const }]);
   };
 
+  const handleOrderReady = (order: Order) => {
+    const updatedOrder = { ...order, status: 'ready' as const };
+    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
+    setPendingNotifications(prev => [...prev, updatedOrder]);
+  };
+
+  const handleNotificationAcknowledge = (orderId: string) => {
+    setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
+    setShowPendingOrders(true);
+  };
+
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
@@ -155,6 +168,8 @@ const RestaurantApp: React.FC = () => {
         handleNewOrder={() => setCurrentScreen('table')}
         setShowPendingOrders={setShowPendingOrders}
         setShowCompletedOrders={setShowCompletedOrders}
+        pendingNotifications={pendingNotifications.filter(order => order.waitress === loggedInUser)}
+        onNotificationAcknowledge={handleNotificationAcknowledge}
       />
     );
   }
@@ -214,6 +229,7 @@ const RestaurantApp: React.FC = () => {
         setPendingOrders={setPendingOrders}
         setCompletedOrders={setCompletedOrders}
         onLogout={handleLogout}
+        onOrderReady={handleOrderReady}
       />
     );
   }
