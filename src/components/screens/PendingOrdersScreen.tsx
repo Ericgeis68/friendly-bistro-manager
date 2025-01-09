@@ -17,13 +17,9 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   onOrderComplete,
   onOrderCancel
 }) => {
-  const formatOrderDate = (date: string | Date | undefined) => {
-    if (!date) return 'Heure indisponible';
+  const formatOrderDate = (date: string) => {
     try {
-      const orderDate = typeof date === 'string' ? new Date(date) : date;
-      if (isNaN(orderDate.getTime())) {
-        return 'Heure indisponible';
-      }
+      const orderDate = new Date(date);
       return format(orderDate, 'HH:mm', { locale: fr });
     } catch {
       return 'Heure indisponible';
@@ -40,13 +36,13 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
       </div>
 
       <div className="p-4 space-y-4">
-        {orders.map((order, index) => (
-          <div key={`${order.table}-${order.createdAt}`} className="bg-white rounded-2xl p-4 shadow">
+        {orders.map((order) => (
+          <div key={order.id} className="bg-white rounded-2xl p-4 shadow">
             <div className="flex justify-between items-center mb-2">
               <div>
-                <span className="font-medium text-lg">Table {order.table}</span>
-                <div className="text-sm text-gray-500 mt-1">
-                  {formatOrderDate(order.createdAt)}
+                <div className="font-medium text-lg">Table {order.table}</div>
+                <div className="text-sm text-gray-500">
+                  {order.id} - {formatOrderDate(order.createdAt)}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -68,7 +64,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
               <div className="mt-2">
                 <div className="font-medium mb-1">Repas:</div>
                 {order.meals.map((meal, mealIndex) => (
-                  <div key={`${index}-${mealIndex}`} className="text-gray-600 ml-2">
+                  <div key={`${order.id}-meal-${mealIndex}`} className="text-gray-600 ml-2">
                     {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
                   </div>
                 ))}
@@ -78,7 +74,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
               <div className="mt-2">
                 <div className="font-medium mb-1">Boissons:</div>
                 {order.drinks.map((drink, drinkIndex) => (
-                  <div key={`${index}-${drinkIndex}`} className="text-gray-600 ml-2">
+                  <div key={`${order.id}-drink-${drinkIndex}`} className="text-gray-600 ml-2">
                     {drink.name} x{drink.quantity}
                   </div>
                 ))}

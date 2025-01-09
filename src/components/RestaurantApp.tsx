@@ -7,13 +7,14 @@ import LoginScreen from './screens/LoginScreen';
 import PendingOrdersScreen from './screens/PendingOrdersScreen';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { generateOrderId } from '../utils/orderUtils';
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
   const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
   const [showPendingOrders, setShowPendingOrders] = useState(false);
-  const [order, setOrder] = useState<Omit<Order, 'waitress'>>({
+  const [order, setOrder] = useState<Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>>({
     drinks: [],
     meals: []
   });
@@ -87,6 +88,7 @@ const RestaurantApp: React.FC = () => {
     }
     
     const newOrder: Order = { 
+      id: generateOrderId(),
       waitress: loggedInUser!, 
       meals: [...order.meals],
       drinks: [...order.drinks],
@@ -539,6 +541,7 @@ const RestaurantApp: React.FC = () => {
         return;
       }
       setPendingOrders([...pendingOrders, { 
+        id: generateOrderId(),
         waitress: loggedInUser!, 
         meals,
         drinks: [] // Add empty drinks array for kitchen orders

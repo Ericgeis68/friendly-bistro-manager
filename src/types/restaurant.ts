@@ -7,13 +7,13 @@ export type MenuItem = {
 };
 
 export type Order = {
-  id?: number;
-  table?: string;
+  id: string;
+  table: string;
   waitress: string;
   drinks: MenuItem[];
   meals: MenuItem[];
-  status?: 'pending' | 'completed' | 'cancelled';
-  createdAt?: string | Date;
+  status: 'pending' | 'completed' | 'cancelled';
+  createdAt: string;
 };
 
 export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'admin';
