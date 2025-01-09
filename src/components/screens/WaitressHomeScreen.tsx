@@ -6,13 +6,15 @@ interface WaitressHomeScreenProps {
   handleLogout: () => void;
   handleNewOrder: () => void;
   setShowPendingOrders: (show: boolean) => void;
+  setShowCompletedOrders: (show: boolean) => void;
 }
 
 const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   loggedInUser,
   handleLogout,
   handleNewOrder,
-  setShowPendingOrders
+  setShowPendingOrders,
+  setShowCompletedOrders
 }) => {
   return (
     <div className="min-h-screen bg-gray-100">
@@ -39,7 +41,7 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         </button>
 
         <button
-          onClick={() => {}}
+          onClick={() => setShowCompletedOrders(true)}
           className="w-full bg-white p-6 rounded-2xl shadow flex flex-col items-center active:bg-gray-50"
         >
           <CheckCircle2 size={48} className="mb-3 text-blue-500" />

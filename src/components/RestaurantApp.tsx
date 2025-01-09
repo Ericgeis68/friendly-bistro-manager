@@ -4,6 +4,7 @@ import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
 import LoginScreen from './screens/LoginScreen';
 import PendingOrdersScreen from './screens/PendingOrdersScreen';
+import CompletedOrdersScreen from './screens/CompletedOrdersScreen';
 import WaitressHomeScreen from './screens/WaitressHomeScreen';
 import TableInputScreen from './screens/TableInputScreen';
 import CategoryMenuScreen from './screens/CategoryMenuScreen';
@@ -17,6 +18,7 @@ const RestaurantApp: React.FC = () => {
   const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
   const [showPendingOrders, setShowPendingOrders] = useState(false);
+  const [showCompletedOrders, setShowCompletedOrders] = useState(false);
   const [order, setOrder] = useState<Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>>({
     table: '',
     drinks: [],
@@ -74,21 +76,8 @@ const RestaurantApp: React.FC = () => {
       drinks: [],
       meals: []
     });
-    setDrinksMenu([
-      { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
-      { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
-      { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
-      { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
-    ]);
-    setMeals
-
-Menu([
-      { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
-      { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
-      { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
-      { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
-      { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
-    ]);
+    setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
+    setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
     setTempMeals([]);
   };
 
@@ -97,9 +86,9 @@ Menu([
       return;
     }
     
-    const newOrder: Order = { 
+    const newOrder: Order = {
       id: generateOrderId(),
-      waitress: loggedInUser!, 
+      waitress: loggedInUser!,
       meals: [...order.meals],
       drinks: [...order.drinks],
       table: tableNumber,
@@ -110,19 +99,8 @@ Menu([
     setPendingOrders(prev => [...prev, newOrder]);
 
     // Reset states
-    setDrinksMenu([
-      { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
-      { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
-      { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
-      { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
-    ]);
-    setMealsMenu([
-      { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
-      { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
-      { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
-      { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
-      { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
-    ]);
+    setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
+    setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
     setTempMeals([]);
     setOrder({
       table: '',
@@ -134,42 +112,51 @@ Menu([
   };
 
   const handleOrderComplete = (completedOrder: Order) => {
-    setPendingOrders(prev => prev.filter(order => 
-      order.id !== completedOrder.id
-    ));
-    
-    const orderToComplete = {
-      ...completedOrder,
-      status: 'completed' as const
-    };
-    
-    setCompletedOrders(prev => [...prev, orderToComplete]);
+    setPendingOrders(prev => prev.filter(order => order.id !== completedOrder.id));
+    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'completed' as const }]);
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {
     setPendingOrders(prev => prev.filter(order => order.id !== cancelledOrder.id));
-    setCompletedOrders(prev => [...prev, { ...cancelledOrder, status: 'cancelled' }]);
+    setCompletedOrders(prev => [...prev, { ...cancelledOrder, status: 'cancelled' as const }]);
   };
 
-  if(currentScreen === 'login'){
+  if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
   if (currentScreen === 'waitress') {
-    if (showPendingOrders) {
-      return <PendingOrdersScreen 
-        orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
-        onBack={() => setShowPendingOrders(false)}
-        onOrderComplete={handleOrderComplete}
-        onOrderCancel={handleOrderCancel}
-      />;
+    if (showCompletedOrders) {
+      return (
+        <CompletedOrdersScreen
+          orders={completedOrders.filter(order => 
+            order.waitress === loggedInUser && order.status === 'completed'
+          )}
+          onBack={() => setShowCompletedOrders(false)}
+        />
+      );
     }
-    return <WaitressHomeScreen 
-      loggedInUser={loggedInUser!}
-      handleLogout={handleLogout}
-      handleNewOrder={() => setCurrentScreen('table')}
-      setShowPendingOrders={setShowPendingOrders}
-    />;
+    
+    if (showPendingOrders) {
+      return (
+        <PendingOrdersScreen
+          orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
+          onBack={() => setShowPendingOrders(false)}
+          onOrderComplete={handleOrderComplete}
+          onOrderCancel={handleOrderCancel}
+        />
+      );
+    }
+
+    return (
+      <WaitressHomeScreen
+        loggedInUser={loggedInUser!}
+        handleLogout={handleLogout}
+        handleNewOrder={() => setCurrentScreen('table')}
+        setShowPendingOrders={setShowPendingOrders}
+        setShowCompletedOrders={setShowCompletedOrders}
+      />
+    );
   }
 
   if (currentScreen === 'table') {
