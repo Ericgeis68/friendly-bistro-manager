@@ -115,7 +115,7 @@ const RestaurantApp: React.FC = () => {
 
   const handleOrderComplete = (completedOrder: Order) => {
     setPendingOrders(prev => prev.filter(order => order.id !== completedOrder.id));
-    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'completed' as const }]);
+    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'delivered' as const }]);
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {

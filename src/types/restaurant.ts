@@ -12,7 +12,7 @@ export type Order = {
   waitress: string;
   drinks: MenuItem[];
   meals: MenuItem[];
-  status: 'pending' | 'completed' | 'cancelled' | 'ready';
+  status: 'pending' | 'completed' | 'cancelled' | 'ready' | 'delivered';
   createdAt: string;
   notificationAcknowledged?: boolean;
 };

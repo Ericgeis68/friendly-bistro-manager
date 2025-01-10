@@ -27,10 +27,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
     // Notifier la serveuse
     onOrderReady(order);
     
-    // Déplacer la commande vers les commandes terminées
-    setPendingOrders(pendingOrders.filter(o => o.id !== order.id));
-    setCompletedOrders([...completedOrders, { ...order, status: 'completed' as const }]);
-    
     toast({
       title: "Notification envoyée",
       description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
@@ -44,6 +40,32 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const handleOrdersView = (view: 'pending' | 'completed' | 'dashboard') => {
     setShowOrders(view);
     setMenuOpen(false);
+  };
+
+  const getStatusColor = (status: Order['status']) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'ready':
+        return 'bg-blue-100 text-blue-800';
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: Order['status']) => {
+    switch (status) {
+      case 'pending':
+        return 'En cours';
+      case 'ready':
+        return 'Prêt';
+      case 'delivered':
+        return 'Livré';
+      default:
+        return status;
+    }
   };
 
   const countItems = (itemName: string, cooking?: string): number => {
@@ -89,8 +111,15 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       <div className="p-4 mt-4 flex space-x-8">
         {showOrders === 'pending' && pendingOrders.map((order) => (
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
-            <h3 className="text-lg font-medium mb-2">Commande de {order.waitress}</h3>
-            <p className="text-sm text-gray-600 mb-2">Table {order.table}</p>
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-lg font-medium">Commande de {order.waitress}</h3>
+                <p className="text-sm text-gray-600">Table {order.table}</p>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
+                {getStatusText(order.status)}
+              </span>
+            </div>
             <ul className="list-disc pl-6">
               {order.meals.map((meal, index) => (
                 <li key={`${order.id}-meal-${index}`} className="flex justify-between">
@@ -100,12 +129,14 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
                 </li>
               ))}
             </ul>
-            <button
-              onClick={() => handleOrderReady(order)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md mt-2 w-full"
-            >
-              Prêt
-            </button>
+            {order.status === 'pending' && (
+              <button
+                onClick={() => handleOrderReady(order)}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md mt-2 w-full"
+              >
+                Prêt
+              </button>
+            )}
           </div>
         ))}
         
@@ -113,8 +144,15 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {completedOrders.map((order, index) => (
               <div key={index} className="bg-white rounded-xl p-4 shadow">
-                <h3 className="text-lg font-medium mb-2">Commande de {order.waitress}</h3>
-                <p className="text-sm text-gray-600 mb-2">Table {order.table}</p>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-lg font-medium">Commande de {order.waitress}</h3>
+                    <p className="text-sm text-gray-600">Table {order.table}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
+                    {getStatusText(order.status)}
+                  </span>
+                </div>
                 <ul className="list-disc pl-6">
                   {order.meals.map((meal, index) => (
                     <li key={`${order.id}-meal-${index}`} className="flex justify-between">
