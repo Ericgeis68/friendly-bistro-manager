@@ -142,16 +142,6 @@ const RestaurantApp: React.FC = () => {
     setCompletedOrders(prev => [...prev, { ...cancelledOrder, status: 'cancelled' as const }]);
   };
 
-  const handleOrderReady = (order: Order) => {
-    const updatedOrder = { ...order, status: 'ready' as const };
-    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    setPendingNotifications(prev => [...prev, updatedOrder]);
-    toast({
-      title: "Commande prête",
-      description: `La commande pour la table ${order.table} est prête.`,
-    });
-  };
-
   const handleNotificationAcknowledge = (orderId: string) => {
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
     setShowPendingOrders(true);
