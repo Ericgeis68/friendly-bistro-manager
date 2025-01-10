@@ -117,13 +117,24 @@ const RestaurantApp: React.FC = () => {
     setCurrentScreen('waitress');
   };
 
+  const handleOrderReady = (order: Order) => {
+    const updatedOrder = { ...order, status: 'ready' as const };
+    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
+    setCompletedOrders(prev => [...prev, updatedOrder]);
+    setPendingNotifications(prev => [...prev, updatedOrder]);
+    toast({
+      title: "Commande prête",
+      description: `La commande pour la table ${order.table} est prête.`,
+    });
+  };
+
   const handleOrderComplete = (completedOrder: Order) => {
     setPendingOrders(prev => prev.filter(order => order.id !== completedOrder.id));
     setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'delivered' as const }]);
     
     // Mettre à jour le statut dans l'interface cuisine
     const updatedOrder = { ...completedOrder, status: 'delivered' as const };
-    setPendingOrders(prev => prev.map(o => o.id === completedOrder.id ? updatedOrder : o));
+    setCompletedOrders(prev => prev.map(o => o.id === completedOrder.id ? updatedOrder : o));
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {

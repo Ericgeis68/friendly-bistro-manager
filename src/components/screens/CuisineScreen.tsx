@@ -25,8 +25,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const handleOrderReady = (order: Order) => {
     onOrderReady(order);
-    setCompletedOrders(prev => [...prev, { ...order, status: 'ready' }]);
-    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
     
     toast({
       title: "Notification envoyée",
@@ -36,10 +34,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
       case 'ready':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-yellow-100 text-yellow-800';
       case 'delivered':
         return 'bg-green-100 text-green-800';
       default:
@@ -49,10 +45,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const getStatusText = (status: Order['status']) => {
     switch (status) {
-      case 'pending':
-        return 'En cours';
       case 'ready':
-        return 'Prêt';
+        return 'En cours';
       case 'delivered':
         return 'Livré';
       default:
@@ -100,7 +94,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         </div>
       )}
 
-      <div className="p-4 mt-4 flex space-x-8">
+      <div className="p-4 mt-4 flex flex-wrap gap-4">
         {showOrders === 'pending' && pendingOrders.map((order) => (
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <div className="flex justify-between items-start mb-2">
@@ -108,9 +102,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
                 <h3 className="text-lg font-medium">Table {order.table}</h3>
                 <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
               </div>
-              <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
-                {getStatusText(order.status)}
-              </span>
             </div>
             <ul className="list-disc pl-6">
               {order.meals.map((meal, index) => (
@@ -152,7 +143,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         ))}
         
         {showOrders === 'dashboard' && (
-          <div>
+          <div className="w-full">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
