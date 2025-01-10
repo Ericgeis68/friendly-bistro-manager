@@ -24,22 +24,14 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleOrderReady = (order: Order) => {
-    // Notifier la serveuse
     onOrderReady(order);
+    setCompletedOrders(prev => [...prev, { ...order, status: 'ready' }]);
+    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
     
     toast({
       title: "Notification envoyée",
       description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
     });
-  };
-
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
-  };
-
-  const handleOrdersView = (view: 'pending' | 'completed' | 'dashboard') => {
-    setShowOrders(view);
-    setMenuOpen(false);
   };
 
   const getStatusColor = (status: Order['status']) => {
@@ -83,7 +75,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-transparent p-4 flex items-center">
-        <button onClick={toggleMenu} className="text-gray-800 font-bold text-xl flex items-center">
+        <button onClick={() => setMenuOpen(!menuOpen)} className="text-gray-800 font-bold text-xl flex items-center">
           <Menu className="mr-2 text-2xl" />
         </button>
         <h1 className="text-gray-800 font-bold text-2xl mx-auto">
@@ -93,13 +85,13 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       
       {menuOpen && (
         <div className="absolute top-16 left-4 bg-white shadow-lg rounded-md p-4 z-50">
-          <button onClick={() => handleOrdersView('pending')} className="w-full text-left py-2 px-4 hover:bg-gray-100">
+          <button onClick={() => { setShowOrders('pending'); setMenuOpen(false); }} className="w-full text-left py-2 px-4 hover:bg-gray-100">
             Commandes en cours
           </button>
-          <button onClick={() => handleOrdersView('completed')} className="w-full text-left py-2 px-4 hover:bg-gray-100">
+          <button onClick={() => { setShowOrders('completed'); setMenuOpen(false); }} className="w-full text-left py-2 px-4 hover:bg-gray-100">
             Commandes terminées
           </button>
-          <button onClick={() => handleOrdersView('dashboard')} className="w-full text-left py-2 px-4 hover:bg-gray-100">
+          <button onClick={() => { setShowOrders('dashboard'); setMenuOpen(false); }} className="w-full text-left py-2 px-4 hover:bg-gray-100">
             Tableau de bord
           </button>
           <button onClick={onLogout} className="w-full text-left py-2 px-4 hover:bg-gray-100">
@@ -113,8 +105,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-lg font-medium">Commande de {order.waitress}</h3>
-                <p className="text-sm text-gray-600">Table {order.table}</p>
+                <h3 className="text-lg font-medium">Table {order.table}</h3>
+                <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
                 {getStatusText(order.status)}
@@ -122,10 +114,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
             </div>
             <ul className="list-disc pl-6">
               {order.meals.map((meal, index) => (
-                <li key={`${order.id}-meal-${index}`} className="flex justify-between">
-                  <span>
-                    {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
-                  </span>
+                <li key={`${order.id}-meal-${index}`}>
+                  {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
                 </li>
               ))}
             </ul>
@@ -140,32 +130,26 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           </div>
         ))}
         
-        {showOrders === 'completed' && (
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {completedOrders.map((order, index) => (
-              <div key={index} className="bg-white rounded-xl p-4 shadow">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="text-lg font-medium">Commande de {order.waitress}</h3>
-                    <p className="text-sm text-gray-600">Table {order.table}</p>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
-                    {getStatusText(order.status)}
-                  </span>
-                </div>
-                <ul className="list-disc pl-6">
-                  {order.meals.map((meal, index) => (
-                    <li key={`${order.id}-meal-${index}`} className="flex justify-between">
-                      <span>
-                        {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+        {showOrders === 'completed' && completedOrders.map((order) => (
+          <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-lg font-medium">Table {order.table}</h3>
+                <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
               </div>
-            ))}
+              <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
+                {getStatusText(order.status)}
+              </span>
+            </div>
+            <ul className="list-disc pl-6">
+              {order.meals.map((meal, index) => (
+                <li key={`${order.id}-meal-${index}`}>
+                  {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+                </li>
+              ))}
+            </ul>
           </div>
-        )}
+        ))}
         
         {showOrders === 'dashboard' && (
           <div>
