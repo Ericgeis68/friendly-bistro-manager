@@ -25,6 +25,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const handleOrderReady = (order: Order) => {
     onOrderReady(order);
+    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
     
     toast({
       title: "Notification envoyée",

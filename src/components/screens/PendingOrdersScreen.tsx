@@ -25,6 +25,20 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
     }
   };
 
+  const getStatusColor = (status: Order['status']) => {
+    if (status === 'ready') {
+      return 'bg-yellow-100 text-yellow-800';
+    }
+    return '';
+  };
+
+  const getStatusText = (status: Order['status']) => {
+    if (status === 'ready') {
+      return 'Prêt';
+    }
+    return '';
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-blue-500 p-4 text-white flex items-center">
@@ -44,19 +58,26 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                   {order.id} - {formatOrderDate(order.createdAt)}
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onOrderComplete(order)}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
-                >
-                  Terminé
-                </button>
-                <button
-                  onClick={() => onOrderCancel(order)}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-                >
-                  Annulé
-                </button>
+              <div className="flex items-center gap-2">
+                {order.status === 'ready' && (
+                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
+                    {getStatusText(order.status)}
+                  </span>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onOrderComplete(order)}
+                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                  >
+                    Terminé
+                  </button>
+                  <button
+                    onClick={() => onOrderCancel(order)}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  >
+                    Annulé
+                  </button>
+                </div>
               </div>
             </div>
             {order.meals.length > 0 && (
