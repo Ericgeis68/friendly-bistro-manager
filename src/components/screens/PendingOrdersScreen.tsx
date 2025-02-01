@@ -68,8 +68,8 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {order.status === 'ready' && (
-                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
-                      {getStatusText(order.status)}
+                    <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                      Prêt
                     </span>
                   )}
                   <div className="flex gap-2">

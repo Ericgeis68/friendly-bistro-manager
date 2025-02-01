@@ -111,6 +111,18 @@ const RestaurantApp: React.FC = () => {
     setShowPendingOrders(true);
   };
 
+  const handleOrderReady = (order: Order) => {
+    const updatedOrder = { ...order, status: 'ready' as const };
+    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
+    setPendingNotifications(prev => [...prev, updatedOrder]);
+  };
+
+  const handleOrderComplete = (order: Order) => {
+    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
+    const updatedOrder = { ...order, status: 'delivered' as const };
+    setCompletedOrders(prev => [...prev, updatedOrder]);
+  };
+
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
