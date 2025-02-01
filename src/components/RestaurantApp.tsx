@@ -13,6 +13,8 @@ import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import { generateOrderId } from '../utils/orderUtils';
 import { toast } from "@/hooks/use-toast";
+import { useOrderManagement } from '../hooks/useOrderManagement';
+import { useMenuManagement } from '../hooks/useMenuManagement';
 
 const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -25,38 +27,26 @@ const RestaurantApp: React.FC = () => {
     drinks: [],
     meals: []
   });
-  const [pendingOrders, setPendingOrders] = useState<Order[]>(() => {
-    const savedOrders = localStorage.getItem('pendingOrders');
-    return savedOrders ? JSON.parse(savedOrders) : [];
-  });
-  const [completedOrders, setCompletedOrders] = useState<Order[]>(() => {
-    const savedCompletedOrders = localStorage.getItem('completedOrders');
-    return savedCompletedOrders ? JSON.parse(savedCompletedOrders) : [];
-  });
-  const [drinksMenu, setDrinksMenu] = useState<MenuItem[]>([
-    { id: 1, name: 'Bière', price: 4.50, quantity: 0 },
-    { id: 2, name: 'Coca', price: 3.50, quantity: 0 },
-    { id: 3, name: 'Eau', price: 2.00, quantity: 0 },
-    { id: 4, name: 'Vin Rouge', price: 5.50, quantity: 0 }
-  ]);
-  const [mealsMenu, setMealsMenu] = useState<MenuItem[]>([
-    { id: 1, name: 'Entrecôte', price: 18.50, quantity: 0 },
-    { id: 2, name: 'Entrecôte spécial', price: 22.50, quantity: 0 },
-    { id: 3, name: 'Frites', price: 4.00, quantity: 0 },
-    { id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 0 },
-    { id: 5, name: 'Merguez pain', price: 8.50, quantity: 0 }
-  ]);
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
-  const [pendingNotifications, setPendingNotifications] = useState<Order[]>([]);
 
-  // Sauvegarder les commandes quand elles changent
-  React.useEffect(() => {
-    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
-  }, [pendingOrders]);
+  const {
+    pendingOrders,
+    setPendingOrders,
+    completedOrders,
+    setCompletedOrders,
+    pendingNotifications,
+    setPendingNotifications,
+    handleOrderReady,
+    handleOrderComplete,
+    handleOrderCancel
+  } = useOrderManagement();
 
-  React.useEffect(() => {
-    localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
-  }, [completedOrders]);
+  const {
+    drinksMenu,
+    setDrinksMenu,
+    mealsMenu,
+    setMealsMenu
+  } = useMenuManagement();
 
   const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
     setLoggedInUser(user);
@@ -104,7 +94,6 @@ const RestaurantApp: React.FC = () => {
       description: `La commande pour la table ${tableNumber} a été envoyée en cuisine.`,
     });
 
-    // Reset states
     setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
     setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
     setTempMeals([]);
@@ -115,31 +104,6 @@ const RestaurantApp: React.FC = () => {
     });
     setTableNumber('');
     setCurrentScreen('waitress');
-  };
-
-  const handleOrderReady = (order: Order) => {
-    const updatedOrder = { ...order, status: 'ready' as const };
-    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    setCompletedOrders(prev => [...prev, updatedOrder]);
-    setPendingNotifications(prev => [...prev, updatedOrder]);
-    toast({
-      title: "Commande prête",
-      description: `La commande pour la table ${order.table} est prête.`,
-    });
-  };
-
-  const handleOrderComplete = (completedOrder: Order) => {
-    setPendingOrders(prev => prev.filter(order => order.id !== completedOrder.id));
-    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'delivered' as const }]);
-    
-    // Mettre à jour le statut dans l'interface cuisine
-    const updatedOrder = { ...completedOrder, status: 'delivered' as const };
-    setCompletedOrders(prev => prev.map(o => o.id === completedOrder.id ? updatedOrder : o));
-  };
-
-  const handleOrderCancel = (cancelledOrder: Order) => {
-    setPendingOrders(prev => prev.filter(order => order.id !== cancelledOrder.id));
-    setCompletedOrders(prev => [...prev, { ...cancelledOrder, status: 'cancelled' as const }]);
   };
 
   const handleNotificationAcknowledge = (orderId: string) => {
