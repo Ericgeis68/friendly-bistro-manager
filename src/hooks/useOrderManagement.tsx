@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Order, MenuItem } from '../types/restaurant';
+import type { Order } from '../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 
 export const useOrderManagement = () => {
@@ -25,8 +25,7 @@ export const useOrderManagement = () => {
 
   const handleOrderReady = (order: Order) => {
     const updatedOrder = { ...order, status: 'ready' as const };
-    setPendingOrders(pendingOrders.filter(o => o.id !== order.id));
-    setCompletedOrders(prev => [...prev, updatedOrder]);
+    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
     setPendingNotifications(prev => [...prev, updatedOrder]);
     toast({
       title: "Commande prête",
@@ -34,12 +33,10 @@ export const useOrderManagement = () => {
     });
   };
 
-  const handleOrderComplete = (completedOrder: Order) => {
-    setPendingOrders(prev => prev.filter(order => order.id !== completedOrder.id));
-    setCompletedOrders(prev => [...prev, { ...completedOrder, status: 'delivered' as const }]);
-    
-    const updatedOrder = { ...completedOrder, status: 'delivered' as const };
-    setCompletedOrders(prev => prev.map(o => o.id === completedOrder.id ? updatedOrder : o));
+  const handleOrderComplete = (order: Order) => {
+    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
+    const updatedOrder = { ...order, status: 'delivered' as const };
+    setCompletedOrders(prev => [...prev, updatedOrder]);
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {
