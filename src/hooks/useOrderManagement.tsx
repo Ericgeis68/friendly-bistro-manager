@@ -24,9 +24,16 @@ export const useOrderManagement = () => {
   }, [completedOrders]);
 
   const handleOrderReady = (order: Order) => {
+    // Mettre à jour le statut dans les commandes en cours de la serveuse
     const updatedOrder = { ...order, status: 'ready' as const };
     setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
+    
+    // Ajouter la commande aux commandes terminées de la cuisine
+    setCompletedOrders(prev => [...prev, updatedOrder]);
+    
+    // Ajouter la notification pour la serveuse
     setPendingNotifications(prev => [...prev, updatedOrder]);
+    
     toast({
       title: "Commande prête",
       description: `La commande pour la table ${order.table} est prête.`,
@@ -34,9 +41,14 @@ export const useOrderManagement = () => {
   };
 
   const handleOrderComplete = (order: Order) => {
+    // Retirer des commandes en cours de la serveuse
     setPendingOrders(prev => prev.filter(o => o.id !== order.id));
+    
+    // Mettre à jour le statut à "delivered" dans les commandes terminées
     const updatedOrder = { ...order, status: 'delivered' as const };
-    setCompletedOrders(prev => [...prev, updatedOrder]);
+    setCompletedOrders(prev => 
+      prev.map(o => o.id === order.id ? updatedOrder : o)
+    );
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {
