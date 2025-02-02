@@ -23,6 +23,9 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Filtrer les commandes en cours pour n'afficher que celles qui n'ont pas encore été marquées comme prêtes
+  const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
+
   const handleOrderReady = (order: Order) => {
     onOrderReady(order);
     
@@ -56,7 +59,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const countItems = (itemName: string, cooking?: string): number => {
     let count = 0;
-    pendingOrders.forEach((order) => {
+    pendingOrdersToShow.forEach((order) => {
       order.meals.forEach((meal) => {
         if (meal.name === itemName && (!cooking || meal.cooking === cooking)) {
           count += meal.quantity;
@@ -95,7 +98,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       )}
 
       <div className="p-4 mt-4 flex flex-wrap gap-4">
-        {showOrders === 'pending' && pendingOrders.map((order) => (
+        {showOrders === 'pending' && pendingOrdersToShow.map((order) => (
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <div className="flex justify-between items-start mb-2">
               <div>
