@@ -27,9 +27,6 @@ export const useOrderManagement = () => {
     // Mettre à jour le statut de la commande
     const updatedOrder = { ...order, status: 'ready' as const };
     
-    // Retirer la commande des commandes en cours
-    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
-    
     // Ajouter la commande aux commandes terminées
     setCompletedOrders(prev => [...prev, updatedOrder]);
     
