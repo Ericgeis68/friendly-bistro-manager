@@ -27,16 +27,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
 
   const handleOrderReady = (order: Order) => {
-    // Mettre à jour le statut de la commande à 'ready'
-    const updatedOrder = { ...order, status: 'ready' as const };
-    
-    // Mettre à jour les commandes en cours
-    setPendingOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
-    
-    // Ajouter aux commandes terminées
-    setCompletedOrders(prev => [...prev, updatedOrder]);
-    
-    onOrderReady(updatedOrder);
+    onOrderReady(order);
     
     toast({
       title: "Notification envoyée",
