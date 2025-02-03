@@ -6,8 +6,8 @@ import { toast } from "@/hooks/use-toast";
 interface CuisineScreenProps {
   pendingOrders: Order[];
   completedOrders: Order[];
-  setPendingOrders: (orders: Order[]) => void;
-  setCompletedOrders: (orders: Order[]) => void;
+  setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   onLogout: () => void;
   onOrderReady: (order: Order) => void;
 }
@@ -27,15 +27,19 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
   
   // Afficher toutes les commandes qui ont été marquées comme prêtes ou livrées
-  const completedOrdersToShow = completedOrders.filter(order => 
-    order.status === 'ready' || order.status === 'delivered'
-  );
+  const completedOrdersToShow = completedOrders;
 
   const handleOrderReady = (order: Order) => {
-    // Mettre à jour le statut et déplacer vers les commandes terminées
+    // Mettre à jour le statut de la commande à 'ready'
     const updatedOrder = { ...order, status: 'ready' as const };
+    
+    // Mettre à jour la commande dans pendingOrders
+    setPendingOrders(prev => 
+      prev.map(o => o.id === order.id ? updatedOrder : o)
+    );
+    
+    // Ajouter la commande aux completedOrders
     setCompletedOrders(prev => [...prev, updatedOrder]);
-    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
     
     onOrderReady(order);
     
