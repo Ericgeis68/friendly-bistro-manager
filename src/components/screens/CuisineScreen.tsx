@@ -25,6 +25,9 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   // Filtrer les commandes en cours pour n'afficher que celles qui n'ont pas encore été marquées comme prêtes
   const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
+  
+  // Filtrer les commandes terminées pour n'afficher que celles qui ont été livrées
+  const completedOrdersToShow = completedOrders.filter(order => order.status === 'delivered');
 
   const handleOrderReady = (order: Order) => {
     onOrderReady(order);
@@ -124,7 +127,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           </div>
         ))}
         
-        {showOrders === 'completed' && completedOrders.map((order) => (
+        {showOrders === 'completed' && completedOrdersToShow.map((order) => (
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <div className="flex justify-between items-start mb-2">
               <div>
