@@ -26,10 +26,17 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   // Filtrer les commandes en cours pour n'afficher que celles qui n'ont pas encore été marquées comme prêtes
   const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
   
-  // Filtrer les commandes terminées pour n'afficher que celles qui ont été livrées
-  const completedOrdersToShow = completedOrders.filter(order => order.status === 'delivered');
+  // Afficher toutes les commandes qui ont été marquées comme prêtes ou livrées
+  const completedOrdersToShow = completedOrders.filter(order => 
+    order.status === 'ready' || order.status === 'delivered'
+  );
 
   const handleOrderReady = (order: Order) => {
+    // Mettre à jour le statut et déplacer vers les commandes terminées
+    const updatedOrder = { ...order, status: 'ready' as const };
+    setCompletedOrders(prev => [...prev, updatedOrder]);
+    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
+    
     onOrderReady(order);
     
     toast({
