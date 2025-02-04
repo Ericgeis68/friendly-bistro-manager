@@ -116,7 +116,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-lg font-medium">Table {order.table}</h3>
+                <h3 className="text-lg font-medium">
+                  Table {order.table}
+                  {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
+                </h3>
                 <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
               </div>
             </div>
@@ -142,7 +145,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-lg font-medium">Table {order.table}</h3>
+                <h3 className="text-lg font-medium">
+                  Table {order.table}
+                  {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
+                </h3>
                 <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>

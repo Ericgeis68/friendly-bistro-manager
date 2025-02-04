@@ -128,12 +128,33 @@ const RestaurantApp: React.FC = () => {
       updatedOrder.mealsStatus = 'delivered';
     }
 
-    // Si les deux sont livrés, marquer la commande comme complètement livrée
+    // Si les deux sont livrés ou annulés, marquer la commande comme complètement livrée
     if (
-      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') &&
-      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered')
+      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
+      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
     ) {
       handleOrderComplete(order);
+    } else {
+      setPendingOrders(prev =>
+        prev.map(o => o.id === order.id ? updatedOrder : o)
+      );
+    }
+  };
+
+  const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
+    const updatedOrder = { ...order };
+    if (type === 'drinks') {
+      updatedOrder.drinksStatus = 'cancelled';
+    } else {
+      updatedOrder.mealsStatus = 'cancelled';
+    }
+
+    // Si les deux sont livrés ou annulés, marquer la commande comme complètement annulée
+    if (
+      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
+      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
+    ) {
+      handleOrderCancel(order);
     } else {
       setPendingOrders(prev =>
         prev.map(o => o.id === order.id ? updatedOrder : o)
@@ -163,7 +184,7 @@ const RestaurantApp: React.FC = () => {
           orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
           onBack={() => setShowPendingOrders(false)}
           onOrderComplete={handleOrderCompleteWithType}
-          onOrderCancel={handleOrderCancel}
+          onOrderCancel={handleOrderCancelWithType}
         />
       );
     }

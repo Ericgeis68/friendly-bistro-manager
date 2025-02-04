@@ -8,7 +8,7 @@ interface PendingOrdersScreenProps {
   orders: Order[];
   onBack: () => void;
   onOrderComplete: (order: Order, type: 'drinks' | 'meals') => void;
-  onOrderCancel: (order: Order) => void;
+  onOrderCancel: (order: Order, type: 'drinks' | 'meals') => void;
 }
 
 const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
@@ -69,13 +69,28 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                   <div className="flex justify-between items-center mb-2">
                     <div className="font-medium">Boissons:</div>
                     <div className="flex gap-2">
-                      {order.drinksStatus !== 'delivered' && (
-                        <button
-                          onClick={() => onOrderComplete(order, 'drinks')}
-                          className="px-3 py-1 bg-green-500 text-white text-sm rounded-md hover:bg-green-600 transition-colors"
-                        >
-                          Livré
-                        </button>
+                      {order.drinksStatus !== 'delivered' && order.drinksStatus !== 'cancelled' && (
+                        <>
+                          <button
+                            onClick={() => onOrderComplete(order, 'drinks')}
+                            className="px-3 py-1 bg-green-500 text-white text-sm rounded-md hover:bg-green-600 transition-colors"
+                          >
+                            Terminé
+                          </button>
+                          <button
+                            onClick={() => onOrderCancel(order, 'drinks')}
+                            className="px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+                          >
+                            Annuler
+                          </button>
+                        </>
+                      )}
+                      {(order.drinksStatus === 'delivered' || order.drinksStatus === 'cancelled') && (
+                        <span className={`px-2 py-1 rounded-full text-sm ${
+                          order.drinksStatus === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {order.drinksStatus === 'delivered' ? 'Terminé' : 'Annulé'}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -96,13 +111,28 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                   <div className="flex justify-between items-center mb-2">
                     <div className="font-medium">Repas:</div>
                     <div className="flex gap-2">
-                      {order.mealsStatus !== 'delivered' && (
-                        <button
-                          onClick={() => onOrderComplete(order, 'meals')}
-                          className="px-3 py-1 bg-green-500 text-white text-sm rounded-md hover:bg-green-600 transition-colors"
-                        >
-                          Livré
-                        </button>
+                      {order.mealsStatus !== 'delivered' && order.mealsStatus !== 'cancelled' && (
+                        <>
+                          <button
+                            onClick={() => onOrderComplete(order, 'meals')}
+                            className="px-3 py-1 bg-green-500 text-white text-sm rounded-md hover:bg-green-600 transition-colors"
+                          >
+                            Terminé
+                          </button>
+                          <button
+                            onClick={() => onOrderCancel(order, 'meals')}
+                            className="px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+                          >
+                            Annuler
+                          </button>
+                        </>
+                      )}
+                      {(order.mealsStatus === 'delivered' || order.mealsStatus === 'cancelled') && (
+                        <span className={`px-2 py-1 rounded-full text-sm ${
+                          order.mealsStatus === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {order.mealsStatus === 'delivered' ? 'Terminé' : 'Annulé'}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -120,13 +150,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
                 </div>
               )}
 
-              <div className="mt-3 pt-2 border-t flex justify-between items-center">
-                <button
-                  onClick={() => onOrderCancel(order)}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-                >
-                  Annuler
-                </button>
+              <div className="mt-3 pt-2 border-t flex justify-end items-center">
                 <div className="font-medium">
                   Total: {total.toFixed(2)} €
                 </div>
