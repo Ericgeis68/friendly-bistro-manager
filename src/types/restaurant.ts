@@ -9,10 +9,13 @@ export type MenuItem = {
 export type Order = {
   id: string;
   table: string;
+  tableComment?: string;
   waitress: string;
   drinks: MenuItem[];
   meals: MenuItem[];
   status: 'pending' | 'completed' | 'cancelled' | 'ready' | 'delivered';
+  drinksStatus?: 'pending' | 'completed' | 'cancelled' | 'ready' | 'delivered';
+  mealsStatus?: 'pending' | 'completed' | 'cancelled' | 'ready' | 'delivered';
   createdAt: string;
   notificationAcknowledged?: boolean;
 };

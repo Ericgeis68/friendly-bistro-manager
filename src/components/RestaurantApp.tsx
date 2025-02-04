@@ -23,6 +23,7 @@ const RestaurantApp: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
   const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
+  const [tableComment, setTableComment] = useState('');
   const [showPendingOrders, setShowPendingOrders] = useState(false);
   const [showCompletedOrders, setShowCompletedOrders] = useState(false);
   const [order, setOrder] = useState<Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>>({
@@ -66,6 +67,7 @@ const RestaurantApp: React.FC = () => {
     setLoggedInUser(null);
     setCurrentScreen('login');
     setTableNumber('');
+    setTableComment('');
     setOrder({
       table: '',
       drinks: [],
@@ -87,7 +89,10 @@ const RestaurantApp: React.FC = () => {
       meals: [...order.meals],
       drinks: [...order.drinks],
       table: tableNumber,
+      tableComment: tableComment || undefined,
       status: 'pending',
+      drinksStatus: order.drinks.length > 0 ? 'pending' : undefined,
+      mealsStatus: order.meals.length > 0 ? 'pending' : undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -106,12 +111,34 @@ const RestaurantApp: React.FC = () => {
       meals: []
     });
     setTableNumber('');
+    setTableComment('');
     setCurrentScreen('waitress');
   };
 
   const handleNotificationAcknowledge = (orderId: string) => {
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
     setShowPendingOrders(true);
+  };
+
+  const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
+    const updatedOrder = { ...order };
+    if (type === 'drinks') {
+      updatedOrder.drinksStatus = 'delivered';
+    } else {
+      updatedOrder.mealsStatus = 'delivered';
+    }
+
+    // Si les deux sont livrés, marquer la commande comme complètement livrée
+    if (
+      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') &&
+      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered')
+    ) {
+      handleOrderComplete(order);
+    } else {
+      setPendingOrders(prev =>
+        prev.map(o => o.id === order.id ? updatedOrder : o)
+      );
+    }
   };
 
   if (currentScreen === 'login') {
@@ -135,7 +162,7 @@ const RestaurantApp: React.FC = () => {
         <PendingOrdersScreen
           orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
           onBack={() => setShowPendingOrders(false)}
-          onOrderComplete={handleOrderComplete}
+          onOrderComplete={handleOrderCompleteWithType}
           onOrderCancel={handleOrderCancel}
         />
       );
@@ -158,6 +185,7 @@ const RestaurantApp: React.FC = () => {
     return <TableInputScreen 
       handleLogout={handleLogout}
       setTableNumber={setTableNumber}
+      setTableComment={setTableComment}
       setCurrentScreen={setCurrentScreen}
     />;
   }
