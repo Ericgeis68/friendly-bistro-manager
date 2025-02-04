@@ -21,6 +21,17 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
+  const getStatusText = (status: Order['status']) => {
+    switch (status) {
+      case 'delivered':
+        return 'Livré';
+      case 'cancelled':
+        return 'Annulé';
+      default:
+        return status;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-blue-500 p-4 text-white flex items-center">
@@ -39,6 +50,13 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
                 <div className="text-sm text-gray-500">
                   {order.id} - {formatOrderDate(order.createdAt)}
                 </div>
+              </div>
+              <div className="text-sm">
+                <span className={`px-2 py-1 rounded-full ${
+                  order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {getStatusText(order.status)}
+                </span>
               </div>
             </div>
             {order.meals.length > 0 && (

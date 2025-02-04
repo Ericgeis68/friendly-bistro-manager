@@ -17,6 +17,9 @@ import { useOrderManagement } from '../hooks/useOrderManagement';
 import { useMenuManagement } from '../hooks/useMenuManagement';
 
 const RestaurantApp: React.FC = () => {
+  // Effacer les commandes terminées au démarrage
+  localStorage.removeItem('completedOrders');
+  
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
   const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
