@@ -38,6 +38,9 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       prev.map(o => o.id === order.id ? updatedOrder : o)
     );
     
+    // Ajouter la commande aux completedOrders
+    setCompletedOrders(prev => [...prev, updatedOrder]);
+    
     onOrderReady(order);
     
     toast({
