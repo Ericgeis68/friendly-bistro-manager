@@ -123,7 +123,7 @@ const RestaurantApp: React.FC = () => {
       return (
         <CompletedOrdersScreen
           orders={completedOrders.filter(order => 
-            order.waitress === loggedInUser && order.status === 'completed'
+            order.waitress === loggedInUser
           )}
           onBack={() => setShowCompletedOrders(false)}
         />
