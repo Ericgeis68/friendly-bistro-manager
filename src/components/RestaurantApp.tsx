@@ -117,6 +117,7 @@ const RestaurantApp: React.FC = () => {
 
   const handleNotificationAcknowledge = (orderId: string) => {
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
+    setShowPendingOrders(true);
   };
 
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
@@ -126,7 +127,9 @@ const RestaurantApp: React.FC = () => {
     } else {
       updatedOrder.mealsStatus = 'delivered';
       // Si c'est un repas qui est livré, on met à jour aussi le statut global
-      updatedOrder.status = 'delivered';
+      if (order.meals.length > 0) {
+        updatedOrder.status = 'delivered';
+      }
     }
 
     // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
@@ -149,7 +152,9 @@ const RestaurantApp: React.FC = () => {
     } else {
       updatedOrder.mealsStatus = 'cancelled';
       // Si c'est un repas qui est annulé, on met à jour aussi le statut global
-      updatedOrder.status = 'cancelled';
+      if (order.meals.length > 0) {
+        updatedOrder.status = 'cancelled';
+      }
     }
 
     // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
