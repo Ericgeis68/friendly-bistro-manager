@@ -21,16 +21,10 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  const getStatusText = (status: Order['status']) => {
-    switch (status) {
-      case 'delivered':
-        return 'Livré';
-      case 'cancelled':
-        return 'Annulé';
-      default:
-        return status;
-    }
-  };
+  // Ne montrer que les commandes complètement terminées ou annulées
+  const filteredOrders = orders.filter(order => 
+    order.status === 'delivered' || order.status === 'cancelled'
+  );
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -42,11 +36,14 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
       </div>
 
       <div className="p-4 space-y-4">
-        {orders.map((order) => (
+        {filteredOrders.map((order) => (
           <div key={order.id} className="bg-white rounded-2xl p-4 shadow">
             <div className="flex justify-between items-center mb-2">
               <div>
-                <div className="font-medium text-lg">Table {order.table}</div>
+                <div className="font-medium text-lg">
+                  Table {order.table}
+                  {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
+                </div>
                 <div className="text-sm text-gray-500">
                   {order.id} - {formatOrderDate(order.createdAt)}
                 </div>
@@ -55,7 +52,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
                 <span className={`px-2 py-1 rounded-full ${
                   order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
-                  {getStatusText(order.status)}
+                  {order.status === 'delivered' ? 'Livré' : 'Annulé'}
                 </span>
               </div>
             </div>
@@ -81,7 +78,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
             )}
           </div>
         ))}
-        {orders.length === 0 && (
+        {filteredOrders.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             Aucune commande terminée
           </div>

@@ -126,9 +126,13 @@ const RestaurantApp: React.FC = () => {
       updatedOrder.drinksStatus = 'delivered';
     } else {
       updatedOrder.mealsStatus = 'delivered';
+      // Si c'est un repas qui est livré, on met à jour aussi le statut global
+      if (order.meals.length > 0) {
+        updatedOrder.status = 'delivered';
+      }
     }
 
-    // Si les deux sont livrés ou annulés, marquer la commande comme complètement livrée
+    // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
     if (
       (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
       (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
@@ -147,9 +151,13 @@ const RestaurantApp: React.FC = () => {
       updatedOrder.drinksStatus = 'cancelled';
     } else {
       updatedOrder.mealsStatus = 'cancelled';
+      // Si c'est un repas qui est annulé, on met à jour aussi le statut global
+      if (order.meals.length > 0) {
+        updatedOrder.status = 'cancelled';
+      }
     }
 
-    // Si les deux sont livrés ou annulés, marquer la commande comme complètement annulée
+    // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
     if (
       (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
       (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
