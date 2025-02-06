@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
+import { generateOrderId } from '../utils/orderUtils';
+import { toast } from "@/hooks/use-toast";
+import { useOrderManagement } from '../hooks/useOrderManagement';
+import { useMenuManagement } from '../hooks/useMenuManagement';
+import { useScreenManagement } from '../hooks/useScreenManagement';
+import { useOrderHandlers } from '../hooks/useOrderHandlers';
 import CuisineScreen from './screens/CuisineScreen';
 import AdminScreen from './screens/AdminScreen';
 import LoginScreen from './screens/LoginScreen';
@@ -11,27 +17,30 @@ import CategoryMenuScreen from './screens/CategoryMenuScreen';
 import DrinkMenuScreen from './screens/DrinkMenuScreen';
 import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
-import { generateOrderId } from '../utils/orderUtils';
-import { toast } from "@/hooks/use-toast";
-import { useOrderManagement } from '../hooks/useOrderManagement';
-import { useMenuManagement } from '../hooks/useMenuManagement';
 
 const RestaurantApp: React.FC = () => {
   // Effacer les commandes terminées au démarrage
   localStorage.removeItem('completedOrders');
   
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
-  const [loggedInUser, setLoggedInUser] = useState<'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null>(null);
   const [tableNumber, setTableNumber] = useState('');
   const [tableComment, setTableComment] = useState('');
-  const [showPendingOrders, setShowPendingOrders] = useState(false);
-  const [showCompletedOrders, setShowCompletedOrders] = useState(false);
   const [order, setOrder] = useState<Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>>({
     table: '',
     drinks: [],
     meals: []
   });
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
+
+  const {
+    currentScreen,
+    setCurrentScreen,
+    loggedInUser,
+    setLoggedInUser,
+    showPendingOrders,
+    setShowPendingOrders,
+    showCompletedOrders,
+    setShowCompletedOrders
+  } = useScreenManagement();
 
   const {
     pendingOrders,
@@ -52,117 +61,34 @@ const RestaurantApp: React.FC = () => {
     setMealsMenu
   } = useMenuManagement();
 
-  const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
-    setLoggedInUser(user);
-    if (user === 'cuisine') {
-      setCurrentScreen('cuisine');
-    } else if (user === 'admin') {
-      setCurrentScreen('admin');
-    } else {
-      setCurrentScreen('waitress');
-    }
-  };
+  const {
+    handleLogin,
+    handleLogout,
+    handleSubmitOrder,
+    handleNotificationAcknowledge,
+    handleOrderCompleteWithType,
+    handleOrderCancelWithType
+  } = useOrderHandlers({
+    loggedInUser,
+    setLoggedInUser,
+    setCurrentScreen,
+    tableNumber,
+    tableComment,
+    order,
+    setOrder,
+    setTableNumber,
+    setTableComment,
+    setDrinksMenu,
+    setMealsMenu,
+    setTempMeals,
+    setPendingOrders,
+    setPendingNotifications,
+    pendingOrders,
+    handleOrderComplete,
+    handleOrderCancel
+  });
 
-  const handleLogout = () => {
-    setLoggedInUser(null);
-    setCurrentScreen('login');
-    setTableNumber('');
-    setTableComment('');
-    setOrder({
-      table: '',
-      drinks: [],
-      meals: []
-    });
-    setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
-    setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
-    setTempMeals([]);
-  };
-
-  const handleSubmitOrder = () => {
-    if (order.meals.length === 0 && order.drinks.length === 0) {
-      return;
-    }
-    
-    const newOrder: Order = {
-      id: generateOrderId(),
-      waitress: loggedInUser!,
-      meals: [...order.meals],
-      drinks: [...order.drinks],
-      table: tableNumber,
-      tableComment: tableComment || undefined,
-      status: 'pending',
-      drinksStatus: order.drinks.length > 0 ? 'pending' : undefined,
-      mealsStatus: order.meals.length > 0 ? 'pending' : undefined,
-      createdAt: new Date().toISOString()
-    };
-
-    setPendingOrders(prev => [...prev, newOrder]);
-    toast({
-      title: "Commande envoyée",
-      description: `La commande pour la table ${tableNumber} a été envoyée en cuisine.`,
-    });
-
-    setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
-    setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
-    setTempMeals([]);
-    setOrder({
-      table: '',
-      drinks: [],
-      meals: []
-    });
-    setTableNumber('');
-    setTableComment('');
-    setCurrentScreen('waitress');
-  };
-
-  const handleNotificationAcknowledge = (orderId: string) => {
-    setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
-  };
-
-  const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
-    const updatedOrder = { ...order };
-    if (type === 'drinks') {
-      updatedOrder.drinksStatus = 'delivered';
-    } else {
-      updatedOrder.mealsStatus = 'delivered';
-      // Mettre à jour le statut global immédiatement pour les repas
-      updatedOrder.status = 'delivered';
-      // Déplacer la commande vers les commandes terminées
-      handleOrderComplete(order);
-      return; // Sortir de la fonction pour éviter le doublon
-    }
-
-    // Si seulement les boissons sont livrées, mettre à jour la commande en cours
-    setPendingOrders(prev =>
-      prev.map(o => o.id === order.id ? updatedOrder : o)
-    );
-  };
-
-  const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
-    const updatedOrder = { ...order };
-    if (type === 'drinks') {
-      updatedOrder.drinksStatus = 'cancelled';
-    } else {
-      updatedOrder.mealsStatus = 'cancelled';
-      // Si c'est un repas qui est annulé, on met à jour aussi le statut global
-      if (order.meals.length > 0) {
-        updatedOrder.status = 'cancelled';
-      }
-    }
-
-    // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
-    if (
-      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
-      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
-    ) {
-      handleOrderCancel(order);
-    } else {
-      setPendingOrders(prev =>
-        prev.map(o => o.id === order.id ? updatedOrder : o)
-      );
-    }
-  };
-
+  // Rendu conditionnel basé sur l'écran actuel
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }

@@ -1,0 +1,167 @@
+import { toast } from "@/hooks/use-toast";
+import { generateOrderId } from '../utils/orderUtils';
+import type { Order, MenuItem } from '../types/restaurant';
+
+interface UseOrderHandlersProps {
+  loggedInUser: string | null;
+  setLoggedInUser: (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null) => void;
+  setCurrentScreen: (screen: any) => void;
+  tableNumber: string;
+  tableComment: string;
+  order: Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>;
+  setOrder: (order: any) => void;
+  setTableNumber: (number: string) => void;
+  setTableComment: (comment: string) => void;
+  setDrinksMenu: (menu: any) => void;
+  setMealsMenu: (menu: any) => void;
+  setTempMeals: (meals: MenuItem[]) => void;
+  setPendingOrders: (orders: any) => void;
+  setPendingNotifications: (notifications: Order[]) => void;
+  pendingOrders: Order[];
+  handleOrderComplete: (order: Order) => void;
+  handleOrderCancel: (order: Order) => void;
+}
+
+export const useOrderHandlers = ({
+  loggedInUser,
+  setLoggedInUser,
+  setCurrentScreen,
+  tableNumber,
+  tableComment,
+  order,
+  setOrder,
+  setTableNumber,
+  setTableComment,
+  setDrinksMenu,
+  setMealsMenu,
+  setTempMeals,
+  setPendingOrders,
+  setPendingNotifications,
+  pendingOrders,
+  handleOrderComplete,
+  handleOrderCancel
+}: UseOrderHandlersProps) => {
+  const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
+    setLoggedInUser(user);
+    if (user === 'cuisine') {
+      setCurrentScreen('cuisine');
+    } else if (user === 'admin') {
+      setCurrentScreen('admin');
+    } else {
+      setCurrentScreen('waitress');
+    }
+  };
+
+  const handleLogout = () => {
+    setLoggedInUser(null);
+    setCurrentScreen('login');
+    setTableNumber('');
+    setTableComment('');
+    setOrder({
+      table: '',
+      drinks: [],
+      meals: []
+    });
+    setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
+    setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
+    setTempMeals([]);
+  };
+
+  const handleSubmitOrder = () => {
+    if (order.meals.length === 0 && order.drinks.length === 0) {
+      return;
+    }
+    
+    const newOrder: Order = {
+      id: generateOrderId(),
+      waitress: loggedInUser!,
+      meals: [...order.meals],
+      drinks: [...order.drinks],
+      table: tableNumber,
+      tableComment: tableComment || undefined,
+      status: 'pending',
+      drinksStatus: order.drinks.length > 0 ? 'pending' : undefined,
+      mealsStatus: order.meals.length > 0 ? 'pending' : undefined,
+      createdAt: new Date().toISOString()
+    };
+
+    setPendingOrders(prev => [...prev, newOrder]);
+    toast({
+      title: "Commande envoyée",
+      description: `La commande pour la table ${tableNumber} a été envoyée en cuisine.`,
+    });
+
+    setDrinksMenu(prevDrinksMenu => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
+    setMealsMenu(prevMealsMenu => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
+    setTempMeals([]);
+    setOrder({
+      table: '',
+      drinks: [],
+      meals: []
+    });
+    setTableNumber('');
+    setTableComment('');
+    setCurrentScreen('waitress');
+  };
+
+  const handleNotificationAcknowledge = (orderId: string) => {
+    setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
+  };
+
+  const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
+    const updatedOrder = { ...order };
+    if (type === 'drinks') {
+      updatedOrder.drinksStatus = 'delivered';
+    } else {
+      updatedOrder.mealsStatus = 'delivered';
+      // Mettre à jour uniquement le statut des repas
+      setPendingOrders(prev =>
+        prev.map(o => o.id === order.id ? updatedOrder : o)
+      );
+    }
+
+    // Si les deux sont livrés, déplacer la commande vers les commandes terminées
+    const currentOrder = pendingOrders.find(o => o.id === order.id);
+    if (currentOrder && 
+        (!currentOrder.drinks.length || currentOrder.drinksStatus === 'delivered') &&
+        (!currentOrder.meals.length || currentOrder.mealsStatus === 'delivered')) {
+      handleOrderComplete({ ...updatedOrder, status: 'delivered' });
+    } else {
+      setPendingOrders(prev =>
+        prev.map(o => o.id === order.id ? updatedOrder : o)
+      );
+    }
+  };
+
+  const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
+    const updatedOrder = { ...order };
+    if (type === 'drinks') {
+      updatedOrder.drinksStatus = 'cancelled';
+    } else {
+      updatedOrder.mealsStatus = 'cancelled';
+      if (order.meals.length > 0) {
+        updatedOrder.status = 'cancelled';
+      }
+    }
+
+    if (
+      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
+      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
+    ) {
+      handleOrderCancel(order);
+    } else {
+      setPendingOrders(prev =>
+        prev.map(o => o.id === order.id ? updatedOrder : o)
+      );
+    }
+  };
+
+  return {
+    handleLogin,
+    handleLogout,
+    handleSubmitOrder,
+    handleNotificationAcknowledge,
+    handleOrderCompleteWithType,
+    handleOrderCancelWithType
+  };
+};
