@@ -15,7 +15,7 @@ interface UseOrderHandlersProps {
   setDrinksMenu: (menu: any) => void;
   setMealsMenu: (menu: any) => void;
   setTempMeals: (meals: MenuItem[]) => void;
-  setPendingOrders: (orders: any) => void;
+  setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   setPendingNotifications: (notifications: Order[]) => void;
   pendingOrders: Order[];
   handleOrderComplete: (order: Order) => void;
@@ -110,27 +110,21 @@ export const useOrderHandlers = ({
 
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
     const updatedOrder = { ...order };
+    
     if (type === 'drinks') {
       updatedOrder.drinksStatus = 'delivered';
     } else {
       updatedOrder.mealsStatus = 'delivered';
-      // Mettre à jour uniquement le statut des repas
-      setPendingOrders(prev =>
-        prev.map(o => o.id === order.id ? updatedOrder : o)
-      );
+      updatedOrder.status = 'delivered';
+      // Si les repas sont terminés, on déplace la commande vers les commandes terminées
+      handleOrderComplete(updatedOrder);
+      return;
     }
 
-    // Si les deux sont livrés, déplacer la commande vers les commandes terminées
-    const currentOrder = pendingOrders.find(o => o.id === order.id);
-    if (currentOrder && 
-        (!currentOrder.drinks.length || currentOrder.drinksStatus === 'delivered') &&
-        (!currentOrder.meals.length || currentOrder.mealsStatus === 'delivered')) {
-      handleOrderComplete({ ...updatedOrder, status: 'delivered' });
-    } else {
-      setPendingOrders(prev =>
-        prev.map(o => o.id === order.id ? updatedOrder : o)
-      );
-    }
+    // Mettre à jour la commande dans pendingOrders si ce sont les boissons
+    setPendingOrders(prev => 
+      prev.map(o => o.id === order.id ? updatedOrder : o)
+    );
   };
 
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
