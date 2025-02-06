@@ -85,7 +85,7 @@ export const useOrderHandlers = ({
       createdAt: new Date().toISOString()
     };
 
-    setPendingOrders(prev => [...prev, newOrder]);
+    setPendingOrders(prevOrders => [...prevOrders, newOrder]);
     toast({
       title: "Commande envoyée",
       description: `La commande pour la table ${tableNumber} a été envoyée en cuisine.`,
@@ -113,18 +113,24 @@ export const useOrderHandlers = ({
     
     if (type === 'drinks') {
       updatedOrder.drinksStatus = 'delivered';
+      setPendingOrders(prevOrders => 
+        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
+      );
     } else {
       updatedOrder.mealsStatus = 'delivered';
       updatedOrder.status = 'delivered';
-      // Si les repas sont terminés, on déplace la commande vers les commandes terminées
-      handleOrderComplete(updatedOrder);
-      return;
+      setPendingOrders(prevOrders => 
+        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
+      );
     }
 
-    // Mettre à jour la commande dans pendingOrders si ce sont les boissons
-    setPendingOrders(prev => 
-      prev.map(o => o.id === order.id ? updatedOrder : o)
-    );
+    // Vérifier si les deux sont livrés
+    if (
+      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') &&
+      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered')
+    ) {
+      handleOrderComplete(updatedOrder);
+    }
   };
 
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
@@ -139,10 +145,10 @@ export const useOrderHandlers = ({
     }
 
     if (
-      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
-      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
+      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'cancelled') &&
+      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'cancelled')
     ) {
-      handleOrderCancel(order);
+      handleOrderCancel(updatedOrder);
     } else {
       setPendingOrders(prev =>
         prev.map(o => o.id === order.id ? updatedOrder : o)
