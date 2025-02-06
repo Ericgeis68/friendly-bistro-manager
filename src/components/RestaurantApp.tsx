@@ -127,19 +127,15 @@ const RestaurantApp: React.FC = () => {
       updatedOrder.mealsStatus = 'delivered';
       // Mettre à jour le statut global immédiatement pour les repas
       updatedOrder.status = 'delivered';
+      // Déplacer la commande vers les commandes terminées
+      handleOrderComplete(order);
+      return; // Sortir de la fonction pour éviter le doublon
     }
 
-    // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
-    if (
-      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered' || updatedOrder.drinksStatus === 'cancelled') &&
-      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered' || updatedOrder.mealsStatus === 'cancelled')
-    ) {
-      handleOrderComplete(order);
-    } else {
-      setPendingOrders(prev =>
-        prev.map(o => o.id === order.id ? updatedOrder : o)
-      );
-    }
+    // Si seulement les boissons sont livrées, mettre à jour la commande en cours
+    setPendingOrders(prev =>
+      prev.map(o => o.id === order.id ? updatedOrder : o)
+    );
   };
 
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
