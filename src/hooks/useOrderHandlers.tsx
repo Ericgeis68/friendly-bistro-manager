@@ -150,8 +150,8 @@ export const useOrderHandlers = ({
     ) {
       handleOrderCancel(updatedOrder);
     } else {
-      setPendingOrders(prev =>
-        prev.map(o => o.id === order.id ? updatedOrder : o)
+      setPendingOrders(prevOrders =>
+        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
       );
     }
   };
