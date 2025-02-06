@@ -117,7 +117,6 @@ const RestaurantApp: React.FC = () => {
 
   const handleNotificationAcknowledge = (orderId: string) => {
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
-    setShowPendingOrders(true);
   };
 
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
@@ -126,10 +125,8 @@ const RestaurantApp: React.FC = () => {
       updatedOrder.drinksStatus = 'delivered';
     } else {
       updatedOrder.mealsStatus = 'delivered';
-      // Si c'est un repas qui est livré, on met à jour aussi le statut global
-      if (order.meals.length > 0) {
-        updatedOrder.status = 'delivered';
-      }
+      // Mettre à jour le statut global immédiatement pour les repas
+      updatedOrder.status = 'delivered';
     }
 
     // Si les deux sont livrés ou annulés, on retire la commande des commandes en cours
@@ -187,6 +184,11 @@ const RestaurantApp: React.FC = () => {
     }
     
     if (showPendingOrders) {
+      // Supprimer les notifications quand on consulte les commandes en cours
+      pendingNotifications
+        .filter(order => order.waitress === loggedInUser)
+        .forEach(order => handleNotificationAcknowledge(order.id));
+      
       return (
         <PendingOrdersScreen
           orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
