@@ -113,18 +113,17 @@ export const useOrderHandlers = ({
     
     if (type === 'drinks') {
       updatedOrder.drinksStatus = 'delivered';
-      setPendingOrders(prevOrders => 
-        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
-      );
     } else {
       updatedOrder.mealsStatus = 'delivered';
       updatedOrder.status = 'delivered';
-      setPendingOrders(prevOrders => 
-        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
-      );
     }
 
-    // Vérifier si les deux sont livrés
+    // Update the order in pendingOrders
+    setPendingOrders((prevOrders: Order[]) => 
+      prevOrders.map((o: Order) => o.id === order.id ? updatedOrder : o)
+    );
+
+    // If both drinks and meals are delivered, complete the order
     if (
       (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') &&
       (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered')
@@ -150,8 +149,8 @@ export const useOrderHandlers = ({
     ) {
       handleOrderCancel(updatedOrder);
     } else {
-      setPendingOrders(prevOrders =>
-        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
+      setPendingOrders((prevOrders: Order[]) =>
+        prevOrders.map((o: Order) => o.id === order.id ? updatedOrder : o)
       );
     }
   };
