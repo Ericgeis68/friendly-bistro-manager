@@ -21,6 +21,7 @@ interface UseOrderHandlersProps {
   handleOrderComplete: (order: Order) => void;
   handleOrderCancel: (order: Order) => void;
   handleDrinksComplete: (order: Order) => void;
+  setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>;
 }
 
 export const useOrderHandlers = ({
@@ -41,7 +42,8 @@ export const useOrderHandlers = ({
   pendingOrders,
   handleOrderComplete,
   handleOrderCancel,
-  handleDrinksComplete
+  handleDrinksComplete,
+  setCompletedOrders
 }: UseOrderHandlersProps) => {
   const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
     setLoggedInUser(user);
@@ -124,20 +126,41 @@ export const useOrderHandlers = ({
         handleDrinksComplete(order);
       }
     } else if (type === 'meals') {
-      // Set meals status to delivered
-      const updatedOrder = { ...order, mealsStatus: 'delivered' as const };
+      // Create a meals-only order for completed orders
+      const mealsOnlyOrder: Order = {
+        ...order,
+        id: `${order.id}-meals`, // Create a unique ID for the meals order
+        drinks: [],
+        status: 'delivered' as const,
+        mealsStatus: 'delivered' as const,
+        drinksStatus: undefined,
+        createdAt: order.createdAt
+      };
       
-      // If there are no drinks or drinks are already delivered, complete the entire order
-      if (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') {
-        handleOrderComplete(updatedOrder);
+      // Update the pending orders, keeping only drinks if they exist
+      if (!order.drinks.length || order.drinksStatus === 'delivered') {
+        // If there are no drinks or drinks are already delivered, complete the entire order
+        handleOrderComplete(order);
+        
         toast({
           title: "Commande terminée",
           description: `La commande pour la table ${order.table} a été terminée.`,
         });
       } else {
-        // If there are drinks that aren't delivered yet, just update the order
+        // If there are drinks that aren't delivered yet, create an order with only drinks
+        const drinksOnlyOrder: Order = {
+          ...order,
+          meals: [],
+          mealsStatus: undefined,
+          status: 'pending' as const
+        };
+        
+        // Add the meals to completed orders
+        setCompletedOrders(prev => [...prev, mealsOnlyOrder]);
+        
+        // Update pending orders to contain only drinks
         setPendingOrders(prevOrders => 
-          prevOrders.map(o => o.id === order.id ? updatedOrder : o)
+          prevOrders.map(o => o.id === order.id ? drinksOnlyOrder : o)
         );
         
         toast({

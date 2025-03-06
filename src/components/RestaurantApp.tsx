@@ -18,8 +18,8 @@ import RecapOrderScreen from './screens/RecapOrderScreen';
 import SplitPaymentScreen from './screens/SplitPaymentScreen';
 
 const RestaurantApp: React.FC = () => {
-  // Clear completed orders on startup
-  localStorage.removeItem('completedOrders');
+  // Remove this line as we want to persist completed orders
+  // localStorage.removeItem('completedOrders');
   
   const [tableNumber, setTableNumber] = useState('');
   const [tableComment, setTableComment] = useState('');
@@ -86,7 +86,8 @@ const RestaurantApp: React.FC = () => {
     pendingOrders,
     handleOrderComplete,
     handleOrderCancel,
-    handleDrinksComplete
+    handleDrinksComplete,
+    setCompletedOrders
   });
 
   if (currentScreen === 'login') {
