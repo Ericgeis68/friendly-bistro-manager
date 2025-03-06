@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
@@ -9,7 +10,7 @@ interface RecapOrderScreenProps {
     meals: MenuItem[];
   };
   handleSubmitOrder: () => void;
-  setCurrentScreen: (screen: 'category') => void;
+  setCurrentScreen: (screen: 'category' | 'splitPayment') => void;
 }
 
 const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
@@ -21,20 +22,20 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const { drinks = [], meals = [] } = order;
 
-  const drinkTotal = drinks.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const mealTotal = meals.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const drinkTotal = drinks.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const mealTotal = meals.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   const totalAmount = drinkTotal + mealTotal;
   const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
 
-  const groupedMeals = meals.reduce((acc, meal) => {
+  const groupedMeals = meals.reduce<Record<string, MenuItem>>((acc, meal) => {
     const key = `${meal.name}-${meal.cooking || 'none'}`;
     if (acc[key]) {
-      acc[key].quantity += meal.quantity;
+      acc[key].quantity = (acc[key].quantity || 1) + 1;
     } else {
-      acc[key] = { ...meal };
+      acc[key] = { ...meal, quantity: 1 };
     }
     return acc;
-  }, {} as { [key: string]: MenuItem });
+  }, {});
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -56,9 +57,9 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
               <div key={item.id} className="flex justify-between mb-2 text-gray-800">
                 <div>
                   <span className="font-medium">{item.name}</span>
-                  <span className="text-gray-600 text-sm"> x{item.quantity}</span>
+                  <span className="text-gray-600 text-sm"> x{item.quantity || 1}</span>
                 </div>
-                <span>{(item.price * item.quantity).toFixed(2)} €</span>
+                <span>{((item.price * (item.quantity || 1))).toFixed(2)} €</span>
               </div>
             ))}
             <div className="text-right text-gray-600 border-t pt-2 mt-2">
@@ -70,13 +71,13 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
           <div className="bg-white rounded-xl shadow-md p-4 mb-4">
             <h2 className="font-bold mb-2 text-lg border-b pb-2 text-gray-800">Repas</h2>
             {Object.values(groupedMeals).map(item => (
-              <div key={item.id} className="flex justify-between mb-2 text-gray-800">
+              <div key={`${item.id}-${item.cooking}`} className="flex justify-between mb-2 text-gray-800">
                 <div>
                   <span className="font-medium">{item.name}</span>
                   <span className="text-gray-600 text-sm"> x{item.quantity}</span>
                   {item.cooking && <span className="text-gray-600 text-sm"> ({item.cooking})</span>}
                 </div>
-                <span>{(item.price * item.quantity).toFixed(2)} €</span>
+                <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>
               </div>
             ))}
             <div className="text-right text-gray-600 border-t pt-2 mt-2">
@@ -105,9 +106,15 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
         </div>
         <button
           onClick={handleSubmitOrder}
-          className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+          className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-2"
         >
           Valider la commande
+        </button>
+        <button
+          onClick={() => setCurrentScreen('splitPayment')}
+          className="w-full h-12 text-lg bg-green-500 hover:bg-green-600 text-white rounded-md"
+        >
+          Paiement séparé
         </button>
       </div>
     </div>

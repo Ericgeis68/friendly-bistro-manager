@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
@@ -7,11 +8,13 @@ import { fr } from 'date-fns/locale';
 interface CompletedOrdersScreenProps {
   orders: Order[];
   onBack: () => void;
+  userRole?: 'waitress' | 'cuisine';
 }
 
 const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
   orders,
-  onBack
+  onBack,
+  userRole = 'waitress'
 }) => {
   const formatOrderDate = (date: string) => {
     try {
@@ -21,10 +24,19 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  // Ne montrer que les commandes complètement terminées ou annulées
-  const filteredOrders = orders.filter(order => 
-    order.status === 'delivered' || order.status === 'cancelled'
-  );
+  // Filter orders based on user role
+  const filteredOrders = orders.filter(order => {
+    // Base filter: only show completed or cancelled orders
+    const statusFilter = order.status === 'delivered' || order.status === 'cancelled';
+    
+    // For cuisine, don't show drink-only orders (those with "-drinks" in the ID)
+    if (userRole === 'cuisine') {
+      return statusFilter && !order.id.includes('-drinks');
+    }
+    
+    // For waitresses, show all completed/cancelled orders
+    return statusFilter;
+  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -45,33 +57,34 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
                   {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {order.id} - {formatOrderDate(order.createdAt)}
+                  {order.id.includes('-drinks') ? `${order.id.replace('-drinks', '')} (Boissons)` : order.id} - {formatOrderDate(order.createdAt)}
                 </div>
               </div>
               <div className="text-sm">
                 <span className={`px-2 py-1 rounded-full ${
-                  order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                  'bg-red-100 text-red-800'
                 }`}>
                   {order.status === 'delivered' ? 'Livré' : 'Annulé'}
                 </span>
               </div>
             </div>
-            {order.meals.length > 0 && (
+            {order.meals && order.meals.length > 0 && (
               <div className="mt-2">
                 <div className="font-medium mb-1">Repas:</div>
                 {order.meals.map((meal, mealIndex) => (
                   <div key={`${order.id}-meal-${mealIndex}`} className="text-gray-600 ml-2">
-                    {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+                    {meal.name} x{meal.quantity || 1} {meal.cooking && `(${meal.cooking})`}
                   </div>
                 ))}
               </div>
             )}
-            {order.drinks.length > 0 && (
+            {order.drinks && order.drinks.length > 0 && (
               <div className="mt-2">
                 <div className="font-medium mb-1">Boissons:</div>
                 {order.drinks.map((drink, drinkIndex) => (
                   <div key={`${order.id}-drink-${drinkIndex}`} className="text-gray-600 ml-2">
-                    {drink.name} x{drink.quantity}
+                    {drink.name} x{drink.quantity || 1}
                   </div>
                 ))}
               </div>

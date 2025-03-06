@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
-import { generateOrderId } from '../utils/orderUtils';
-import { toast } from "@/hooks/use-toast";
 import { useOrderManagement } from '../hooks/useOrderManagement';
 import { useMenuManagement } from '../hooks/useMenuManagement';
 import { useScreenManagement } from '../hooks/useScreenManagement';
@@ -17,9 +15,10 @@ import CategoryMenuScreen from './screens/CategoryMenuScreen';
 import DrinkMenuScreen from './screens/DrinkMenuScreen';
 import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
+import SplitPaymentScreen from './screens/SplitPaymentScreen';
 
 const RestaurantApp: React.FC = () => {
-  // Effacer les commandes terminées au démarrage
+  // Clear completed orders on startup
   localStorage.removeItem('completedOrders');
   
   const [tableNumber, setTableNumber] = useState('');
@@ -51,7 +50,8 @@ const RestaurantApp: React.FC = () => {
     setPendingNotifications,
     handleOrderReady,
     handleOrderComplete,
-    handleOrderCancel
+    handleOrderCancel,
+    handleDrinksComplete
   } = useOrderManagement();
 
   const {
@@ -85,10 +85,10 @@ const RestaurantApp: React.FC = () => {
     setPendingNotifications,
     pendingOrders,
     handleOrderComplete,
-    handleOrderCancel
+    handleOrderCancel,
+    handleDrinksComplete
   });
 
-  // Rendu conditionnel basé sur l'écran actuel
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
@@ -101,12 +101,12 @@ const RestaurantApp: React.FC = () => {
             order.waitress === loggedInUser
           )}
           onBack={() => setShowCompletedOrders(false)}
+          userRole="waitress"
         />
       );
     }
     
     if (showPendingOrders) {
-      // Supprimer les notifications quand on consulte les commandes en cours
       pendingNotifications
         .filter(order => order.waitress === loggedInUser)
         .forEach(order => handleNotificationAcknowledge(order.id));
@@ -117,6 +117,7 @@ const RestaurantApp: React.FC = () => {
           onBack={() => setShowPendingOrders(false)}
           onOrderComplete={handleOrderCompleteWithType}
           onOrderCancel={handleOrderCancelWithType}
+          setPendingOrders={setPendingOrders}
         />
       );
     }
@@ -178,6 +179,14 @@ const RestaurantApp: React.FC = () => {
       tableNumber={tableNumber}
       order={order}
       handleSubmitOrder={handleSubmitOrder}
+      setCurrentScreen={setCurrentScreen}
+    />;
+  }
+
+  if (currentScreen === 'splitPayment') {
+    return <SplitPaymentScreen 
+      tableNumber={tableNumber}
+      order={order}
       setCurrentScreen={setCurrentScreen}
     />;
   }

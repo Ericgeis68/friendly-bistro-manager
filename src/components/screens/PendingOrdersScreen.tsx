@@ -1,22 +1,33 @@
-import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Search, Filter, Trash2, CheckCircle, Bell } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Button } from '../ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { Badge } from "../ui/badge";
+
+type FilterType = 'all' | 'drinks' | 'meals';
 
 interface PendingOrdersScreenProps {
   orders: Order[];
-  onBack: () => void;
   onOrderComplete: (order: Order, type: 'drinks' | 'meals') => void;
-  onOrderCancel: (order: Order, type: 'drinks' | 'meals') => void;
+  onOrderCancel: (order: Order, type: 'drinks' | 'meals' | 'all') => void;
+  onBack: () => void;
+  setPendingOrders: (orders: Order[]) => void;
 }
 
 const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   orders,
-  onBack,
   onOrderComplete,
-  onOrderCancel
+  onOrderCancel,
+  onBack,
+  setPendingOrders
 }) => {
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [orderToCancel, setOrderToCancel] = useState<{order: Order, type: 'drinks' | 'meals' | 'all'} | null>(null);
+
   const formatOrderDate = (date: string) => {
     try {
       return format(new Date(date), 'HH:mm', { locale: fr });
@@ -25,17 +36,111 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
     }
   };
 
-  const getStatusColor = (status: Order['status']) => {
-    if (status === 'ready') {
-      return 'bg-yellow-100 text-yellow-800';
-    }
-    return '';
+  const handleCancelOrder = (order: Order, type: 'drinks' | 'meals' | 'all') => {
+    onOrderCancel(order, type);
   };
 
-  const calculateSubtotals = (order: Order) => {
-    const drinksTotal = order.drinks.reduce((sum, drink) => sum + (drink.price * drink.quantity), 0);
-    const mealsTotal = order.meals.reduce((sum, meal) => sum + (meal.price * meal.quantity), 0);
-    return { drinksTotal, mealsTotal, total: drinksTotal + mealsTotal };
+  const handleCompleteOrder = (order: Order, type: 'drinks' | 'meals') => {
+    onOrderComplete(order, type);
+  };
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const searchTerm = searchQuery.toLowerCase();
+      const matchesSearch =
+        order.table.toLowerCase().includes(searchTerm) ||
+        (order.tableComment && order.tableComment.toLowerCase().includes(searchTerm)) ||
+        order.waitress.toLowerCase().includes(searchTerm) ||
+        order.meals.some(meal => meal.name.toLowerCase().includes(searchTerm)) ||
+        order.drinks.some(drink => drink.name.toLowerCase().includes(searchTerm));
+
+      if (filter === 'drinks') return order.drinks.length > 0 && matchesSearch;
+      if (filter === 'meals') return order.meals.length > 0 && matchesSearch;
+      return matchesSearch;
+    });
+  }, [orders, filter, searchQuery]);
+
+  const getActionButtonText = (order: Order, type: 'drinks' | 'meals' | 'all', action: 'cancel' | 'complete') => {
+    if (type === 'drinks') {
+      return action === 'complete' ? "Terminer boissons" : "Annuler boissons";
+    }
+    if (type === 'meals') {
+      if (order.mealsStatus === 'ready') return "Terminer repas";
+      return "Annuler repas";
+    }
+    return "Annuler commande";
+  };
+
+  const getConfirmationText = (order: Order, type: 'drinks' | 'meals' | 'all', action: 'cancel' | 'complete') => {
+    if (type === 'drinks') {
+      return action === 'complete' 
+        ? "Cette action marquera les boissons comme livrées."
+        : "Cette action supprimera les boissons de la commande.";
+    }
+    if (type === 'meals') {
+      if (order.mealsStatus === 'ready') return "Cette action marquera les repas comme livrés.";
+      return "Cette action supprimera les repas de la commande.";
+    }
+    return "Cette action supprimera la commande complète définitivement.";
+  };
+
+  const handleActionButtonClick = (order: Order, type: 'drinks' | 'meals' | 'all', action: 'cancel' | 'complete') => {
+    if (action === 'complete') {
+      handleCompleteOrder(order, type as 'drinks' | 'meals');
+    } else {
+      handleCancelOrder(order, type);
+    }
+  };
+
+  const ActionButton = ({ 
+    order, 
+    type, 
+    action = 'cancel',
+    className = '' 
+  }: { 
+    order: Order, 
+    type: 'drinks' | 'meals' | 'all',
+    action?: 'cancel' | 'complete',
+    className?: string
+  }) => {
+    if (type === 'meals' && order.mealsStatus === 'ready' && action === 'cancel') {
+      return null;
+    }
+
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant={action === 'complete' || (type === 'meals' && order.mealsStatus === 'ready') ? "default" : "destructive"} 
+            size="sm"
+            className={className}
+          >
+            {(action === 'complete' || (type === 'meals' && order.mealsStatus === 'ready')) ? (
+              <CheckCircle className="h-4 w-4 mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {getActionButtonText(order, type, action)}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {getConfirmationText(order, type, action)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleActionButtonClick(order, type, action)}>
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
   };
 
   return (
@@ -47,122 +152,144 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
         <h1 className="text-xl font-bold">Commandes en cours</h1>
       </div>
 
-      <div className="p-4 space-y-4">
-        {orders.map((order) => {
-          const { drinksTotal, mealsTotal, total } = calculateSubtotals(order);
-          return (
-            <div key={order.id} className="bg-white rounded-2xl p-4 shadow">
-              <div className="flex justify-between items-center mb-2">
-                <div>
-                  <div className="font-medium text-lg">
-                    Table {order.table}
-                    {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {order.id} - {formatOrderDate(order.createdAt)}
-                  </div>
-                </div>
-              </div>
-
-              {order.drinks.length > 0 && (
-                <div className="mt-2 border-t pt-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium">Boissons:</div>
-                    <div className="flex gap-2">
-                      {order.drinksStatus !== 'delivered' && order.drinksStatus !== 'cancelled' && (
-                        <>
-                          <button
-                            onClick={() => onOrderComplete(order, 'drinks')}
-                            className="px-3 py-1 bg-green-500 text-white text-sm rounded-md hover:bg-green-600 transition-colors"
-                          >
-                            Terminé
-                          </button>
-                          <button
-                            onClick={() => onOrderCancel(order, 'drinks')}
-                            className="px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
-                          >
-                            Annuler
-                          </button>
-                        </>
-                      )}
-                      {(order.drinksStatus === 'delivered' || order.drinksStatus === 'cancelled') && (
-                        <span className={`px-2 py-1 rounded-full text-sm ${
-                          order.drinksStatus === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {order.drinksStatus === 'delivered' ? 'Terminé' : 'Annulé'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {order.drinks.map((drink, drinkIndex) => (
-                    <div key={`${order.id}-drink-${drinkIndex}`} className="text-gray-600 ml-2 flex justify-between">
-                      <span>{drink.name} x{drink.quantity}</span>
-                      <span>{(drink.price * drink.quantity).toFixed(2)} €</span>
-                    </div>
-                  ))}
-                  <div className="text-right text-sm text-gray-600 mt-1">
-                    Sous-total boissons: {drinksTotal.toFixed(2)} €
-                  </div>
-                </div>
-              )}
-
-              {order.meals.length > 0 && (
-                <div className="mt-2 border-t pt-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="font-medium">Repas:</div>
-                    <div className="flex gap-2">
-                      {order.mealsStatus !== 'delivered' && order.mealsStatus !== 'cancelled' && (
-                        <>
-                          <button
-                            onClick={() => onOrderComplete(order, 'meals')}
-                            className="px-3 py-1 bg-green-500 text-white text-sm rounded-md hover:bg-green-600 transition-colors"
-                          >
-                            Terminé
-                          </button>
-                          <button
-                            onClick={() => onOrderCancel(order, 'meals')}
-                            className="px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
-                          >
-                            Annuler
-                          </button>
-                        </>
-                      )}
-                      {(order.mealsStatus === 'delivered' || order.mealsStatus === 'cancelled') && (
-                        <span className={`px-2 py-1 rounded-full text-sm ${
-                          order.mealsStatus === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {order.mealsStatus === 'delivered' ? 'Terminé' : 'Annulé'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {order.meals.map((meal, mealIndex) => (
-                    <div key={`${order.id}-meal-${mealIndex}`} className="text-gray-600 ml-2 flex justify-between">
-                      <span>
-                        {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
-                      </span>
-                      <span>{(meal.price * meal.quantity).toFixed(2)} €</span>
-                    </div>
-                  ))}
-                  <div className="text-right text-sm text-gray-600 mt-1">
-                    Sous-total repas: {mealsTotal.toFixed(2)} €
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-3 pt-2 border-t flex justify-end items-center">
-                <div className="font-medium">
-                  Total: {total.toFixed(2)} €
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {orders.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            Aucune commande en cours
+      <div className="p-4">
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilter('all')}
+          >
+            <Filter size={16} className="mr-2" />
+            Tout
+          </Button>
+          <Button
+            variant={filter === 'drinks' ? 'default' : 'outline'}
+            onClick={() => setFilter('drinks')}
+            className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+          >
+            <Filter size={16} className="mr-2" />
+            Boissons
+          </Button>
+          <Button
+            variant={filter === 'meals' ? 'default' : 'outline'}
+            onClick={() => setFilter('meals')}
+            className="bg-orange-100 text-orange-800 hover:bg-orange-200"
+          >
+            <Filter size={16} className="mr-2" />
+            Repas
+          </Button>
+        </div>
+        <div className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              className="w-full h-10 px-3 py-2 rounded-md border border-gray-300 text-gray-800"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <Search className="absolute right-3 top-3 h-4 w-4 text-gray-500" />
           </div>
-        )}
+        </div>
+
+        <div className="space-y-4">
+          {filteredOrders.map((order) => (
+            <div key={order.id} className="bg-white rounded-2xl shadow overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium text-lg">
+                      Table {order.table}
+                      {order.tableComment && (
+                        <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {formatOrderDate(order.createdAt)} - {order.waitress}
+                    </div>
+                  </div>
+                  {filter === 'drinks' && (
+                    <div className="flex gap-2">
+                      <ActionButton order={order} type="drinks" action="complete" />
+                      <ActionButton order={order} type="drinks" />
+                    </div>
+                  )}
+                  {filter === 'meals' && (
+                    <div className="flex gap-2">
+                      {order.mealsStatus === 'ready' ? (
+                        <ActionButton order={order} type="meals" action="complete" />
+                      ) : (
+                        <ActionButton order={order} type="meals" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {(filter === 'all' || filter === 'drinks') && order.drinks.length > 0 && (
+                <div className="p-4 bg-blue-50">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium text-blue-800 mb-2">Boissons</h3>
+                    {filter === 'all' && order.drinks.length > 0 && (
+                      <div className="flex gap-2">
+                        <ActionButton order={order} type="drinks" action="complete" />
+                        <ActionButton order={order} type="drinks" />
+                      </div>
+                    )}
+                  </div>
+                  {order.drinks.map((drink, index) => (
+                    <div key={index} className="text-gray-700 ml-2">
+                      {drink.name} x{drink.quantity}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {(filter === 'all' || filter === 'meals') && order.meals.length > 0 && (
+                <div className="p-4 bg-orange-50">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <h3 className="font-medium text-orange-800 mb-2">Repas</h3>
+                      {order.mealsStatus === 'ready' && (
+                        <Badge variant="secondary" className="ml-2 bg-green-500 text-white">
+                          <Bell className="h-3 w-3 mr-1" />
+                          Prêt
+                        </Badge>
+                      )}
+                    </div>
+                    {filter === 'all' && order.meals.length > 0 && (
+                      <div className="ml-2">
+                        {order.mealsStatus === 'ready' ? (
+                          <ActionButton order={order} type="meals" action="complete" />
+                        ) : (
+                          <ActionButton order={order} type="meals" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {order.meals.map((meal, index) => (
+                    <div key={index} className="text-gray-700 ml-2">
+                      {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {filter === 'all' && (
+                <div className="px-4 pb-4">
+                  <ActionButton order={order} type="all" className="w-full mt-2" />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {filteredOrders.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              {filter === 'drinks' && "Aucune commande de boissons en cours"}
+              {filter === 'meals' && "Aucune commande de repas en cours"}
+              {filter === 'all' && "Aucune commande en cours"}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

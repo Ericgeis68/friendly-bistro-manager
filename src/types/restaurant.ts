@@ -1,3 +1,4 @@
+
 export type MenuItem = {
   id: number;
   name: string;
@@ -20,4 +21,4 @@ export type Order = {
   notificationAcknowledged?: boolean;
 };
 
-export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'admin';
+export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'admin' | 'splitPayment';

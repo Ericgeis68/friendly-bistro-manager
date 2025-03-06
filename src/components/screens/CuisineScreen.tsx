@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
+import CompletedOrdersScreen from './CompletedOrdersScreen';
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -23,31 +25,31 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Filtrer les commandes en cours pour n'afficher que celles qui n'ont pas encore été marquées comme prêtes
   const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
-  
-  // Afficher toutes les commandes qui ont été marquées comme prêtes ou livrées
-  const completedOrdersToShow = completedOrders;
 
   const handleOrderReady = (order: Order) => {
-    // Mettre à jour le statut de la commande à 'ready'
     const updatedOrder = { ...order, status: 'ready' as const };
-    
-    // Mettre à jour la commande dans pendingOrders
     setPendingOrders(prev => 
       prev.map(o => o.id === order.id ? updatedOrder : o)
     );
-    
-    // Ajouter la commande aux completedOrders
     setCompletedOrders(prev => [...prev, updatedOrder]);
-    
     onOrderReady(order);
-    
     toast({
       title: "Notification envoyée",
       description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
     });
   };
+
+  // If showing completed orders, render the CompletedOrdersScreen component
+  if (showOrders === 'completed') {
+    return (
+      <CompletedOrdersScreen 
+        orders={completedOrders}
+        onBack={() => setShowOrders('pending')}
+        userRole="cuisine"
+      />
+    );
+  }
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -55,6 +57,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         return 'bg-yellow-100 text-yellow-800';
       case 'delivered':
         return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -66,6 +70,8 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         return 'En cours';
       case 'delivered':
         return 'Livré';
+      case 'cancelled':
+        return 'Annulé';
       default:
         return status;
     }
@@ -138,30 +144,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
                 Prêt
               </button>
             )}
-          </div>
-        ))}
-        
-        {showOrders === 'completed' && completedOrdersToShow.map((order) => (
-          <div key={order.id} className="bg-white rounded-xl p-4 shadow w-64">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h3 className="text-lg font-medium">
-                  Table {order.table}
-                  {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
-                </h3>
-                <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
-              </div>
-              <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
-                {getStatusText(order.status)}
-              </span>
-            </div>
-            <ul className="list-disc pl-6">
-              {order.meals.map((meal, index) => (
-                <li key={`${order.id}-meal-${index}`}>
-                  {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
-                </li>
-              ))}
-            </ul>
           </div>
         ))}
         

@@ -1,11 +1,11 @@
 import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
-import type { Order, MenuItem } from '../types/restaurant';
+import type { Order, MenuItem, ScreenType } from '../types/restaurant';
 
 interface UseOrderHandlersProps {
   loggedInUser: string | null;
   setLoggedInUser: (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | null) => void;
-  setCurrentScreen: (screen: any) => void;
+  setCurrentScreen: (screen: ScreenType) => void;
   tableNumber: string;
   tableComment: string;
   order: Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>;
@@ -16,10 +16,11 @@ interface UseOrderHandlersProps {
   setMealsMenu: (menu: any) => void;
   setTempMeals: (meals: MenuItem[]) => void;
   setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  setPendingNotifications: (notifications: Order[]) => void;
+  setPendingNotifications: React.Dispatch<React.SetStateAction<Order[]>>;
   pendingOrders: Order[];
   handleOrderComplete: (order: Order) => void;
   handleOrderCancel: (order: Order) => void;
+  handleDrinksComplete: (order: Order) => void;
 }
 
 export const useOrderHandlers = ({
@@ -39,7 +40,8 @@ export const useOrderHandlers = ({
   setPendingNotifications,
   pendingOrders,
   handleOrderComplete,
-  handleOrderCancel
+  handleOrderCancel,
+  handleDrinksComplete
 }: UseOrderHandlersProps) => {
   const handleLogin = (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin') => {
     setLoggedInUser(user);
@@ -109,48 +111,86 @@ export const useOrderHandlers = ({
   };
 
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals') => {
-    const updatedOrder = { ...order };
-    
     if (type === 'drinks') {
-      updatedOrder.drinksStatus = 'delivered';
-    } else {
-      updatedOrder.mealsStatus = 'delivered';
-      updatedOrder.status = 'delivered';
-    }
-
-    // Update the order in pendingOrders
-    setPendingOrders((prevOrders: Order[]) => 
-      prevOrders.map((o: Order) => o.id === order.id ? updatedOrder : o)
-    );
-
-    // If both drinks and meals are delivered, complete the order
-    if (
-      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') &&
-      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'delivered')
-    ) {
-      handleOrderComplete(updatedOrder);
+      // If there are no meals, complete the entire order
+      if (!order.meals.length) {
+        handleOrderComplete(order);
+        toast({
+          title: "Commande terminée",
+          description: `La commande pour la table ${order.table} a été terminée.`,
+        });
+      } else {
+        // If there are meals, just complete the drinks portion
+        handleDrinksComplete(order);
+      }
+    } else if (type === 'meals') {
+      // Set meals status to delivered
+      const updatedOrder = { ...order, mealsStatus: 'delivered' as const };
+      
+      // If there are no drinks or drinks are already delivered, complete the entire order
+      if (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'delivered') {
+        handleOrderComplete(updatedOrder);
+        toast({
+          title: "Commande terminée",
+          description: `La commande pour la table ${order.table} a été terminée.`,
+        });
+      } else {
+        // If there are drinks that aren't delivered yet, just update the order
+        setPendingOrders(prevOrders => 
+          prevOrders.map(o => o.id === order.id ? updatedOrder : o)
+        );
+        
+        toast({
+          title: "Repas livrés",
+          description: `Les repas pour la table ${order.table} ont été livrés.`,
+        });
+      }
     }
   };
 
-  const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals') => {
-    const updatedOrder = { ...order };
-    if (type === 'drinks') {
-      updatedOrder.drinksStatus = 'cancelled';
-    } else {
-      updatedOrder.mealsStatus = 'cancelled';
-      if (order.meals.length > 0) {
-        updatedOrder.status = 'cancelled';
-      }
+  const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals' | 'all') => {
+    if (type === 'all') {
+      // Cancel the entire order
+      handleOrderCancel(order);
+      toast({
+        title: "Commande annulée",
+        description: `La commande pour la table ${order.table} a été annulée.`,
+      });
+      return;
     }
 
+    const updatedOrder = { ...order };
+    
+    if (type === 'drinks') {
+      // For drinks only, set drinks to empty array
+      updatedOrder.drinks = [];
+      updatedOrder.drinksStatus = 'cancelled';
+      
+      toast({
+        title: "Boissons annulées",
+        description: `Les boissons pour la table ${order.table} ont été annulées.`,
+      });
+    } else if (type === 'meals') {
+      // For meals only, set meals to empty array
+      updatedOrder.meals = [];
+      updatedOrder.mealsStatus = 'cancelled';
+      
+      toast({
+        title: "Repas annulés",
+        description: `Les repas pour la table ${order.table} ont été annulés.`,
+      });
+    }
+
+    // If both drinks and meals are cancelled or empty, cancel the entire order
     if (
-      (!updatedOrder.drinks.length || updatedOrder.drinksStatus === 'cancelled') &&
-      (!updatedOrder.meals.length || updatedOrder.mealsStatus === 'cancelled')
+      (updatedOrder.drinks.length === 0 || updatedOrder.drinksStatus === 'cancelled') &&
+      (updatedOrder.meals.length === 0 || updatedOrder.mealsStatus === 'cancelled')
     ) {
-      handleOrderCancel(updatedOrder);
+      handleOrderCancel(order);
     } else {
-      setPendingOrders((prevOrders: Order[]) =>
-        prevOrders.map((o: Order) => o.id === order.id ? updatedOrder : o)
+      // Update the order in pendingOrders
+      setPendingOrders(prevOrders =>
+        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
       );
     }
   };
