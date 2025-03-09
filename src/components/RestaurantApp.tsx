@@ -206,11 +206,7 @@ const RestaurantApp: React.FC = () => {
   }
 
   if (currentScreen === 'admin') {
-    return <AdminScreen 
-      onLogout={handleLogout}
-      setLoggedInUser={setLoggedInUser}
-      setCurrentScreen={setCurrentScreen}
-    />;
+    return <AdminScreen />;
   }
 
   return null;

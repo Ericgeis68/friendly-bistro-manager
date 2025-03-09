@@ -1,14 +1,7 @@
-
-import React from 'react';
-import RestaurantApp from '../components/RestaurantApp';
-import { RestaurantProvider } from '../context/RestaurantContext';
+import RestaurantApp from "../components/RestaurantApp";
 
 const Index = () => {
-  return (
-    <RestaurantProvider>
-      <RestaurantApp />
-    </RestaurantProvider>
-  );
+  return <RestaurantApp />;
 };
 
 export default Index;

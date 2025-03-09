@@ -1,85 +1,126 @@
 import React, { useState } from 'react';
 import { Beer, UtensilsCrossed, FileText, ArrowLeft, Plus, Trash2, Edit, Save, X, CheckCircle, Clock, AlertTriangle, Settings, List, BarChart2 } from 'lucide-react';
-import type { MenuItem, Order, ScreenType } from '../../types/restaurant';
-import { useRestaurant } from '../../context/RestaurantContext';
 
-interface AdminScreenProps {
-    onLogout: () => void;
-    setLoggedInUser: (user: string | null) => void;
-    setCurrentScreen: (screen: ScreenType) => void;
-}
+type MenuItem = {
+    id: number;
+    name: string;
+    price: number;
+    quantity?: number;
+    cooking?: string;
+};
 
-const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, setCurrentScreen }) => {
-    const { menuItems, setMenuItems, orders, pendingOrders, completedOrders } = useRestaurant();
-    const [currentScreenLocal, setCurrentScreenLocal] = useState<'dashboard' | 'menu' | 'orders' | 'settings' | 'editMenu' | 'addMenuItem' | 'editItem' | 'dailySales'>('dashboard');
+type Order = {
+  id: number;
+  table: string;
+  waitress: string;
+  drinks: MenuItem[];
+  meals: MenuItem[];
+  status: 'pending' | 'completed' | 'cancelled';
+  createdAt: Date;
+};
+
+const AdminApp: React.FC = () => {
+    const [currentScreen, setCurrentScreen] = useState<'dashboard' | 'menu' | 'orders' | 'settings' | 'editMenu' | 'addMenuItem' | 'editItem' | 'dailySales'>('dashboard');
+    const [menuItems, setMenuItems] = useState<{drinks: MenuItem[], meals: MenuItem[]}>({
+        drinks: [
+            { id: 1, name: 'Bière', price: 4.50 },
+            { id: 2, name: 'Coca', price: 3.50 },
+            { id: 3, name: 'Eau', price: 2.00 },
+            { id: 4, name: 'Vin Rouge', price: 5.50 }
+        ],
+        meals: [
+            { id: 1, name: 'Entrecôte', price: 18.50 },
+            { id: 2, name: 'Entrecôte spécial', price: 22.50 },
+            { id: 3, name: 'Frites', price: 4.00 },
+            { id: 4, name: 'Saucisse blanche frite', price: 12.50 },
+            { id: 5, name: 'Merguez pain', price: 8.50 }
+        ]
+    });
+    const [orders, setOrders] = useState<Order[]>([
+        {
+            id: 1,
+            table: '1',
+            waitress: 'Celine',
+            drinks: [{ id: 1, name: 'Bière', price: 4.50, quantity: 2 }, {id: 2, name: 'Coca', price: 3.50, quantity: 1}],
+            meals: [{id: 1, name: 'Entrecôte', price: 18.50, quantity: 1, cooking: 'SAIGNANT'}],
+            status: 'completed',
+            createdAt: new Date('2024-05-24T10:00:00')
+        },
+        {
+            id: 2,
+            table: '3',
+            waitress: 'Audrey',
+            drinks: [{ id: 3, name: 'Eau', price: 2.00, quantity: 3 }],
+            meals: [{ id: 3, name: 'Frites', price: 4.00, quantity: 2 }],
+            status: 'pending',
+            createdAt: new Date('2024-05-24T11:30:00')
+        },
+        {
+            id: 3,
+            table: '2',
+            waitress: 'Stephanie',
+            drinks: [{ id: 4, name: 'Vin Rouge', price: 5.50, quantity: 1 }],
+            meals: [{ id: 4, name: 'Saucisse blanche frite', price: 12.50, quantity: 1 }],
+            status: 'cancelled',
+            createdAt: new Date('2024-05-24T12:45:00')
+        }
+    ]);
     const [serverIp, setServerIp] = useState<string>('127.0.0.1');
     const [connectedDevices, setConnectedDevices] = useState<number>(5);
     const [editItem, setEditItem] = useState<MenuItem | null>(null);
     const [editCategory, setEditCategory] = useState<'drinks' | 'meals' | null>(null);
 
     const handleEditMenu = () => {
-        setCurrentScreenLocal('editMenu');
+        setCurrentScreen('editMenu');
     };
 
     const handleAddItem = (category: 'drinks' | 'meals') => {
         setEditCategory(category);
-        setCurrentScreenLocal('addMenuItem');
+        setCurrentScreen('addMenuItem');
     };
 
     const handleEditItem = (item: MenuItem, category: 'drinks' | 'meals') => {
         setEditItem(item);
         setEditCategory(category);
-        setCurrentScreenLocal('editItem');
+        setCurrentScreen('editItem');
     };
 
     const handleSaveItem = (editedItem: MenuItem) => {
         if (!editCategory) return;
-        setMenuItems(prev => {
-            const updatedMenuItems = {
-                ...prev,
-                [editCategory]: prev[editCategory].map(item =>
-                    item.id === editedItem.id ? { ...editedItem } : item
-                )
-            };
-            localStorage.setItem('menuItems', JSON.stringify(updatedMenuItems));
-            return updatedMenuItems;
-        });
-        setCurrentScreenLocal('editMenu');
+        setMenuItems(prev => ({
+            ...prev,
+            [editCategory]: prev[editCategory].map(item =>
+                item.id === editedItem.id ? editedItem : item
+            )
+        }));
+        setCurrentScreen('editMenu');
         setEditItem(null);
         setEditCategory(null);
     };
 
     const handleAddItemSubmit = (newItem: Omit<MenuItem, 'id'>, category: 'drinks' | 'meals') => {
         const id = Date.now();
-        setMenuItems(prev => {
-            const updatedMenuItems = {
-                ...prev,
-                [category]: [...prev[category], { ...newItem, id }]
-            };
-            localStorage.setItem('menuItems', JSON.stringify(updatedMenuItems));
-            return updatedMenuItems;
-        });
-        setCurrentScreenLocal('editMenu');
+        setMenuItems(prev => ({
+            ...prev,
+            [category]: [...prev[category], { ...newItem, id }]
+        }));
+        setCurrentScreen('editMenu');
     };
 
     const handleDeleteItem = (id: number, category: 'drinks' | 'meals') => {
-        setMenuItems(prev => {
-            const updatedMenuItems = {
-                ...prev,
-                [category]: prev[category].filter(item => item.id !== id)
-            };
-            localStorage.setItem('menuItems', JSON.stringify(updatedMenuItems));
-            return updatedMenuItems;
-        });
+        setMenuItems(prev => ({
+            ...prev,
+            [category]: prev[category].filter(item => item.id !== id)
+        }));
     };
 
     const handleCancelEdit = () => {
-        setCurrentScreenLocal('editMenu');
+        setCurrentScreen('editMenu');
         setEditItem(null);
         setEditCategory(null);
     };
 
-    const handleOrderStatusChange = (orderId: string, newStatus: 'pending' | 'completed' | 'cancelled') => {
+    const handleOrderStatusChange = (orderId: number, newStatus: 'pending' | 'completed' | 'cancelled') => {
         setOrders(prevOrders =>
             prevOrders.map(order =>
                 order.id === orderId ? { ...order, status: newStatus } : order
@@ -87,64 +128,50 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         );
     };
 
-    const handleLogoutAdmin = () => {
-        setLoggedInUser(null);
-        setCurrentScreen('login');
-    };
-
+    // Sidebar Component
     const Sidebar: React.FC = () => {
         return (
             <div className="bg-gray-800 text-white w-64 p-4 flex flex-col space-y-4">
                 <div className="text-2xl font-bold mb-4 text-center">Admin Panel</div>
                 <button
-                    onClick={() => setCurrentScreenLocal('dashboard')}
-                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'dashboard' ? 'bg-gray-700' : ''}`}
+                    onClick={() => setCurrentScreen('dashboard')}
+                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreen === 'dashboard' ? 'bg-gray-700' : ''}`}
                 >
                     <BarChart2 size={20} className="mr-2" />
                     Tableau de Bord
                 </button>
                 <button
-                    onClick={() => setCurrentScreenLocal('menu')}
-                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'menu' ? 'bg-gray-700' : ''}`}
-                >
+                    onClick={() => setCurrentScreen('menu')}
+                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreen === 'menu' ? 'bg-gray-700' : ''}`}>
                     <UtensilsCrossed size={20} className="mr-2" />
                     Menu
                 </button>
                 <button
-                    onClick={() => setCurrentScreenLocal('orders')}
-                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'orders' ? 'bg-gray-700' : ''}`}
+                    onClick={() => setCurrentScreen('orders')}
+                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreen === 'orders' ? 'bg-gray-700' : ''}`}
                 >
                     <FileText size={20} className="mr-2" />
                     Commandes
                 </button>
                 <button
-                    onClick={() => setCurrentScreenLocal('dailySales')}
-                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'dailySales' ? 'bg-gray-700' : ''}`}
+                    onClick={() => setCurrentScreen('dailySales')}
+                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreen === 'dailySales' ? 'bg-gray-700' : ''}`}
                 >
                     <List size={20} className="mr-2" />
                     Ventes du Jour
                 </button>
                 <button
-                    onClick={() => setCurrentScreenLocal('settings')}
-                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'settings' ? 'bg-gray-700' : ''}`}
+                    onClick={() => setCurrentScreen('settings')}
+                    className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreen === 'settings' ? 'bg-gray-700' : ''}`}
                 >
                     <Settings size={20} className="mr-2" />
                     Paramètres
-                </button>
-                <button
-                    onClick={() => {
-                        handleLogoutAdmin();
-                        onLogout();
-                    }}
-                    className="flex items-center py-2 px-4 rounded-md hover:bg-gray-700"
-                >
-                    <ArrowLeft size={20} className="mr-2" />
-                    Déconnexion
                 </button>
             </div>
         );
     };
 
+    // Menu Management Screen
     const MenuScreen: React.FC = () => {
         return (
             <div className="flex-1 p-4">
@@ -155,7 +182,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <h3 className="text-xl font-medium mb-2">Boissons</h3>
-                        {menuItems.drinks && menuItems.drinks.map(drink => (
+                        {menuItems.drinks.map(drink => (
                             <div key={drink.id} className="bg-white rounded-xl p-4 shadow flex justify-between mb-2">
                                 <div>
                                     <div className="font-medium text-lg">{drink.name}</div>
@@ -166,7 +193,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                     </div>
                     <div>
                         <h3 className="text-xl font-medium mb-2">Repas</h3>
-                        {menuItems.meals && menuItems.meals.map(meal => (
+                        {menuItems.meals.map(meal => (
                             <div key={meal.id} className="bg-white rounded-xl p-4 shadow flex justify-between mb-2">
                                 <div>
                                     <div className="font-medium text-lg">{meal.name}</div>
@@ -180,12 +207,13 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         );
     };
 
+    // Edit Menu Screen
     const EditMenuScreen: React.FC = () => {
         return (
             <div className="flex-1 p-4">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold">Modifier le Menu</h2>
-                    <button onClick={() => setCurrentScreenLocal('menu')} className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md p-2">
+                    <button onClick={() => setCurrentScreen('menu')} className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md p-2">
                         <X size={20}/>
                     </button>
                 </div>
@@ -197,7 +225,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                                 <Plus size={20}/>
                             </button>
                         </div>
-                        {menuItems.drinks && menuItems.drinks.map(drink => (
+                        {menuItems.drinks.map(drink => (
                             <div key={drink.id} className="bg-white rounded-xl p-4 shadow flex justify-between items-center mb-2">
                                 <div>
                                     <div className="font-medium text-lg">{drink.name}</div>
@@ -221,7 +249,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                                 <Plus size={20}/>
                             </button>
                         </div>
-                        {menuItems.meals && menuItems.meals.map(meal => (
+                        {menuItems.meals.map(meal => (
                             <div key={meal.id} className="bg-white rounded-xl p-4 shadow flex justify-between items-center mb-2">
                                 <div>
                                     <div className="font-medium text-lg">{meal.name}</div>
@@ -332,6 +360,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         );
     };
 
+    // Order Management Screen
     const OrderScreen: React.FC = () => {
         return (
             <div className="flex-1 p-4">
@@ -351,28 +380,23 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.map(order => {
-                                const orderTime = typeof order.createdAt === 'string' 
-                                    ? new Date(order.createdAt).toLocaleTimeString() 
-                                    : new Date(order.createdAt).toLocaleTimeString();
-                                
-                                return (
+                            {orders.map(order => (
                                 <tr key={order.id} className="border-b">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{order.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{order.table}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{order.waitress}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{orderTime}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{order.createdAt.toLocaleTimeString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {order.drinks.map((drink, idx) => (
-                                            <div key={idx}>
-                                                {drink.name} x{drink.quantity || 1}
+                                        {order.drinks.map(drink => (
+                                            <div key={drink.id}>
+                                                {drink.name} x{drink.quantity}
                                             </div>
                                         ))}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {order.meals.map((meal, idx) => (
-                                            <div key={idx}>
-                                                {meal.name} x{meal.quantity || 1} {meal.cooking && `(${meal.cooking})`}
+                                        {order.meals.map(meal => (
+                                            <div key={meal.id}>
+                                                {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
                                             </div>
                                         ))}
                                     </td>
@@ -408,7 +432,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                                         </select>
                                     </td>
                                 </tr>
-                            )})}
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -417,8 +441,8 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
     };
 
     const DashboardScreen: React.FC = () => {
-        const pendingOrdersCount = orders.filter(order => order.status === 'pending').length;
-        const completedOrdersCount = orders.filter(order => order.status === 'completed').length;
+        const pendingOrders = orders.filter(order => order.status === 'pending').length;
+        const completedOrders = orders.filter(order => order.status === 'completed').length;
         return (
             <div className="flex-1 p-4">
                 <h2 className="text-2xl font-bold mb-4">Tableau de Bord</h2>
@@ -426,14 +450,14 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                     <div className="bg-white rounded-xl p-6 shadow flex items-center justify-between">
                         <div>
                             <div className="text-xl font-bold text-gray-700">Commandes en cours</div>
-                            <div className="text-3xl font-bold text-yellow-600">{pendingOrdersCount}</div>
+                            <div className="text-3xl font-bold text-yellow-600">{pendingOrders}</div>
                         </div>
                         <Clock size={48} className="text-yellow-600" />
                     </div>
                     <div className="bg-white rounded-xl p-6 shadow flex items-center justify-between">
                         <div>
                             <div className="text-xl font-bold text-gray-700">Commandes terminées</div>
-                            <div className="text-3xl font-bold text-green-600">{completedOrdersCount}</div>
+                            <div className="text-3xl font-bold text-green-600">{completedOrders}</div>
                         </div>
                         <CheckCircle size={48} className="text-green-600" />
                     </div>
@@ -454,10 +478,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         const isCurrentServiceEvening = selectedService === 'soir' && isEvening;
 
         const filteredOrders = orders.filter(order => {
-            const orderDate = typeof order.createdAt === 'string' 
-                ? new Date(order.createdAt) 
-                : new Date(order.createdAt);
-                
+            const orderDate = new Date(order.createdAt);
             const isSameDay = orderDate >= startOfToday && orderDate < new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
             if (selectedService === 'midi') {
                 return isSameDay && orderDate.getHours() >= 11 && orderDate.getHours() < 14;
@@ -474,19 +495,19 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
 
             filteredOrders.forEach(order => {
                 order.drinks.forEach(drink => {
-                    totalDrinks += drink.price * (drink.quantity || 0);
+                    totalDrinks += drink.price * drink.quantity!;
                     if (drinksSales[drink.name]) {
-                        drinksSales[drink.name].quantity += (drink.quantity || 0);
+                        drinksSales[drink.name].quantity += drink.quantity!;
                     } else {
-                        drinksSales[drink.name] = { quantity: (drink.quantity || 0), price: drink.price };
+                        drinksSales[drink.name] = { quantity: drink.quantity!, price: drink.price };
                     }
                 });
                 order.meals.forEach(meal => {
-                    totalMeals += meal.price * (meal.quantity || 0);
+                    totalMeals += meal.price * meal.quantity!;
                     if (mealsSales[meal.name]) {
-                        mealsSales[meal.name].quantity += (meal.quantity || 0);
+                        mealsSales[meal.name].quantity += meal.quantity!;
                     } else {
-                        mealsSales[meal.name] = { quantity: (meal.quantity || 0), price: meal.price };
+                        mealsSales[meal.name] = { quantity: meal.quantity!, price: meal.price };
                     }
                 });
             });
@@ -549,6 +570,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         );
     };
 
+    // Settings Screen
     const SettingsScreen: React.FC = () => {
         return (
             <div className="flex-1 p-4">
@@ -582,17 +604,17 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         <div className="min-h-screen flex">
             <Sidebar />
             <div className="flex-1 bg-gray-50">
-                {currentScreenLocal === 'dashboard' && <DashboardScreen />}
-                {currentScreenLocal === 'menu' && <MenuScreen />}
-                {currentScreenLocal === 'orders' && <OrderScreen />}
-                {currentScreenLocal === 'dailySales' && <DailySalesScreen />}
-                {currentScreenLocal === 'settings' && <SettingsScreen />}
-                {currentScreenLocal === 'editMenu' && <EditMenuScreen />}
-                {currentScreenLocal === 'addMenuItem' && <AddMenuItemScreen />}
-                {currentScreenLocal === 'editItem' && <EditItemScreen />}
+                {currentScreen === 'dashboard' && <DashboardScreen />}
+                {currentScreen === 'menu' && <MenuScreen />}
+                {currentScreen === 'orders' && <OrderScreen />}
+                {currentScreen === 'dailySales' && <DailySalesScreen />}
+                {currentScreen === 'settings' && <SettingsScreen />}
+                {currentScreen === 'editMenu' && <EditMenuScreen />}
+                {currentScreen === 'addMenuItem' && <AddMenuItemScreen />}
+                {currentScreen === 'editItem' && <EditItemScreen />}
             </div>
         </div>
     );
 };
 
-export default AdminScreen;
+export default AdminApp;
