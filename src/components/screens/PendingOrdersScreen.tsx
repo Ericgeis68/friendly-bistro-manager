@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Search, Filter, Trash2, CheckCircle, Bell } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
@@ -7,7 +6,6 @@ import { fr } from 'date-fns/locale';
 import { Button } from '../ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Badge } from "../ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 type FilterType = 'all' | 'drinks' | 'meals';
 
@@ -109,30 +107,22 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
       return null;
     }
 
-    const buttonText = getActionButtonText(order, type, action);
-    const isCompleteAction = action === 'complete' || (type === 'meals' && order.mealsStatus === 'ready');
-    const icon = isCompleteAction ? <CheckCircle className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />;
-
     return (
       <AlertDialog>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant={isCompleteAction ? "default" : "destructive"} 
-                  size="sm"
-                  className={className}
-                >
-                  {icon}
-                </Button>
-              </AlertDialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{buttonText}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant={action === 'complete' || (type === 'meals' && order.mealsStatus === 'ready') ? "default" : "destructive"} 
+            size="sm"
+            className={className}
+          >
+            {(action === 'complete' || (type === 'meals' && order.mealsStatus === 'ready')) ? (
+              <CheckCircle className="h-4 w-4 mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {getActionButtonText(order, type, action)}
+          </Button>
+        </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>

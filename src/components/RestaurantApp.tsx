@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import { useOrderManagement } from '../hooks/useOrderManagement';
@@ -70,12 +69,12 @@ const RestaurantApp: React.FC = () => {
     handleOrderCompleteWithType,
     handleOrderCancelWithType
   } = useOrderHandlers({
-    loggedInUser: loggedInUser || '',
+    loggedInUser,
     setLoggedInUser,
     setCurrentScreen,
     tableNumber,
     tableComment,
-    order: order as Order,
+    order,
     setOrder,
     setTableNumber,
     setTableComment,
@@ -88,8 +87,7 @@ const RestaurantApp: React.FC = () => {
     handleOrderComplete,
     handleOrderCancel,
     handleDrinksComplete,
-    setCompletedOrders,
-    completedOrders
+    setCompletedOrders
   });
 
   if (currentScreen === 'login') {
@@ -182,7 +180,7 @@ const RestaurantApp: React.FC = () => {
       tableNumber={tableNumber}
       order={order}
       handleSubmitOrder={handleSubmitOrder}
-      setCurrentScreen={(screen) => setCurrentScreen(screen as ScreenType)}
+      setCurrentScreen={setCurrentScreen}
     />;
   }
 
@@ -190,7 +188,7 @@ const RestaurantApp: React.FC = () => {
     return <SplitPaymentScreen 
       tableNumber={tableNumber}
       order={order}
-      setCurrentScreen={(screen) => setCurrentScreen(screen as ScreenType)}
+      setCurrentScreen={setCurrentScreen}
     />;
   }
 
@@ -210,11 +208,7 @@ const RestaurantApp: React.FC = () => {
   if (currentScreen === 'admin') {
     return <AdminScreen 
       onLogout={handleLogout}
-      setLoggedInUser={(user) => {
-        if (typeof user === 'string') {
-          setLoggedInUser(user as any);
-        }
-      }}
+      setLoggedInUser={setLoggedInUser}
       setCurrentScreen={setCurrentScreen}
     />;
   }

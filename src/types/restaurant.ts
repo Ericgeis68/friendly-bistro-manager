@@ -22,25 +22,12 @@ export type Order = {
   originalOrderId?: string; // Pour lier les commandes séparées (repas/boissons)
 };
 
-export type ScreenType = 
-  | 'login' 
-  | 'waitress' 
-  | 'table' 
-  | 'category' 
-  | 'boissons' 
-  | 'repas' 
-  | 'recap' 
-  | 'cuisine' 
-  | 'admin' 
-  | 'splitPayment'
-  | 'Celine'
-  | 'Audrey'
-  | 'Stephanie';
+export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'cuisine' | 'admin' | 'splitPayment';
 
 export interface UseOrderHandlersProps {
   loggedInUser: string;
-  setLoggedInUser: (user: string) => void;
-  setCurrentScreen: (screen: ScreenType) => void;
+  setLoggedInUser: React.Dispatch<React.SetStateAction<string>>;
+  setCurrentScreen: React.Dispatch<React.SetStateAction<ScreenType>>;
   tableNumber: string;
   tableComment: string;
   order: Order;
@@ -56,6 +43,6 @@ export interface UseOrderHandlersProps {
   handleOrderComplete: (order: Order) => void;
   handleOrderCancel: (order: Order) => void;
   handleDrinksComplete: (order: Order) => void;
+  completedOrders: Order[];
   setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  completedOrders: Order[]; // Property needed for useOrderHandlers
 }

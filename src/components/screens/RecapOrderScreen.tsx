@@ -22,19 +22,11 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const { drinks = [], meals = [] } = order;
 
-  // Make sure to calculate total based on quantity with proper null checks
-  const drinkTotal = drinks.reduce((sum, item) => {
-    return sum + (item.price * (item.quantity || 1));
-  }, 0);
-  
-  const mealTotal = meals.reduce((sum, item) => {
-    return sum + (item.price * (item.quantity || 1));
-  }, 0);
-  
+  const drinkTotal = drinks.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const mealTotal = meals.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   const totalAmount = drinkTotal + mealTotal;
   const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
 
-  // Group meals by name and cooking style
   const groupedMeals = meals.reduce<Record<string, MenuItem>>((acc, meal) => {
     const key = `${meal.name}-${meal.cooking || 'none'}`;
     if (acc[key]) {
@@ -82,7 +74,7 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
               <div key={`${item.id}-${item.cooking}`} className="flex justify-between mb-2 text-gray-800">
                 <div>
                   <span className="font-medium">{item.name}</span>
-                  <span className="text-gray-600 text-sm"> x{item.quantity || 1}</span>
+                  <span className="text-gray-600 text-sm"> x{item.quantity}</span>
                   {item.cooking && <span className="text-gray-600 text-sm"> ({item.cooking})</span>}
                 </div>
                 <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>

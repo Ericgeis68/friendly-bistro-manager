@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
@@ -68,67 +67,17 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
     });
   };
 
-  // Group and count items by name and cooking style
-  const countItemsByCooking = () => {
-    // Structure: { itemName: { cookingStyle: count } }
-    const counts: Record<string, Record<string, number>> = {};
-    
+  const countItems = (itemName: string, cooking?: string): number => {
+    let count = 0;
     pendingOrdersToShow.forEach((order) => {
       order.meals.forEach((meal) => {
-        const itemName = meal.name;
-        const cookingStyle = meal.cooking || 'standard';
-        const quantity = meal.quantity || 1;
-        
-        if (!counts[itemName]) {
-          counts[itemName] = {};
+        if (meal.name === itemName && (!cooking || meal.cooking === cooking)) {
+          count += meal.quantity || 0;
         }
-        
-        if (!counts[itemName][cookingStyle]) {
-          counts[itemName][cookingStyle] = 0;
-        }
-        
-        counts[itemName][cookingStyle] += quantity;
       });
     });
-    
-    return counts;
+    return count;
   };
-
-  const itemCounts = countItemsByCooking();
-  
-  // Flatten the grouped items into rows for display
-  const itemRows: { name: string; cooking: string; count: number }[] = [];
-  Object.entries(itemCounts).forEach(([itemName, cookingCounts]) => {
-    Object.entries(cookingCounts).forEach(([cooking, count]) => {
-      if (cooking !== 'standard' || (itemName !== 'Entrecôte' && itemName !== 'Entrecôte spécial')) {
-        itemRows.push({ name: itemName, cooking, count });
-      }
-    });
-  });
-  
-  // Special handling for Entrecôte items - group by cooking style
-  const entrecoteTotals: Record<string, number> = {};
-  
-  if (itemCounts['Entrecôte']) {
-    Object.entries(itemCounts['Entrecôte']).forEach(([cooking, count]) => {
-      if (cooking !== 'standard') {
-        entrecoteTotals[cooking] = (entrecoteTotals[cooking] || 0) + count;
-      }
-    });
-  }
-  
-  if (itemCounts['Entrecôte spécial']) {
-    Object.entries(itemCounts['Entrecôte spécial']).forEach(([cooking, count]) => {
-      if (cooking !== 'standard') {
-        entrecoteTotals[cooking] = (entrecoteTotals[cooking] || 0) + count;
-      }
-    });
-  }
-  
-  // Add the grouped Entrecôte rows
-  Object.entries(entrecoteTotals).forEach(([cooking, count]) => {
-    itemRows.push({ name: 'Entrecôte (tous types)', cooking, count });
-  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -138,7 +87,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         </button>
         <h1 className="text-gray-800 font-bold text-2xl mx-auto">
           {showOrders === 'pending' ? 'Commandes en cours' : 
-           showOrders === 'dashboard' ? 'Tableau de bord' : 'Commandes terminées'}
+           showOrders === 'completed' ? 'Commandes terminées' : 'Tableau de bord'}
         </h1>
       </nav>
       
@@ -174,7 +123,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
             <ul className="list-disc pl-6">
               {order.meals.map((meal, index) => (
                 <li key={`${order.id}-meal-${index}`}>
-                  {meal.name} x{meal.quantity || 1} {meal.cooking && `(${meal.cooking})`}
+                  {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
                 </li>
               ))}
             </ul>
@@ -200,22 +149,36 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {itemRows
-                  .filter(row => row.count > 0) // Only show items with a count
-                  .sort((a, b) => {
-                    // Show entrecote group first, then sort by name
-                    if (a.name.includes('Entrecôte') && !b.name.includes('Entrecôte')) return -1;
-                    if (!a.name.includes('Entrecôte') && b.name.includes('Entrecôte')) return 1;
-                    return a.name.localeCompare(b.name);
-                  })
-                  .map((row, idx) => (
-                    <tr key={`row-${idx}`}>
-                      <td className="border px-4 py-2">{row.name}</td>
-                      <td className="border px-4 py-2">{row.cooking === 'standard' ? '-' : row.cooking}</td>
-                      <td className="border px-4 py-2">{row.count}</td>
-                    </tr>
-                  ))
-                }
+                <tr>
+                  <td className="border px-4 py-2">Entrecôte</td>
+                  <td className="border px-4 py-2">SAIGNANT</td>
+                  <td className="border px-4 py-2">{countItems('Entrecôte', 'SAIGNANT')}</td>
+                </tr>
+                <tr>
+                  <td className="border px-4 py-2">Entrecôte</td>
+                  <td className="border px-4 py-2">A POINT</td>
+                  <td className="border px-4 py-2">{countItems('Entrecôte', 'A POINT')}</td>
+                </tr>
+                <tr>
+                  <td className="border px-4 py-2">Entrecôte spécial</td>
+                  <td className="border px-4 py-2">A POINT</td>
+                  <td className="border px-4 py-2">{countItems('Entrecôte spécial', 'A POINT')}</td>
+                </tr>
+                <tr>
+                  <td className="border px-4 py-2">Merguez pain</td>
+                  <td className="border px-4 py-2">-</td>
+                  <td className="border px-4 py-2">{countItems('Merguez pain')}</td>
+                </tr>
+                <tr>
+                  <td className="border px-4 py-2">Frites</td>
+                  <td className="border px-4 py-2">-</td>
+                  <td className="border px-4 py-2">{countItems('Frites')}</td>
+                </tr>
+                <tr>
+                  <td className="border px-4 py-2">Saucisse blanche frite</td>
+                  <td className="border px-4 py-2">-</td>
+                  <td className="border px-4 py-2">{countItems('Saucisse blanche frite')}</td>
+                </tr>
               </tbody>
             </table>
           </div>

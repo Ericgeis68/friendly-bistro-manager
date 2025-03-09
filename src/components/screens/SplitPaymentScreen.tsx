@@ -26,104 +26,46 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const [availableMeals, setAvailableMeals] = useState<MenuItem[]>([]);
   const [availableDrinks, setAvailableDrinks] = useState<MenuItem[]>([]);
-  const [personDrinkQuantities, setPersonDrinkQuantities] = useState<{ [personId: string]: { [itemId: number]: number } }>({});
-  const [personMealQuantities, setPersonMealQuantities] = useState<{ [personId: string]: { [itemId: number]: number } }>({});
+  const [personQuantities, setPersonQuantities] = useState<{ [personId: string]: { [itemId: number]: number } }>({});
   const [equalPaymentAmountReceived, setEqualPaymentAmountReceived] = useState('');
-  const [equalPaymentsByPerson, setEqualPaymentsByPerson] = useState<{ [personId: string]: { paid: boolean; amount: number; amountReceived: string; change: number } }>({});
 
-  const groupSimilarItems = (items: MenuItem[]): MenuItem[] => {
-    const groupedMap = new Map<string, MenuItem>();
-    
-    items.forEach(item => {
-      const key = `${item.name}-${item.price}`;
-      if (groupedMap.has(key)) {
-        const existingItem = groupedMap.get(key)!;
-        existingItem.quantity = (existingItem.quantity || 1) + (item.quantity || 1);
-      } else {
-        groupedMap.set(key, { ...item });
-      }
-    });
-    
-    return Array.from(groupedMap.values());
-  };
-
-  const { 
-    drinks: initialDrinks = [], 
-    meals: initialMeals = [] 
-  } = order;
-
-  const drinkTotal = initialDrinks.reduce((sum, item) => {
-    return sum + (item.price * (item.quantity || 1));
-  }, 0);
-  
-  const mealTotal = initialMeals.reduce((sum, item) => {
-    return sum + (item.price * (item.quantity || 1));
-  }, 0);
-  
+  const { drinks: initialDrinks = [], meals: initialMeals = [] } = order;
+  const drinkTotal = initialDrinks.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const mealTotal = initialMeals.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
   const totalAmount = drinkTotal + mealTotal;
 
   const amountPerPerson = paymentMethod === 'equal' && numberOfPeople > 0 ? totalAmount / numberOfPeople : 0;
-
-  useEffect(() => {
-    if (paymentMethod === 'equal') {
-      const initialPayments: { [personId: string]: { paid: boolean; amount: number; amountReceived: string; change: number } } = {};
-      
-      for (let i = 1; i <= numberOfPeople; i++) {
-        initialPayments[i.toString()] = { 
-          paid: false, 
-          amount: amountPerPerson, 
-          amountReceived: '', 
-          change: 0 
-        };
-      }
-      
-      setEqualPaymentsByPerson(initialPayments);
-    }
-  }, [paymentMethod, numberOfPeople, amountPerPerson]);
+  const equalPaymentChange = parseFloat(equalPaymentAmountReceived) - amountPerPerson;
 
   useEffect(() => {
     setRemainingBalance(totalAmount);
-    setAvailableMeals(groupSimilarItems([...initialMeals]));
-    setAvailableDrinks(groupSimilarItems([...initialDrinks]));
+    setAvailableMeals([...initialMeals]);
+    setAvailableDrinks([...initialDrinks]);
   }, [totalAmount, initialMeals, initialDrinks]);
 
   useEffect(() => {
     if (paymentMethod === 'equal') {
-      let totalPaid = 0;
-      Object.values(equalPaymentsByPerson).forEach(personPayment => {
-        if (personPayment.paid) {
-          totalPaid += personPayment.amount;
-        }
-      });
-      
-      setRemainingBalance(totalAmount - totalPaid);
-      setIsValidPayment(Math.abs(totalAmount - totalPaid) < 0.01);
+      setIsValidPayment(amountPerPerson * numberOfPeople === totalAmount);
+      setRemainingBalance(totalAmount - (amountPerPerson * numberOfPeople));
     } else {
       let totalPaid = 0;
-      Object.entries(personPayments).forEach(([personId]) => {
-        totalPaid += calculatePersonTotal(personId);
+      Object.values(personPayments).forEach(person => {
+        totalPaid += calculatePersonTotal(Object.keys(person)[0] || '');
       });
-      
+      setIsValidPayment(remainingBalance === 0);
       setRemainingBalance(totalAmount - totalPaid);
-      setIsValidPayment(Math.abs(remainingBalance) < 0.01);
     }
-  }, [paymentMethod, equalPaymentsByPerson, personPayments, totalAmount]);
+  }, [paymentMethod, numberOfPeople, personPayments, totalAmount, amountPerPerson]);
 
   const calculatePersonTotal = (personId: string) => {
     let personTotal = 0;
-    
-    const personDrinkQuantitiesMap = personDrinkQuantities[personId] || {};
-    availableDrinks.forEach(drink => {
-      const quantity = personDrinkQuantitiesMap[drink.id] || 0;
-      personTotal += drink.price * quantity;
+    const person = personPayments[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
+    person.drinks.forEach(drink => {
+      personTotal += drink.price * (personQuantities[personId]?.[drink.id] || 0);
     });
-    
-    const personMealQuantitiesMap = personMealQuantities[personId] || {};
-    availableMeals.forEach(meal => {
-      const quantity = personMealQuantitiesMap[meal.id] || 0;
-      personTotal += meal.price * quantity;
+    person.meals.forEach(meal => {
+      personTotal += meal.price * (personQuantities[personId]?.[meal.id] || 0);
     });
-    
     return personTotal;
   };
 
@@ -151,7 +93,6 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
     const numericAmount = parseFloat(amount) || 0;
     const personTotal = calculatePersonTotal(personId);
     setAmountReceived(amount);
-    
     setPersonPayments(prev => {
       const person = prev[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
       return { 
@@ -165,171 +106,107 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
     });
   };
 
-  const handleEqualPaymentAmountChange = (personId: string, amount: string) => {
-    const numericAmount = parseFloat(amount) || 0;
-    
-    setEqualPaymentsByPerson(prev => {
-      return {
-        ...prev,
-        [personId]: {
-          ...prev[personId],
-          amountReceived: amount,
-          change: numericAmount - amountPerPerson
-        }
-      };
-    });
-  };
-
-  const handleEqualPaymentComplete = (personId: string) => {
-    setEqualPaymentsByPerson(prev => {
-      return {
-        ...prev,
-        [personId]: {
-          ...prev[personId],
-          paid: true
-        }
-      };
-    });
-    
-    const nextUnpaidPersonId = personIds.find(id => {
-      return !equalPaymentsByPerson[id]?.paid && id !== personId;
-    });
-    
-    if (nextUnpaidPersonId) {
-      setCurrentPersonIndex(parseInt(nextUnpaidPersonId) - 1);
-    }
-  };
-
   const currentPersonId = personIds[currentPersonIndex];
-  
-  const hasSelectedItems = () => {
-    const drinkQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
-    const mealQuantitiesMap = personMealQuantities[currentPersonId] || {};
-    
-    return Object.values(drinkQuantitiesMap).some(quantity => quantity > 0) || 
-           Object.values(mealQuantitiesMap).some(quantity => quantity > 0);
-  };
-  
+  const hasSelectedItems = personPayments[currentPersonId]?.meals.length > 0 || personPayments[currentPersonId]?.drinks.length > 0;
   const currentPersonTotal = calculatePersonTotal(currentPersonId);
   const currentChange = (parseFloat(amountReceived) || 0) - currentPersonTotal;
 
   const handleNextPerson = () => {
-    const updatedDrinks: MenuItem[] = [];
-    const updatedMeals: MenuItem[] = [];
-    
-    const personDrinkQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
-    availableDrinks.forEach(drink => {
-      const quantity = personDrinkQuantitiesMap[drink.id] || 0;
-      if (quantity > 0) {
-        updatedDrinks.push({...drink, quantity});
-      }
-    });
-    
-    const personMealQuantitiesMap = personMealQuantities[currentPersonId] || {};
-    availableMeals.forEach(meal => {
-      const quantity = personMealQuantitiesMap[meal.id] || 0;
-      if (quantity > 0) {
-        updatedMeals.push({...meal, quantity});
-      }
-    });
-    
-    setPersonPayments(prev => {
-      const amount = parseFloat(amountReceived) || 0;
-      return {
-        ...prev,
-        [currentPersonId]: {
-          drinks: updatedDrinks,
-          meals: updatedMeals,
-          amount: amount,
-          change: amount - currentPersonTotal
-        }
-      };
-    });
-    
-    setAvailableDrinks(prevDrinks => {
-      return prevDrinks.map(drink => {
-        const personQuantity = personDrinkQuantitiesMap[drink.id] || 0;
-        return { 
-          ...drink, 
-          quantity: Math.max(0, (drink.quantity || 0) - personQuantity) 
-        };
-      }).filter(drink => (drink.quantity || 0) > 0);
-    });
+    const personTotal = calculatePersonTotal(currentPersonId);
+    setRemainingBalance(prevBalance => prevBalance - personTotal);
 
     setAvailableMeals(prevMeals => {
       return prevMeals.map(meal => {
-        const personQuantity = personMealQuantitiesMap[meal.id] || 0;
-        return { 
-          ...meal, 
-          quantity: Math.max(0, (meal.quantity || 0) - personQuantity) 
-        };
-      }).filter(meal => (meal.quantity || 0) > 0);
+        const personQuantity = personQuantities[currentPersonId]?.[meal.id] || 0;
+        return { ...meal, quantity: Math.max(0, (meal.quantity || 1) - personQuantity) };
+      }).filter(meal => meal.quantity > 0);
     });
-    
-    setRemainingBalance(prevBalance => {
-      let newPersonTotal = 0;
-      updatedDrinks.forEach(drink => {
-        newPersonTotal += drink.price * (drink.quantity || 0);
-      });
-      updatedMeals.forEach(meal => {
-        newPersonTotal += meal.price * (meal.quantity || 0);
-      });
-      return prevBalance - newPersonTotal;
+
+    setAvailableDrinks(prevDrinks => {
+      return prevDrinks.map(drink => {
+        const personQuantity = personQuantities[currentPersonId]?.[drink.id] || 0;
+        return { ...drink, quantity: Math.max(0, (drink.quantity || 1) - personQuantity) };
+      }).filter(drink => drink.quantity > 0);
     });
 
     setAmountReceived('');
-    
-    setPersonDrinkQuantities(prev => ({
-      ...prev,
-      [currentPersonId]: {}
-    }));
-    
-    setPersonMealQuantities(prev => ({
-      ...prev,
-      [currentPersonId]: {}
-    }));
 
     if (currentPersonIndex < numberOfPeople - 1) {
       setCurrentPersonIndex(prev => prev + 1);
     }
   };
 
-  const getRemainingQuantity = (item: MenuItem): number => {
-    return item.quantity || 0;
+  const getRemainingQuantity = (item: MenuItem, type: 'meal' | 'drink') => {
+    if (type === 'meal') {
+      return availableMeals.find(m => m.id === item.id)?.quantity || 0;
+    } else {
+      return availableDrinks.find(d => d.id === item.id)?.quantity || 0;
+    }
   };
 
-  const updateDrinkQuantityForPerson = (personId: string, drink: MenuItem, quantityChange: number) => {
-    const personQuantitiesMap = personDrinkQuantities[personId] || {};
-    const currentQuantity = personQuantitiesMap[drink.id] || 0;
-    const remainingQuantity = getRemainingQuantity(drink);
+  const updateItemQuantityForPerson = (personId: string, item: MenuItem, type: 'meal' | 'drink', quantityChange: number) => {
+    const currentQuantity = personQuantities[personId]?.[item.id] || 0;
+    const remainingQuantity = getRemainingQuantity(item, type);
     
     const newQuantity = Math.max(0, currentQuantity + quantityChange);
     if (newQuantity > remainingQuantity && quantityChange > 0) {
       return;
     }
 
-    setPersonDrinkQuantities(prev => {
-      const personData = {...(prev[personId] || {})};
-      personData[drink.id] = newQuantity;
-      return { ...prev, [personId]: personData };
+    setPersonQuantities(prev => {
+      const person = prev[personId] || {};
+      return { ...prev, [personId]: { ...person, [item.id]: newQuantity } };
     });
-  };
 
-  const updateMealQuantityForPerson = (personId: string, meal: MenuItem, quantityChange: number) => {
-    const personQuantitiesMap = personMealQuantities[personId] || {};
-    const currentQuantity = personQuantitiesMap[meal.id] || 0;
-    const remainingQuantity = getRemainingQuantity(meal);
-    
-    const newQuantity = Math.max(0, currentQuantity + quantityChange);
-    if (newQuantity > remainingQuantity && quantityChange > 0) {
-      return;
+    setPersonPayments(prev => {
+      const person = prev[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
+      let updatedMeals = [...person.meals];
+      let updatedDrinks = [...person.drinks];
+
+      if (type === 'meal') {
+        const mealIndex = updatedMeals.findIndex(m => m.id === item.id);
+        if (mealIndex !== -1) {
+          updatedMeals.splice(mealIndex, 1);
+        }
+        if (newQuantity > 0) {
+          updatedMeals.push(item);
+        }
+      } else {
+        const drinkIndex = updatedDrinks.findIndex(d => d.id === item.id);
+        if (drinkIndex !== -1) {
+          updatedDrinks.splice(drinkIndex, 1);
+        }
+        if (newQuantity > 0) {
+          updatedDrinks.push(item);
+        }
+      }
+
+      const updatedPerson = { ...person, meals: updatedMeals, drinks: updatedDrinks };
+      const newTotal = calculatePersonTotal(personId);
+      setRemainingBalance(prevBalance => totalAmount - (newTotal + Object.entries(personPayments)
+        .filter(([id]) => id !== personId)
+        .reduce((sum, [id]) => sum + calculatePersonTotal(id), 0)));
+
+      return { ...prev, [personId]: updatedPerson };
+    });
+
+    if (type === 'meal') {
+      setAvailableMeals(prev => 
+        prev.map(meal => 
+          meal.id === item.id 
+            ? { ...meal, quantity: remainingQuantity - (newQuantity - currentQuantity) }
+            : meal
+        )
+      );
+    } else {
+      setAvailableDrinks(prev => 
+        prev.map(drink => 
+          drink.id === item.id 
+            ? { ...drink, quantity: remainingQuantity - (newQuantity - currentQuantity) }
+            : drink
+        )
+      );
     }
-
-    setPersonMealQuantities(prev => {
-      const personData = {...(prev[personId] || {})};
-      personData[meal.id] = newQuantity;
-      return { ...prev, [personId]: personData };
-    });
   };
 
   return (
@@ -396,50 +273,22 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             <div className="text-lg font-medium text-gray-800 bg-blue-50 p-4 rounded-lg mb-4">
               Montant par personne: <span className="text-blue-600">{amountPerPerson.toFixed(2)} €</span>
             </div>
-            
-            <div className="bg-blue-50 p-3 rounded-lg mb-4">
-              <h3 className="text-xl font-medium mb-2 text-blue-800">
-                Personne {currentPersonIndex + 1} 
-                {equalPaymentsByPerson[currentPersonId]?.paid && 
-                  <span className="ml-2 text-green-600 text-sm">(Payé)</span>
-                }
-              </h3>
-            </div>
-            
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-700 text-sm font-medium mb-2">Montant reçu</label>
                 <input
                   type="number"
-                  value={equalPaymentsByPerson[currentPersonId]?.amountReceived || ''}
-                  onChange={(e) => handleEqualPaymentAmountChange(currentPersonId, e.target.value)}
-                  disabled={equalPaymentsByPerson[currentPersonId]?.paid}
+                  value={equalPaymentAmountReceived}
+                  onChange={(e) => setEqualPaymentAmountReceived(e.target.value)}
                   className="w-full h-12 text-lg px-3 rounded-md border border-gray-300 text-gray-800"
                   placeholder="0.00"
                 />
               </div>
-              {equalPaymentsByPerson[currentPersonId]?.amountReceived && (
+              {equalPaymentAmountReceived && (
                 <div className="text-lg font-medium text-gray-800 bg-green-50 p-4 rounded-lg">
-                  Monnaie à rendre: <span className="text-green-600">
-                    {equalPaymentsByPerson[currentPersonId]?.change > 0 
-                      ? equalPaymentsByPerson[currentPersonId]?.change.toFixed(2) 
-                      : '0.00'} €
-                  </span>
+                  Monnaie à rendre: <span className="text-green-600">{equalPaymentChange > 0 ? equalPaymentChange.toFixed(2) : '0.00'} €</span>
                 </div>
               )}
-              
-              <button
-                onClick={() => handleEqualPaymentComplete(currentPersonId)}
-                disabled={!equalPaymentsByPerson[currentPersonId]?.amountReceived || equalPaymentsByPerson[currentPersonId]?.paid}
-                className={`w-full h-12 text-lg text-white rounded-md flex items-center justify-center gap-2 ${
-                  !equalPaymentsByPerson[currentPersonId]?.amountReceived || equalPaymentsByPerson[currentPersonId]?.paid
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-blue-500 hover:bg-blue-600'
-                } transition-colors`}
-              >
-                <Check size={18} />
-                <span>Personne suivante</span>
-              </button>
             </div>
           </div>
         )}
@@ -454,19 +303,17 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             <div className="mb-4">
               <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Boissons</h4>
               {availableDrinks.map(drink => {
-                const remaining = getRemainingQuantity(drink);
-                const personQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
-                const personQuantity = personQuantitiesMap[drink.id] || 0;
-                
+                const remaining = getRemainingQuantity(drink, 'drink');
+                const personQuantity = personQuantities[currentPersonId]?.[drink.id] || 0;
                 return (
-                  <div key={`drink-${drink.id}`} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
-                    <div className="flex-1 flex flex-col">
+                  <div key={drink.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
+                    <div className="flex-1">
                       <span className="font-medium">{drink.name}</span>
-                      <span className="text-gray-500 text-sm">({drink.price.toFixed(2)} €)</span>
+                      <span className="text-gray-500 text-sm ml-2">({drink.price.toFixed(2)} €)</span>
                     </div>
                     <div className="flex items-center">
                       <button 
-                        onClick={() => updateDrinkQuantityForPerson(currentPersonId, drink, -1)}
+                        onClick={() => updateItemQuantityForPerson(currentPersonId, drink, 'drink', -1)}
                         disabled={personQuantity === 0}
                         className={`rounded-l-md px-4 py-2 ${
                           personQuantity === 0 
@@ -478,7 +325,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                       </button>
                       <span className="mx-2 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
                       <button 
-                        onClick={() => updateDrinkQuantityForPerson(currentPersonId, drink, 1)}
+                        onClick={() => updateItemQuantityForPerson(currentPersonId, drink, 'drink', 1)}
                         disabled={personQuantity >= remaining}
                         className={`rounded-r-md px-4 py-2 ${
                           personQuantity >= remaining 
@@ -500,20 +347,18 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             <div className="mb-4">
               <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Repas</h4>
               {availableMeals.map(meal => {
-                const remaining = getRemainingQuantity(meal);
-                const personQuantitiesMap = personMealQuantities[currentPersonId] || {};
-                const personQuantity = personQuantitiesMap[meal.id] || 0;
-                
+                const remaining = getRemainingQuantity(meal, 'meal');
+                const personQuantity = personQuantities[currentPersonId]?.[meal.id] || 0;
                 return (
-                  <div key={`meal-${meal.id}`} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
-                    <div className="flex-1 flex flex-col">
+                  <div key={meal.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
+                    <div className="flex-1">
                       <span className="font-medium">{meal.name}</span>
-                      <span className="text-gray-500 text-sm">({meal.price.toFixed(2)} €)</span>
-                      {meal.cooking && <span className="text-gray-500 text-sm">({meal.cooking})</span>}
+                      <span className="text-gray-500 text-sm ml-2">({meal.price.toFixed(2)} €)</span>
+                      {meal.cooking && <span className="text-gray-500 text-sm ml-1">({meal.cooking})</span>}
                     </div>
                     <div className="flex items-center">
                       <button 
-                        onClick={() => updateMealQuantityForPerson(currentPersonId, meal, -1)}
+                        onClick={() => updateItemQuantityForPerson(currentPersonId, meal, 'meal', -1)}
                         disabled={personQuantity === 0}
                         className={`rounded-l-md px-4 py-2 ${
                           personQuantity === 0 
@@ -525,7 +370,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                       </button>
                       <span className="mx-2 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
                       <button 
-                        onClick={() => updateMealQuantityForPerson(currentPersonId, meal, 1)}
+                        onClick={() => updateItemQuantityForPerson(currentPersonId, meal, 'meal', 1)}
                         disabled={personQuantity >= remaining}
                         className={`rounded-r-md px-4 py-2 ${
                           personQuantity >= remaining 
@@ -569,15 +414,15 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             </div>
             
             <button
-              disabled={!hasSelectedItems()}
+              disabled={!hasSelectedItems}
               onClick={handleNextPerson}
               className={`w-full h-12 text-lg text-white rounded-md mt-4 flex items-center justify-center gap-2 ${
-                hasSelectedItems() 
+                hasSelectedItems 
                 ? 'bg-blue-500 hover:bg-blue-600' 
                 : 'bg-gray-400 cursor-not-allowed'
               } transition-colors`}
             >
-              <span>Personne suivante</span>
+              <span>Suivant</span>
               <ArrowLeft className="transform rotate-180" size={18} />
             </button>
           </div>

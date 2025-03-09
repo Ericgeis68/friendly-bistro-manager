@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
 import MealItem from '../ui/MealItem';
@@ -26,20 +25,10 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
 }) => {
   const [selectedMeal, setSelectedMeal] = useState<number | null>(null);
   const [showCookingDialog, setShowCookingDialog] = useState(false);
-  const [localMealsMenu, setLocalMealsMenu] = useState(() => 
-    mealsMenu.map(meal => ({ ...meal, quantity: meal.quantity || 0 }))
-  );
-  const [localTempMeals, setLocalTempMeals] = useState<MenuItem[]>(() => 
-    tempMeals.map(meal => ({ ...meal, quantity: meal.quantity || 0 }))
-  );
+  const [localMealsMenu, setLocalMealsMenu] = useState([...mealsMenu]);
+  const [localTempMeals, setLocalTempMeals] = useState<MenuItem[]>([...tempMeals]);
   const [showRemoveCookingDialog, setShowRemoveCookingDialog] = useState(false);
   const [selectedMealToRemove, setSelectedMealToRemove] = useState<number | null>(null);
-
-  useEffect(() => {
-    // Initialize with proper quantities to avoid NaN issues
-    setLocalMealsMenu(mealsMenu.map(meal => ({ ...meal, quantity: meal.quantity || 0 })));
-    setLocalTempMeals(tempMeals.map(meal => ({ ...meal, quantity: meal.quantity || 0 })));
-  }, [mealsMenu, tempMeals]);
 
   const cookingOptions = ['BLEU', 'SAIGNANT', 'A POINT', 'CUIT', 'BIEN CUIT'];
 
@@ -57,7 +46,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
 
     const updatedMeals = localMealsMenu.map(meal => {
       if (meal.id === id) {
-        return { ...meal, quantity: Math.max(0, (meal.quantity || 0) + increment) };
+        return { ...meal, quantity: Math.max(0, meal.quantity + increment) };
       }
       return meal;
     });
@@ -72,7 +61,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
       setLocalTempMeals([...localTempMeals, {...mealToUpdate, quantity: 1, cooking}]);
       setLocalMealsMenu(localMealsMenu.map(meal => {
         if (meal.id === selectedMeal) {
-          return {...meal, quantity: (meal.quantity || 0) + 1};
+          return {...meal, quantity: meal.quantity + 1};
         }
         return meal;
       }));
@@ -95,7 +84,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
         setLocalTempMeals(newTempMeals);
         setLocalMealsMenu(localMealsMenu.map(meal => {
           if (meal.id === selectedMealToRemove) {
-            return { ...meal, quantity: Math.max(0, (meal.quantity || 0) - 1) };
+            return { ...meal, quantity: Math.max(0, meal.quantity - 1) };
           }
           return meal;
         }));
@@ -107,7 +96,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
   };
 
   const handleValidate = () => {
-    const orderedMeals = localMealsMenu.filter(m => (m.quantity || 0) > 0 && (m.id !== 1 && m.id !==2));
+    const orderedMeals = localMealsMenu.filter(m => m.quantity > 0 && (m.id !== 1 && m.id !==2));
     setOrder(prev => ({
       ...prev,
       meals: [...orderedMeals, ...localTempMeals]
@@ -117,11 +106,10 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
     setCurrentScreen('category');
   };
 
-  // Calculate the total with proper null/undefined check for quantity
   const totalAmount = localMealsMenu.reduce((sum, meal) => 
-    sum + (meal.price * (meal.quantity || 0)), 0
+    sum + (meal.price * meal.quantity), 0
   ) + localTempMeals.reduce((sum, meal) => 
-    sum + (meal.price * (meal.quantity || 0)), 0
+    sum + (meal.price * meal.quantity), 0
   );
 
   const allCookingOptions = [...new Set(localTempMeals
@@ -145,7 +133,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
         {localMealsMenu.map(meal => (
           <MealItem
             key={meal.id}
-            meal={{...meal, quantity: meal.quantity || 0}}
+            meal={meal}
             onQuantityChange={updateQuantity}
           />
         ))}
