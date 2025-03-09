@@ -22,12 +22,11 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const { drinks = [], meals = [] } = order;
 
-  // Calculate drink total with proper quantity handling
+  // Make sure to calculate total based on quantity with proper null checks
   const drinkTotal = drinks.reduce((sum, item) => {
     return sum + (item.price * (item.quantity || 1));
   }, 0);
   
-  // Calculate meal total with proper quantity handling
   const mealTotal = meals.reduce((sum, item) => {
     return sum + (item.price * (item.quantity || 1));
   }, 0);
@@ -35,13 +34,13 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const totalAmount = drinkTotal + mealTotal;
   const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
 
-  // Group meals by name and cooking style with proper quantity handling
+  // Group meals by name and cooking style
   const groupedMeals = meals.reduce<Record<string, MenuItem>>((acc, meal) => {
     const key = `${meal.name}-${meal.cooking || 'none'}`;
     if (acc[key]) {
-      acc[key].quantity = (acc[key].quantity || 1) + (meal.quantity || 1);
+      acc[key].quantity = (acc[key].quantity || 1) + 1;
     } else {
-      acc[key] = { ...meal, quantity: meal.quantity || 1 };
+      acc[key] = { ...meal, quantity: 1 };
     }
     return acc;
   }, {});

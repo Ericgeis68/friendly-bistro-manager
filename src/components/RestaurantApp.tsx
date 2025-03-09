@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import type { MenuItem, Order, ScreenType, UserRole } from '../types/restaurant';
+import type { MenuItem, Order, ScreenType } from '../types/restaurant';
 import { useOrderManagement } from '../hooks/useOrderManagement';
 import { useMenuManagement } from '../hooks/useMenuManagement';
 import { useScreenManagement } from '../hooks/useScreenManagement';
@@ -18,80 +18,10 @@ import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import SplitPaymentScreen from './screens/SplitPaymentScreen';
 
-// WaitressScreens component to handle all waitress screen states
-const WaitressScreens = ({
-  loggedInUser,
-  showCompletedOrders,
-  showPendingOrders,
-  completedOrders,
-  pendingOrders,
-  pendingNotifications,
-  handleLogout,
-  setCurrentScreen,
-  setShowPendingOrders,
-  setShowCompletedOrders,
-  handleNotificationAcknowledge,
-  handleOrderCompleteWithType,
-  handleOrderCancelWithType,
-  setPendingOrders
-}: {
-  loggedInUser: UserRole;
-  showCompletedOrders: boolean;
-  showPendingOrders: boolean;
-  completedOrders: Order[];
-  pendingOrders: Order[];
-  pendingNotifications: Order[];
-  handleLogout: () => void;
-  setCurrentScreen: (screen: ScreenType) => void;
-  setShowPendingOrders: (show: boolean) => void;
-  setShowCompletedOrders: (show: boolean) => void;
-  handleNotificationAcknowledge: (id: string) => void;
-  handleOrderCompleteWithType: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
-  handleOrderCancelWithType: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
-  setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-}) => {
-  if (showCompletedOrders) {
-    return (
-      <CompletedOrdersScreen
-        orders={completedOrders.filter(order => 
-          order.waitress === loggedInUser
-        )}
-        onBack={() => setShowCompletedOrders(false)}
-        userRole="waitress"
-      />
-    );
-  }
-  
-  if (showPendingOrders) {
-    pendingNotifications
-      .filter(order => order.waitress === loggedInUser)
-      .forEach(order => handleNotificationAcknowledge(order.id));
-    
-    return (
-      <PendingOrdersScreen
-        orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
-        onBack={() => setShowPendingOrders(false)}
-        onOrderComplete={handleOrderCompleteWithType}
-        onOrderCancel={handleOrderCancelWithType}
-        setPendingOrders={setPendingOrders}
-      />
-    );
-  }
-
-  return (
-    <WaitressHomeScreen
-      loggedInUser={loggedInUser}
-      handleLogout={handleLogout}
-      handleNewOrder={() => setCurrentScreen('table')}
-      setShowPendingOrders={setShowPendingOrders}
-      setShowCompletedOrders={setShowCompletedOrders}
-      pendingNotifications={pendingNotifications.filter(order => order.waitress === loggedInUser)}
-      onNotificationAcknowledge={handleNotificationAcknowledge}
-    />
-  );
-};
-
 const RestaurantApp: React.FC = () => {
+  // Remove this line as we want to persist completed orders
+  // localStorage.removeItem('completedOrders');
+  
   const [tableNumber, setTableNumber] = useState('');
   const [tableComment, setTableComment] = useState('');
   const [order, setOrder] = useState<Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>>({
@@ -132,16 +62,6 @@ const RestaurantApp: React.FC = () => {
     setMealsMenu
   } = useMenuManagement();
 
-  // Fix typing issue by creating a wrapper function that handles the type conversion
-  const handleSetLoggedInUser = (user: string | null) => {
-    if (user === null) {
-      setLoggedInUser(null);
-    } else {
-      // We know this is a valid user role because it comes from the LoginScreen
-      setLoggedInUser(user as UserRole);
-    }
-  };
-
   const {
     handleLogin,
     handleLogout,
@@ -151,7 +71,7 @@ const RestaurantApp: React.FC = () => {
     handleOrderCancelWithType
   } = useOrderHandlers({
     loggedInUser: loggedInUser || '',
-    setLoggedInUser: handleSetLoggedInUser,
+    setLoggedInUser,
     setCurrentScreen,
     tableNumber,
     tableComment,
@@ -172,87 +92,110 @@ const RestaurantApp: React.FC = () => {
     completedOrders
   });
 
-  // Render based on current screen
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  if (currentScreen === 'waitress' && loggedInUser) {
+  if (currentScreen === 'waitress') {
+    if (showCompletedOrders) {
+      return (
+        <CompletedOrdersScreen
+          orders={completedOrders.filter(order => 
+            order.waitress === loggedInUser
+          )}
+          onBack={() => setShowCompletedOrders(false)}
+          userRole="waitress"
+        />
+      );
+    }
+    
+    if (showPendingOrders) {
+      pendingNotifications
+        .filter(order => order.waitress === loggedInUser)
+        .forEach(order => handleNotificationAcknowledge(order.id));
+      
+      return (
+        <PendingOrdersScreen
+          orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
+          onBack={() => setShowPendingOrders(false)}
+          onOrderComplete={handleOrderCompleteWithType}
+          onOrderCancel={handleOrderCancelWithType}
+          setPendingOrders={setPendingOrders}
+        />
+      );
+    }
+
     return (
-      <WaitressScreens
-        loggedInUser={loggedInUser}
-        showCompletedOrders={showCompletedOrders}
-        showPendingOrders={showPendingOrders}
-        completedOrders={completedOrders}
-        pendingOrders={pendingOrders}
-        pendingNotifications={pendingNotifications}
+      <WaitressHomeScreen
+        loggedInUser={loggedInUser!}
         handleLogout={handleLogout}
-        setCurrentScreen={setCurrentScreen}
+        handleNewOrder={() => setCurrentScreen('table')}
         setShowPendingOrders={setShowPendingOrders}
         setShowCompletedOrders={setShowCompletedOrders}
-        handleNotificationAcknowledge={handleNotificationAcknowledge}
-        handleOrderCompleteWithType={handleOrderCompleteWithType}
-        handleOrderCancelWithType={handleOrderCancelWithType}
-        setPendingOrders={setPendingOrders}
+        pendingNotifications={pendingNotifications.filter(order => order.waitress === loggedInUser)}
+        onNotificationAcknowledge={handleNotificationAcknowledge}
       />
     );
   }
 
-  // Mapping for other screens
-  const screenMap: Record<ScreenType, React.ReactNode> = {
-    login: null, // Already handled
-    waitress: null, // Already handled
-    table: (
-      <TableInputScreen 
-        handleLogout={handleLogout}
-        setTableNumber={setTableNumber}
-        setTableComment={setTableComment}
-        setCurrentScreen={setCurrentScreen}
-      />
-    ),
-    category: (
-      <CategoryMenuScreen 
-        tableNumber={tableNumber}
-        handleLogout={handleLogout}
-        setCurrentScreen={setCurrentScreen}
-      />
-    ),
-    boissons: (
-      <DrinkMenuScreen 
-        tableNumber={tableNumber}
-        drinksMenu={drinksMenu}
-        setDrinksMenu={setDrinksMenu}
-        setCurrentScreen={setCurrentScreen}
-        setOrder={setOrder}
-      />
-    ),
-    repas: (
-      <MealMenuScreen 
-        tableNumber={tableNumber}
-        mealsMenu={mealsMenu}
-        setMealsMenu={setMealsMenu}
-        tempMeals={tempMeals}
-        setTempMeals={setTempMeals}
-        setCurrentScreen={setCurrentScreen}
-        setOrder={setOrder}
-      />
-    ),
-    recap: (
-      <RecapOrderScreen 
-        tableNumber={tableNumber}
-        order={order}
-        handleSubmitOrder={handleSubmitOrder}
-        setCurrentScreen={setCurrentScreen}
-      />
-    ),
-    splitPayment: (
-      <SplitPaymentScreen 
-        tableNumber={tableNumber}
-        order={order}
-        setCurrentScreen={setCurrentScreen}
-      />
-    ),
-    cuisine: (
+  if (currentScreen === 'table') {
+    return <TableInputScreen 
+      handleLogout={handleLogout}
+      setTableNumber={setTableNumber}
+      setTableComment={setTableComment}
+      setCurrentScreen={setCurrentScreen}
+    />;
+  }
+
+  if (currentScreen === 'category') {
+    return <CategoryMenuScreen 
+      tableNumber={tableNumber}
+      handleLogout={handleLogout}
+      setCurrentScreen={setCurrentScreen}
+    />;
+  }
+
+  if (currentScreen === 'boissons') {
+    return <DrinkMenuScreen 
+      tableNumber={tableNumber}
+      drinksMenu={drinksMenu}
+      setDrinksMenu={setDrinksMenu}
+      setCurrentScreen={setCurrentScreen}
+      setOrder={setOrder}
+    />;
+  }
+
+  if (currentScreen === 'repas') {
+    return <MealMenuScreen 
+      tableNumber={tableNumber}
+      mealsMenu={mealsMenu}
+      setMealsMenu={setMealsMenu}
+      tempMeals={tempMeals}
+      setTempMeals={setTempMeals}
+      setCurrentScreen={setCurrentScreen}
+      setOrder={setOrder}
+    />;
+  }
+
+  if (currentScreen === 'recap') {
+    return <RecapOrderScreen 
+      tableNumber={tableNumber}
+      order={order}
+      handleSubmitOrder={handleSubmitOrder}
+      setCurrentScreen={(screen) => setCurrentScreen(screen as ScreenType)}
+    />;
+  }
+
+  if (currentScreen === 'splitPayment') {
+    return <SplitPaymentScreen 
+      tableNumber={tableNumber}
+      order={order}
+      setCurrentScreen={(screen) => setCurrentScreen(screen as ScreenType)}
+    />;
+  }
+
+  if (currentScreen === 'cuisine'){
+    return (
       <CuisineScreen 
         pendingOrders={pendingOrders}
         completedOrders={completedOrders}
@@ -261,17 +204,22 @@ const RestaurantApp: React.FC = () => {
         onLogout={handleLogout}
         onOrderReady={handleOrderReady}
       />
-    ),
-    admin: (
-      <AdminScreen 
-        onLogout={handleLogout}
-        setLoggedInUser={handleSetLoggedInUser}
-        setCurrentScreen={setCurrentScreen}
-      />
-    )
-  };
+    );
+  }
 
-  return screenMap[currentScreen] || null;
+  if (currentScreen === 'admin') {
+    return <AdminScreen 
+      onLogout={handleLogout}
+      setLoggedInUser={(user) => {
+        if (typeof user === 'string') {
+          setLoggedInUser(user as any);
+        }
+      }}
+      setCurrentScreen={setCurrentScreen}
+    />;
+  }
+
+  return null;
 };
 
 export default RestaurantApp;
