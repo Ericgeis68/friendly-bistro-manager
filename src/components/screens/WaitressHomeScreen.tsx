@@ -1,6 +1,8 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { ShoppingBag, Clock, CheckCircle2, Bell } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
+import OrderDetailScreen from './OrderDetailScreen';
 
 interface WaitressHomeScreenProps {
   loggedInUser: string;
@@ -10,6 +12,8 @@ interface WaitressHomeScreenProps {
   setShowCompletedOrders: (show: boolean) => void;
   pendingNotifications: Order[];
   onNotificationAcknowledge: (orderId: string) => void;
+  pendingOrders: Order[];
+  onOrderComplete: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
 }
 
 const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
@@ -19,8 +23,35 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   setShowPendingOrders,
   setShowCompletedOrders,
   pendingNotifications,
-  onNotificationAcknowledge
+  onNotificationAcknowledge,
+  pendingOrders,
+  onOrderComplete
 }) => {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const handleViewOrderDetails = (orderId: string) => {
+    const order = pendingOrders.find(order => order.id === orderId);
+    if (order) {
+      setSelectedOrder(order);
+      onNotificationAcknowledge(orderId);
+    }
+  };
+
+  const handleBack = () => {
+    setSelectedOrder(null);
+  };
+
+  // Si une commande est sélectionnée, afficher l'écran de détails
+  if (selectedOrder) {
+    return (
+      <OrderDetailScreen 
+        order={selectedOrder} 
+        onBack={handleBack}
+        onOrderComplete={onOrderComplete}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white p-4 flex justify-between items-center">
@@ -31,7 +62,7 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
       {pendingNotifications.length > 0 && (
         <div className="p-4">
           {pendingNotifications.map((order) => (
-            <div 
+            <div
               key={order.id}
               className="bg-blue-100 p-4 rounded-lg mb-4 flex justify-between items-center"
               onClick={() => onNotificationAcknowledge(order.id)}
@@ -40,7 +71,13 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
                 <Bell className="text-blue-500 mr-2" />
                 <span>Commande prête - Table {order.table}</span>
               </div>
-              <button className="text-blue-500 underline">
+              <button
+                className="text-blue-500 underline"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent notification click handler
+                  handleViewOrderDetails(order.id);
+                }}
+              >
                 Voir
               </button>
             </div>

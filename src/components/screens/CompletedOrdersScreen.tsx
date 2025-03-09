@@ -23,19 +23,25 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  // Filter orders based on user role
+  const formatDate = (dateString: string | number) => {
+    if (typeof dateString === 'number') {
+      dateString = new Date(dateString).toISOString();
+    }
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+  };
+
   const filteredOrders = orders.filter(order => {
-    // Base filter criteria depends on user role
     if (userRole === 'cuisine') {
-      // For cuisine, show ready, delivered or cancelled orders, but not drink-only orders
       return (order.status === 'ready' || order.status === 'delivered' || order.status === 'cancelled') && !order.id.includes('-drinks');
     } else {
-      // For waitresses, only show completed or cancelled orders (not 'ready' ones)
       return (order.status === 'delivered' || order.status === 'cancelled');
     }
   });
 
-  // Helper function to determine order type
   const getOrderType = (order: Order) => {
     if (order.id.includes('-drinks')) {
       return 'Boissons';
@@ -44,7 +50,6 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  // Get status text based on order status
   const getStatusText = (status: Order['status']) => {
     switch (status) {
       case 'ready':
@@ -58,7 +63,6 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  // Get status color based on order status
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'ready':
@@ -72,7 +76,6 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  // Créer une clé unique pour chaque commande en combinant l'ID et le statut
   const getUniqueKey = (order: Order) => {
     return `${order.id}-${order.status}-${Date.now()}`;
   };
