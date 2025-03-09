@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
@@ -72,11 +73,6 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     }
   };
 
-  // Créer une clé unique pour chaque commande en combinant l'ID et le statut
-  const getUniqueKey = (order: Order) => {
-    return `${order.id}-${order.status}-${Date.now()}`;
-  };
-
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-blue-500 p-4 text-white flex items-center">
@@ -94,7 +90,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
             .replace('-meals', '');
             
           return (
-            <div key={getUniqueKey(order)} className="bg-white rounded-2xl p-4 shadow">
+            <div key={order.id} className="bg-white rounded-2xl p-4 shadow">
               <div className="flex justify-between items-center mb-2">
                 <div>
                   <div className="font-medium text-lg">
