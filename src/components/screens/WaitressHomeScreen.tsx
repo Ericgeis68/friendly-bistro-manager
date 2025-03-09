@@ -31,7 +31,7 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
       {pendingNotifications.length > 0 && (
         <div className="p-4">
           {pendingNotifications.map((order) => (
-            <div 
+            <div
               key={order.id}
               className="bg-blue-100 p-4 rounded-lg mb-4 flex justify-between items-center"
               onClick={() => onNotificationAcknowledge(order.id)}
@@ -40,7 +40,13 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
                 <Bell className="text-blue-500 mr-2" />
                 <span>Commande prête - Table {order.table}</span>
               </div>
-              <button className="text-blue-500 underline">
+              <button
+                className="text-blue-500 underline"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent notification click handler
+                  setShowPendingOrders(true);
+                }}
+              >
                 Voir
               </button>
             </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
@@ -22,17 +21,26 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const { drinks = [], meals = [] } = order;
 
-  const drinkTotal = drinks.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
-  const mealTotal = meals.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  // Calculate drink total with proper quantity handling
+  const drinkTotal = drinks.reduce((sum, item) => {
+    return sum + (item.price * (item.quantity || 1));
+  }, 0);
+  
+  // Calculate meal total with proper quantity handling
+  const mealTotal = meals.reduce((sum, item) => {
+    return sum + (item.price * (item.quantity || 1));
+  }, 0);
+  
   const totalAmount = drinkTotal + mealTotal;
   const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
 
+  // Group meals by name and cooking style with proper quantity handling
   const groupedMeals = meals.reduce<Record<string, MenuItem>>((acc, meal) => {
     const key = `${meal.name}-${meal.cooking || 'none'}`;
     if (acc[key]) {
-      acc[key].quantity = (acc[key].quantity || 1) + 1;
+      acc[key].quantity = (acc[key].quantity || 1) + (meal.quantity || 1);
     } else {
-      acc[key] = { ...meal, quantity: 1 };
+      acc[key] = { ...meal, quantity: meal.quantity || 1 };
     }
     return acc;
   }, {});
@@ -74,7 +82,7 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
               <div key={`${item.id}-${item.cooking}`} className="flex justify-between mb-2 text-gray-800">
                 <div>
                   <span className="font-medium">{item.name}</span>
-                  <span className="text-gray-600 text-sm"> x{item.quantity}</span>
+                  <span className="text-gray-600 text-sm"> x{item.quantity || 1}</span>
                   {item.cooking && <span className="text-gray-600 text-sm"> ({item.cooking})</span>}
                 </div>
                 <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>

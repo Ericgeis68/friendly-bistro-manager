@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Check } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
@@ -18,7 +17,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   order,
   setCurrentScreen
 }) => {
-  const [paymentMethod, setPaymentMethod] = useState<'equal' | 'items'>('equal');
+  const [paymentMethod, setPaymentMethod] = useState<'equal' | 'items'>('items');
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1);
   const [personPayments, setPersonPayments] = useState<{ [key: string]: { meals: MenuItem[]; drinks: MenuItem[]; amount: number; change: number } }>({});
   const [remainingBalance, setRemainingBalance] = useState(0);
@@ -27,44 +26,104 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const [availableMeals, setAvailableMeals] = useState<MenuItem[]>([]);
   const [availableDrinks, setAvailableDrinks] = useState<MenuItem[]>([]);
-  const [personQuantities, setPersonQuantities] = useState<{ [personId: string]: { [itemId: number]: number } }>({});
+  const [personDrinkQuantities, setPersonDrinkQuantities] = useState<{ [personId: string]: { [itemId: number]: number } }>({});
+  const [personMealQuantities, setPersonMealQuantities] = useState<{ [personId: string]: { [itemId: number]: number } }>({});
+  const [equalPaymentAmountReceived, setEqualPaymentAmountReceived] = useState('');
+  const [equalPaymentsByPerson, setEqualPaymentsByPerson] = useState<{ [personId: string]: { paid: boolean; amount: number; amountReceived: string; change: number } }>({});
 
-  const { drinks: initialDrinks = [], meals: initialMeals = [] } = order;
-  const drinkTotal = initialDrinks.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
-  const mealTotal = initialMeals.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const groupSimilarItems = (items: MenuItem[]): MenuItem[] => {
+    const groupedMap = new Map<string, MenuItem>();
+
+    items.forEach(item => {
+      const key = `${item.name}-${item.price}`;
+      if (groupedMap.has(key)) {
+        const existingItem = groupedMap.get(key)!;
+        existingItem.quantity = (existingItem.quantity || 1) + (item.quantity || 1);
+      } else {
+        groupedMap.set(key, { ...item });
+      }
+    });
+
+    return Array.from(groupedMap.values());
+  };
+
+  const {
+    drinks: initialDrinks = [],
+    meals: initialMeals = []
+  } = order;
+
+  const drinkTotal = initialDrinks.reduce((sum, item) => {
+    return sum + (item.price * (item.quantity || 1));
+  }, 0);
+
+  const mealTotal = initialMeals.reduce((sum, item) => {
+    return sum + (item.price * (item.quantity || 1));
+  }, 0);
+
   const totalAmount = drinkTotal + mealTotal;
 
   const amountPerPerson = paymentMethod === 'equal' && numberOfPeople > 0 ? totalAmount / numberOfPeople : 0;
 
   useEffect(() => {
+    if (paymentMethod === 'equal') {
+      const initialPayments: { [personId: string]: { paid: boolean; amount: number; amountReceived: string; change: number } } = {};
+
+      for (let i = 1; i <= numberOfPeople; i++) {
+        initialPayments[i.toString()] = {
+          paid: false,
+          amount: amountPerPerson,
+          amountReceived: '',
+          change: 0
+        };
+      }
+
+      setEqualPaymentsByPerson(initialPayments);
+    }
+  }, [paymentMethod, numberOfPeople, amountPerPerson]);
+
+  useEffect(() => {
     setRemainingBalance(totalAmount);
-    setAvailableMeals([...initialMeals]);
-    setAvailableDrinks([...initialDrinks]);
+    setAvailableMeals(groupSimilarItems([...initialMeals]));
+    setAvailableDrinks(groupSimilarItems([...initialDrinks]));
   }, [totalAmount, initialMeals, initialDrinks]);
 
   useEffect(() => {
     if (paymentMethod === 'equal') {
-      setIsValidPayment(amountPerPerson * numberOfPeople === totalAmount);
-      setRemainingBalance(totalAmount - (amountPerPerson * numberOfPeople));
+      let totalPaid = 0;
+      Object.values(equalPaymentsByPerson).forEach(personPayment => {
+        if (personPayment.paid) {
+          totalPaid += personPayment.amount;
+        }
+      });
+
+      setRemainingBalance(totalAmount - totalPaid);
+      setIsValidPayment(Math.abs(totalAmount - totalPaid) < 0.01);
     } else {
       let totalPaid = 0;
-      Object.values(personPayments).forEach(person => {
-        totalPaid += calculatePersonTotal(Object.keys(person)[0] || '');
+      Object.entries(personPayments).forEach(([personId]) => {
+        totalPaid += calculatePersonTotal(personId);
       });
-      setIsValidPayment(remainingBalance === 0);
+
       setRemainingBalance(totalAmount - totalPaid);
+      setIsValidPayment(Math.abs(remainingBalance) < 0.01);
     }
-  }, [paymentMethod, numberOfPeople, personPayments, totalAmount, amountPerPerson]);
+  }, [paymentMethod, equalPaymentsByPerson, personPayments, totalAmount]);
 
   const calculatePersonTotal = (personId: string) => {
     let personTotal = 0;
-    const person = personPayments[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
-    person.drinks.forEach(drink => {
-      personTotal += drink.price * (personQuantities[personId]?.[drink.id] || 0);
+
+    const personDrinkQuantitiesMap = personDrinkQuantities[personId] || {};
+    availableDrinks.forEach(drink => {
+      const quantity = personDrinkQuantitiesMap[drink.id] || 0;
+      personTotal += drink.price * quantity;
     });
-    person.meals.forEach(meal => {
-      personTotal += meal.price * (personQuantities[personId]?.[meal.id] || 0);
+
+    const personMealQuantitiesMap = personMealQuantities[personId] || {};
+    availableMeals.forEach(meal => {
+      const quantity = personMealQuantitiesMap[meal.id] || 0;
+      personTotal += meal.price * quantity;
     });
+
     return personTotal;
   };
 
@@ -92,123 +151,193 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
     const numericAmount = parseFloat(amount) || 0;
     const personTotal = calculatePersonTotal(personId);
     setAmountReceived(amount);
+
     setPersonPayments(prev => {
       const person = prev[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
-      return { 
-        ...prev, 
-        [personId]: { 
-          ...person, 
+      return {
+        ...prev,
+        [personId]: {
+          ...person,
           amount: numericAmount,
           change: numericAmount - personTotal
-        } 
+        }
       };
     });
   };
 
+  const handleEqualPaymentAmountChange = (personId: string, amount: string) => {
+    const numericAmount = parseFloat(amount) || 0;
+
+    setEqualPaymentsByPerson(prev => {
+      return {
+        ...prev,
+        [personId]: {
+          ...prev[personId],
+          amountReceived: amount,
+          change: numericAmount - amountPerPerson
+        }
+      };
+    });
+  };
+
+  const handleEqualPaymentComplete = (personId: string) => {
+    setEqualPaymentsByPerson(prev => {
+      return {
+        ...prev,
+        [personId]: {
+          ...prev[personId],
+          paid: true
+        }
+      };
+    });
+
+    const nextUnpaidPersonId = personIds.find(id => {
+      return !equalPaymentsByPerson[id]?.paid && id !== personId;
+    });
+
+    if (nextUnpaidPersonId) {
+      setCurrentPersonIndex(parseInt(nextUnpaidPersonId) - 1);
+    }
+  };
+
   const currentPersonId = personIds[currentPersonIndex];
-  const hasSelectedItems = personPayments[currentPersonId]?.meals.length > 0 || personPayments[currentPersonId]?.drinks.length > 0;
+
+  const hasSelectedItems = () => {
+    const drinkQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
+    const mealQuantitiesMap = personMealQuantities[currentPersonId] || {};
+
+    return Object.values(drinkQuantitiesMap).some(quantity => quantity > 0) ||
+      Object.values(mealQuantitiesMap).some(quantity => quantity > 0);
+  };
+
   const currentPersonTotal = calculatePersonTotal(currentPersonId);
   const currentChange = (parseFloat(amountReceived) || 0) - currentPersonTotal;
 
   const handleNextPerson = () => {
-    const personTotal = calculatePersonTotal(currentPersonId);
-    setRemainingBalance(prevBalance => prevBalance - personTotal);
+    console.log("Before set currentPersonIndex:", currentPersonIndex);
 
-    // Update available items (remove paid items)
-    setAvailableMeals(prevMeals => {
-      return prevMeals.map(meal => {
-        const personQuantity = personQuantities[currentPersonId]?.[meal.id] || 0;
-        return { ...meal, quantity: Math.max(0, (meal.quantity || 1) - personQuantity) };
-      }).filter(meal => meal.quantity > 0);
+    const updatedDrinks: MenuItem[] = [];
+    const updatedMeals: MenuItem[] = [];
+
+    const personDrinkQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
+    availableDrinks.forEach(drink => {
+      const quantity = personDrinkQuantitiesMap[drink.id] || 0;
+      if (quantity > 0) {
+        updatedDrinks.push({ ...drink, quantity });
+      }
+    });
+
+    const personMealQuantitiesMap = personMealQuantities[currentPersonId] || {};
+    availableMeals.forEach(meal => {
+      const quantity = personMealQuantitiesMap[meal.id] || 0;
+      if (quantity > 0) {
+        updatedMeals.push({ ...meal, quantity });
+      }
+    });
+
+    setPersonPayments(prev => {
+      const amount = parseFloat(amountReceived) || 0;
+      return {
+        ...prev,
+        [currentPersonId]: {
+          drinks: updatedDrinks,
+          meals: updatedMeals,
+          amount: amount,
+          change: amount - currentPersonTotal
+        }
+      };
     });
 
     setAvailableDrinks(prevDrinks => {
       return prevDrinks.map(drink => {
-        const personQuantity = personQuantities[currentPersonId]?.[drink.id] || 0;
-        return { ...drink, quantity: Math.max(0, (drink.quantity || 1) - personQuantity) };
-      }).filter(drink => drink.quantity > 0);
+        const personQuantity = personDrinkQuantitiesMap[drink.id] || 0;
+        return {
+          ...drink,
+          quantity: Math.max(0, (drink.quantity || 0) - personQuantity)
+        };
+      }).filter(drink => (drink.quantity || 0) > 0);
+    });
+
+    setAvailableMeals(prevMeals => {
+      return prevMeals.map(meal => {
+        const personQuantity = personMealQuantitiesMap[meal.id] || 0;
+        return {
+          ...meal,
+          quantity: Math.max(0, (meal.quantity || 0) - personQuantity)
+        };
+      }).filter(meal => (meal.quantity || 0) > 0);
+    });
+
+    setRemainingBalance(prevBalance => {
+      let newPersonTotal = 0;
+      updatedDrinks.forEach(drink => {
+        newPersonTotal += drink.price * (drink.quantity || 0);
+      });
+      updatedMeals.forEach(meal => {
+        newPersonTotal += meal.price * (meal.quantity || 0);
+      });
+      return prevBalance - newPersonTotal;
     });
 
     setAmountReceived('');
+
+    setPersonDrinkQuantities(prev => ({
+      ...prev,
+      [currentPersonId]: {}
+    }));
+
+    setPersonMealQuantities(prev => ({
+      ...prev,
+      [currentPersonId]: {}
+    }));
+
+    setCurrentPersonIndex(prev => {
+      const nextIndex = prev + 1;
+      console.log("After set currentPersonIndex:", nextIndex);
+      return nextIndex;
+    });
 
     if (currentPersonIndex < numberOfPeople - 1) {
       setCurrentPersonIndex(prev => prev + 1);
     }
   };
 
-  const getRemainingQuantity = (item: MenuItem, type: 'meal' | 'drink') => {
-    if (type === 'meal') {
-      return availableMeals.find(m => m.id === item.id)?.quantity || 0;
-    } else {
-      return availableDrinks.find(d => d.id === item.id)?.quantity || 0;
-    }
+  const getRemainingQuantity = (item: MenuItem): number => {
+    return item.quantity || 0;
   };
 
-  const updateItemQuantityForPerson = (personId: string, item: MenuItem, type: 'meal' | 'drink', quantityChange: number) => {
-    const currentQuantity = personQuantities[personId]?.[item.id] || 0;
-    const remainingQuantity = getRemainingQuantity(item, type);
-    
-    // Vérifier si la nouvelle quantité est valide
+  const updateDrinkQuantityForPerson = (personId: string, drink: MenuItem, quantityChange: number) => {
+    const personQuantitiesMap = personDrinkQuantities[personId] || {};
+    const currentQuantity = personQuantitiesMap[drink.id] || 0;
+    const remainingQuantity = getRemainingQuantity(drink);
+
     const newQuantity = Math.max(0, currentQuantity + quantityChange);
     if (newQuantity > remainingQuantity && quantityChange > 0) {
-      return; // Ne pas permettre d'augmenter au-delà de la quantité restante
+      return;
     }
 
-    setPersonQuantities(prev => {
-      const person = prev[personId] || {};
-      return { ...prev, [personId]: { ...person, [item.id]: newQuantity } };
+    setPersonDrinkQuantities(prev => {
+      const personData = { ...(prev[personId] || {}) };
+      personData[drink.id] = newQuantity;
+      return { ...prev, [personId]: personData };
     });
+  };
 
-    setPersonPayments(prev => {
-      const person = prev[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
-      let updatedMeals = [...person.meals];
-      let updatedDrinks = [...person.drinks];
+  const updateMealQuantityForPerson = (personId: string, meal: MenuItem, quantityChange: number) => {
+    const personQuantitiesMap = personMealQuantities[personId] || {};
+    const currentQuantity = personQuantitiesMap[meal.id] || 0;
+    const remainingQuantity = getRemainingQuantity(meal);
 
-      if (type === 'meal') {
-        const mealIndex = updatedMeals.findIndex(m => m.id === item.id);
-        if (mealIndex !== -1) {
-          updatedMeals.splice(mealIndex, 1);
-        }
-        if (newQuantity > 0) {
-          updatedMeals.push(item);
-        }
-      } else {
-        const drinkIndex = updatedDrinks.findIndex(d => d.id === item.id);
-        if (drinkIndex !== -1) {
-          updatedDrinks.splice(drinkIndex, 1);
-        }
-        if (newQuantity > 0) {
-          updatedDrinks.push(item);
-        }
-      }
-
-      const updatedPerson = { ...person, meals: updatedMeals, drinks: updatedDrinks };
-      const newTotal = calculatePersonTotal(personId);
-      setRemainingBalance(prevBalance => totalAmount - (newTotal + Object.entries(personPayments)
-        .filter(([id]) => id !== personId)
-        .reduce((sum, [id]) => sum + calculatePersonTotal(id), 0)));
-
-      return { ...prev, [personId]: updatedPerson };
-    });
-
-    // Mettre à jour les quantités restantes
-    if (type === 'meal') {
-      setAvailableMeals(prev => 
-        prev.map(meal => 
-          meal.id === item.id 
-            ? { ...meal, quantity: remainingQuantity - (newQuantity - currentQuantity) }
-            : meal
-        )
-      );
-    } else {
-      setAvailableDrinks(prev => 
-        prev.map(drink => 
-          drink.id === item.id 
-            ? { ...drink, quantity: remainingQuantity - (newQuantity - currentQuantity) }
-            : drink
-        )
-      );
+    const newQuantity = Math.max(0, currentQuantity + quantityChange);
+    if (newQuantity > remainingQuantity && quantityChange > 0) {
+      return;
     }
+
+    setPersonMealQuantities(prev => {
+      const personData = { ...(prev[personId] || {}) };
+      personData[meal.id] = newQuantity;
+      return { ...prev, [personId]: personData };
+    });
   };
 
   return (
@@ -253,8 +382,8 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             <h2 className="font-bold mb-4 text-lg text-gray-800">Partage équitable</h2>
             <div className="mb-4 flex items-center">
               <label className="block text-gray-700 text-sm font-medium mr-2">Nombre de personnes</label>
-              <button 
-                onClick={removePerson} 
+              <button
+                onClick={removePerson}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-l-md p-2 h-12 w-12 flex items-center justify-center transition-colors"
               >
                 -
@@ -265,15 +394,60 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                 onChange={(e) => setNumberOfPeople(parseInt(e.target.value))}
                 className="w-20 h-12 text-lg px-3 text-center border-y border-gray-300 text-gray-800"
               />
-              <button 
-                onClick={addPerson} 
+              <button
+                onClick={addPerson}
                 className="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-r-md p-2 h-12 w-12 flex items-center justify-center transition-colors"
               >
                 +
               </button>
             </div>
-            <div className="text-lg font-medium text-gray-800 bg-blue-50 p-4 rounded-lg">
+            <div className="text-lg font-medium text-gray-800 bg-blue-50 p-4 rounded-lg mb-4">
               Montant par personne: <span className="text-blue-600">{amountPerPerson.toFixed(2)} €</span>
+            </div>
+
+            <div className="bg-blue-50 p-3 rounded-lg mb-4">
+              <h3 className="text-xl font-medium mb-2 text-blue-800">
+                Personne {currentPersonIndex + 1}
+                {equalPaymentsByPerson[currentPersonId]?.paid &&
+                  <span className="ml-2 text-green-600 text-sm">(Payé)</span>
+                }
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Montant reçu</label>
+                <input
+                  type="number"
+                  value={equalPaymentsByPerson[currentPersonId]?.amountReceived || ''}
+                  onChange={(e) => handleEqualPaymentAmountChange(currentPersonId, e.target.value)}
+                  disabled={equalPaymentsByPerson[currentPersonId]?.paid}
+                  className="w-full h-12 text-lg px-3 rounded-md border border-gray-300 text-gray-800"
+                  placeholder="0.00"
+                />
+              </div>
+              {equalPaymentsByPerson[currentPersonId]?.amountReceived && (
+                <div className="text-lg font-medium text-gray-800 bg-green-50 p-4 rounded-lg">
+                  Monnaie à rendre: <span className="text-green-600">
+                    {equalPaymentsByPerson[currentPersonId]?.change > 0
+                      ? equalPaymentsByPerson[currentPersonId]?.change.toFixed(2)
+                      : '0.00'} €
+                  </span>
+                </div>
+              )}
+
+              <button
+                onClick={() => handleEqualPaymentComplete(currentPersonId)}
+                disabled={!equalPaymentsByPerson[currentPersonId]?.amountReceived || equalPaymentsByPerson[currentPersonId]?.paid}
+                className={`w-full h-12 text-lg text-white rounded-md flex items-center justify-center gap-2 ${
+                  !equalPaymentsByPerson[currentPersonId]?.amountReceived || equalPaymentsByPerson[currentPersonId]?.paid
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } transition-colors`}
+              >
+                <Check size={18} />
+                <span>Personne suivante</span>
+              </button>
             </div>
           </div>
         )}
@@ -284,96 +458,104 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             <div className="bg-blue-50 p-3 rounded-lg mb-4">
               <h3 className="text-xl font-medium mb-2 text-blue-800">Personne {currentPersonIndex + 1}</h3>
             </div>
-            
+
             <div className="mb-4">
               <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Boissons</h4>
               {availableDrinks.map(drink => {
-                const remaining = getRemainingQuantity(drink, 'drink');
-                const personQuantity = personQuantities[currentPersonId]?.[drink.id] || 0;
+                const remaining = getRemainingQuantity(drink);
+                const personQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
+                const personQuantity = personQuantitiesMap[drink.id] || 0;
+
                 return (
-                  <div key={drink.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
-                    <div className="flex-1">
+                  <div key={`drink-${drink.id}`} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
+                    <div className="flex-1 flex flex-col">
                       <span className="font-medium">{drink.name}</span>
-                      <span className="text-gray-500 text-sm ml-2">({drink.price.toFixed(2)} €)</span>
+                      <span className="text-gray-500 text-sm">({drink.price.toFixed(2)} €)</span>
                     </div>
-                    <div className="flex items-center">
-                      <button 
-                        onClick={() => updateItemQuantityForPerson(currentPersonId, drink, 'drink', -1)}
-                        disabled={personQuantity === 0}
-                        className={`rounded-l-md px-4 py-2 ${
-                          personQuantity === 0 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                        } text-xl transition-colors`}
-                      >
-                        -
-                      </button>
-                      <span className="mx-2 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
-                      <button 
-                        onClick={() => updateItemQuantityForPerson(currentPersonId, drink, 'drink', 1)}
-                        disabled={personQuantity >= remaining}
-                        className={`rounded-r-md px-4 py-2 ${
-                          personQuantity >= remaining 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                        } text-xl transition-colors`}
-                      >
-                        +
-                      </button>
+                    <div className="flex items-center h-full justify-end">
+                      <div className="flex items-center h-full">
+                        <button
+                          onClick={() => updateDrinkQuantityForPerson(currentPersonId, drink, -1)}
+                          disabled={personQuantity === 0}
+                          className={`rounded-l-md px-3 py-2 ${
+                            personQuantity === 0
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                          } text-xl transition-colors`}
+                        >
+                          -
+                        </button>
+                        <span className="mx-1 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
+                        <button
+                          onClick={() => updateDrinkQuantityForPerson(currentPersonId, drink, 1)}
+                          disabled={personQuantity >= remaining}
+                          className={`rounded-r-md px-3 py-2 ${
+                            personQuantity >= remaining
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                          } text-xl transition-colors`}
+                        >
+                          +
+                        </button>
+                      </div>
                       <span className={`ml-3 text-sm ${remaining === 0 ? 'text-green-500' : 'text-gray-500'}`}>
-                        ({remaining} restant)
+                        ({remaining})
                       </span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            
+
             <div className="mb-4">
               <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Repas</h4>
               {availableMeals.map(meal => {
-                const remaining = getRemainingQuantity(meal, 'meal');
-                const personQuantity = personQuantities[currentPersonId]?.[meal.id] || 0;
+                const remaining = getRemainingQuantity(meal);
+                const personQuantitiesMap = personMealQuantities[currentPersonId] || {};
+                const personQuantity = personQuantitiesMap[meal.id] || 0;
+
                 return (
-                  <div key={meal.id} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
-                    <div className="flex-1">
+                  <div key={`meal-${meal.id}`} className="flex items-center justify-between mb-2 p-2 hover:bg-gray-50 rounded-lg">
+                    <div className="flex-1 flex flex-col">
                       <span className="font-medium">{meal.name}</span>
-                      <span className="text-gray-500 text-sm ml-2">({meal.price.toFixed(2)} €)</span>
-                      {meal.cooking && <span className="text-gray-500 text-sm ml-1">({meal.cooking})</span>}
+                      <span className="text-gray-500 text-sm">({meal.price.toFixed(2)} €)</span>
+                      {meal.cooking && <span className="text-gray-500 text-sm">({meal.cooking})</span>}
                     </div>
-                    <div className="flex items-center">
-                      <button 
-                        onClick={() => updateItemQuantityForPerson(currentPersonId, meal, 'meal', -1)}
-                        disabled={personQuantity === 0}
-                        className={`rounded-l-md px-4 py-2 ${
-                          personQuantity === 0 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                        } text-xl transition-colors`}
-                      >
-                        -
-                      </button>
-                      <span className="mx-2 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
-                      <button 
-                        onClick={() => updateItemQuantityForPerson(currentPersonId, meal, 'meal', 1)}
-                        disabled={personQuantity >= remaining}
-                        className={`rounded-r-md px-4 py-2 ${
-                          personQuantity >= remaining 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                        } text-xl transition-colors`}
-                      >
-                        +
-                      </button>
+                    <div className="flex items-center h-full justify-end">
+                      <div className="flex items-center h-full">
+                        <button
+                          onClick={() => updateMealQuantityForPerson(currentPersonId, meal, -1)}
+                          disabled={personQuantity === 0}
+                          className={`rounded-l-md px-3 py-2 ${
+                            personQuantity === 0
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                          } text-xl transition-colors`}
+                        >
+                          -
+                        </button>
+                        <span className="mx-1 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
+                        <button
+                          onClick={() => updateMealQuantityForPerson(currentPersonId, meal, 1)}
+                          disabled={personQuantity >= remaining}
+                          className={`rounded-r-md px-3 py-2 ${
+                            personQuantity >= remaining
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                          } text-xl transition-colors`}
+                        >
+                          +
+                        </button>
+                      </div>
                       <span className={`ml-3 text-sm ${remaining === 0 ? 'text-green-500' : 'text-gray-500'}`}>
-                        ({remaining} restant)
+                        ({remaining})
                       </span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            
+
             <div className="mt-6 p-4 bg-blue-50 rounded-lg shadow-inner">
               <div className="font-bold text-lg mb-4 text-gray-800">
                 Total pour cette personne: <span className="text-blue-600">{currentPersonTotal.toFixed(2)} €</span>
@@ -397,17 +579,17 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <button
-              disabled={!hasSelectedItems}
+              disabled={!hasSelectedItems()}
               onClick={handleNextPerson}
               className={`w-full h-12 text-lg text-white rounded-md mt-4 flex items-center justify-center gap-2 ${
-                hasSelectedItems 
-                ? 'bg-blue-500 hover:bg-blue-600' 
+                hasSelectedItems()
+                ? 'bg-blue-500 hover:bg-blue-600'
                 : 'bg-gray-400 cursor-not-allowed'
               } transition-colors`}
             >
-              <span>Suivant</span>
+              <span>Personne suivante</span>
               <ArrowLeft className="transform rotate-180" size={18} />
             </button>
           </div>
@@ -427,8 +609,8 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             disabled={remainingBalance !== 0}
             onClick={() => setCurrentScreen('recap')}
             className={`w-full h-12 text-lg text-white rounded-md flex items-center justify-center gap-2 ${
-              remainingBalance === 0 
-              ? 'bg-green-500 hover:bg-green-600' 
+              remainingBalance === 0
+              ? 'bg-green-500 hover:bg-green-600'
               : 'bg-gray-400 cursor-not-allowed'
             } transition-colors`}
           >
