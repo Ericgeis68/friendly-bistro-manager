@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Menu, RefreshCw } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';

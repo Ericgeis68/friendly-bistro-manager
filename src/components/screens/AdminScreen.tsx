@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Beer, UtensilsCrossed, FileText, ArrowLeft, Plus, Trash2, Edit, Save, X, CheckCircle, Clock, AlertTriangle, Settings, List, BarChart2, Menu, RefreshCw } from 'lucide-react';
 import type { MenuItem, Order, ScreenType, UserRole } from '../../types/restaurant';
@@ -11,20 +12,18 @@ interface AdminScreenProps {
 }
 
 // Separate component for the sidebar to reduce file size
-const Sidebar = ({
-    currentScreenLocal,
-    setCurrentScreenLocal,
-    setSidebarOpen,
-    sidebarOpen,
-    handleLogoutAdmin,
-    onLogout
-}: {
-    currentScreenLocal: string;
-    setCurrentScreenLocal: (screen: any) => void;
-    setSidebarOpen: (open: boolean) => void;
-    sidebarOpen: boolean;
-    handleLogoutAdmin: () => void;
-    onLogout: () => void;
+const Sidebar = ({ 
+    currentScreenLocal, 
+    setCurrentScreenLocal, 
+    setSidebarOpen, 
+    handleLogoutAdmin, 
+    onLogout 
+}: { 
+    currentScreenLocal: string; 
+    setCurrentScreenLocal: (screen: any) => void; 
+    setSidebarOpen: (open: boolean) => void; 
+    handleLogoutAdmin: () => void; 
+    onLogout: () => void; 
 }) => {
     return (
         <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block bg-gray-800 text-white w-full md:w-64 p-4 md:h-screen md:fixed md:left-0 md:top-0 z-50`}>
@@ -101,12 +100,12 @@ const Sidebar = ({
 };
 
 // Separate component for mobile header
-const MobileHeader = ({
+const MobileHeader = ({ 
     currentScreenLocal,
     setSidebarOpen,
     sidebarOpen
-}: {
-    currentScreenLocal: string;
+}: { 
+    currentScreenLocal: string; 
     setSidebarOpen: (open: boolean) => void;
     sidebarOpen: boolean;
 }) => {
@@ -138,16 +137,16 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
     const [editItem, setEditItem] = useState<MenuItem | null>(null);
     const [editCategory, setEditCategory] = useState<'drinks' | 'meals' | null>(null);
     const [localOrders, setLocalOrders] = useState<Order[]>([]);
-    const [sidebarOpen, setSidebarOpen] = useState(false); // Initialize sidebarOpen state
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Load orders from localStorage on component mount and when orders change
     useEffect(() => {
         const pendingOrdersFromStorage = localStorage.getItem('pendingOrders');
         const completedOrdersFromStorage = localStorage.getItem('completedOrders');
-
+        
         const pendingOrders = pendingOrdersFromStorage ? JSON.parse(pendingOrdersFromStorage) : [];
         const completedOrders = completedOrdersFromStorage ? JSON.parse(completedOrdersFromStorage) : [];
-
+        
         setLocalOrders([...pendingOrders, ...completedOrders]);
     }, []);
 
@@ -155,12 +154,12 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
     const refreshOrders = () => {
         const pendingOrdersFromStorage = localStorage.getItem('pendingOrders');
         const completedOrdersFromStorage = localStorage.getItem('completedOrders');
-
+        
         const pendingOrders = pendingOrdersFromStorage ? JSON.parse(pendingOrdersFromStorage) : [];
         const completedOrders = completedOrdersFromStorage ? JSON.parse(completedOrdersFromStorage) : [];
-
+        
         setLocalOrders([...pendingOrders, ...completedOrders]);
-
+        
         toast({
             title: "Données actualisées",
             description: "Les commandes ont été mises à jour.",
@@ -172,13 +171,13 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         // Get pending orders
         const pendingOrdersFromStorage = localStorage.getItem('pendingOrders');
         const pendingOrders = pendingOrdersFromStorage ? JSON.parse(pendingOrdersFromStorage) : [];
-
+        
         // Clear completed orders from localStorage
         localStorage.setItem('completedOrders', JSON.stringify([]));
-
+        
         // Update local state
         setLocalOrders([...pendingOrders]);
-
+        
         toast({
             title: "Commandes terminées effacées",
             description: "Toutes les commandes terminées ont été supprimées.",
@@ -458,15 +457,15 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl md:text-2xl font-bold">Gestion des Commandes</h2>
                     <div className="flex space-x-2">
-                        <button
-                            onClick={refreshOrders}
+                        <button 
+                            onClick={refreshOrders} 
                             className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2 flex items-center"
                         >
                             <RefreshCw size={20} className="mr-1" />
                             <span>Actualiser</span>
                         </button>
-                        <button
-                            onClick={clearCompletedOrders}
+                        <button 
+                            onClick={clearCompletedOrders} 
                             className="bg-red-500 hover:bg-red-600 text-white rounded-md p-2 flex items-center"
                         >
                             <Trash2 size={20} className="mr-1" />
@@ -489,60 +488,60 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
                         </thead>
                         <tbody>
                             {localOrders.map(order => {
-                                const orderTime = typeof order.createdAt === 'string'
-                                    ? new Date(order.createdAt).toLocaleTimeString()
+                                const orderTime = typeof order.createdAt === 'string' 
+                                    ? new Date(order.createdAt).toLocaleTimeString() 
                                     : new Date(order.createdAt).toLocaleTimeString();
-
+                                
                                 return (
-                                    <tr key={order.id} className="border-b">
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{order.id}</td>
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{order.table}</td>
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{order.waitress}</td>
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{orderTime}</td>
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">
-                                            {order.drinks.length > 0 && <span className="block">Boissons: {order.drinks.length}</span>}
-                                            {order.meals.length > 0 && <span className="block">Repas: {order.meals.length}</span>}
-                                        </td>
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">
-                                            {order.status === 'pending' && (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                    <Clock className="w-3 h-3 mr-1"/>
-                                                    En cours
-                                                </span>
-                                            )}
-                                            {order.status === 'ready' && (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    <CheckCircle className="w-3 h-3 mr-1"/>
-                                                    Prêt
-                                                </span>
-                                            )}
-                                            {order.status === 'delivered' && (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    <CheckCircle className="w-3 h-3 mr-1"/>
-                                                    Livrée
-                                                </span>
-                                            )}
-                                            {order.status === 'cancelled' && (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    <AlertTriangle className="w-3 h-3 mr-1"/>
-                                                    Annulée
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium">
-                                            <select
-                                                value={order.status}
-                                                onChange={(e) => handleOrderStatusChange(order.id, e.target.value as 'pending' | 'completed' | 'cancelled')}
-                                                className="border rounded-md p-1 md:p-2 text-xs md:text-sm"
-                                            >
-                                                <option value="pending">En cours</option>
-                                                <option value="ready">Prêt</option>
-                                                <option value="delivered">Livrée</option>
-                                                <option value="cancelled">Annulée</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                )})}
+                                <tr key={order.id} className="border-b">
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{order.id}</td>
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{order.table}</td>
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{order.waitress}</td>
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">{orderTime}</td>
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">
+                                        {order.drinks.length > 0 && <span className="block">Boissons: {order.drinks.length}</span>}
+                                        {order.meals.length > 0 && <span className="block">Repas: {order.meals.length}</span>}
+                                    </td>
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700">
+                                        {order.status === 'pending' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                <Clock className="w-3 h-3 mr-1"/>
+                                                En cours
+                                            </span>
+                                        )}
+                                        {order.status === 'ready' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                <CheckCircle className="w-3 h-3 mr-1"/>
+                                                Prêt
+                                            </span>
+                                        )}
+                                        {order.status === 'delivered' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <CheckCircle className="w-3 h-3 mr-1"/>
+                                                Livrée
+                                            </span>
+                                        )}
+                                        {order.status === 'cancelled' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <AlertTriangle className="w-3 h-3 mr-1"/>
+                                                Annulée
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-2 md:px-6 py-2 md:py-4 whitespace-nowrap text-xs md:text-sm font-medium">
+                                        <select
+                                            value={order.status}
+                                            onChange={(e) => handleOrderStatusChange(order.id, e.target.value as 'pending' | 'completed' | 'cancelled')}
+                                            className="border rounded-md p-1 md:p-2 text-xs md:text-sm"
+                                        >
+                                            <option value="pending">En cours</option>
+                                            <option value="ready">Prêt</option>
+                                            <option value="delivered">Livrée</option>
+                                            <option value="cancelled">Annulée</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            )})}
                         </tbody>
                     </table>
                 </div>
@@ -554,13 +553,13 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
     const DashboardScreen = () => {
         const pendingOrdersCount = localOrders.filter(order => order.status === 'pending' || order.status === 'ready').length;
         const completedOrdersCount = localOrders.filter(order => order.status === 'delivered').length;
-
+        
         return (
             <div className="p-4">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl md:text-2xl font-bold">Tableau de Bord</h2>
-                    <button
-                        onClick={refreshOrders}
+                    <button 
+                        onClick={refreshOrders} 
                         className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2 flex items-center"
                     >
                         <RefreshCw size={20} className="mr-1" />
@@ -600,10 +599,10 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         const isCurrentServiceEvening = selectedService === 'soir' && isEvening;
 
         const filteredOrders = localOrders.filter(order => {
-            const orderDate = typeof order.createdAt === 'string'
-                ? new Date(order.createdAt)
+            const orderDate = typeof order.createdAt === 'string' 
+                ? new Date(order.createdAt) 
                 : new Date(order.createdAt);
-
+                
             const isSameDay = orderDate >= startOfToday && orderDate < new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
             if (selectedService === 'midi') {
                 return isSameDay && orderDate.getHours() >= 11 && orderDate.getHours() < 14;
@@ -645,8 +644,8 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
             <div className="p-4">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl md:text-2xl font-bold">Ventes du Jour</h2>
-                    <button
-                        onClick={refreshOrders}
+                    <button 
+                        onClick={refreshOrders} 
                         className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2 flex items-center"
                     >
                         <RefreshCw size={20} className="mr-1" />
@@ -738,7 +737,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
         if (sidebarOpen && window.innerWidth < 768) {
             return null;
         }
-
+        
         switch(currentScreenLocal) {
             case 'dashboard': return <DashboardScreen />;
             case 'menu': return <MenuScreen />;
@@ -754,18 +753,17 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ onLogout, setLoggedInUser, se
 
     return (
         <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
-            <MobileHeader
-                currentScreenLocal={currentScreenLocal}
-                setSidebarOpen={setSidebarOpen}
-                sidebarOpen={sidebarOpen}
+            <MobileHeader 
+                currentScreenLocal={currentScreenLocal} 
+                setSidebarOpen={setSidebarOpen} 
+                sidebarOpen={sidebarOpen} 
             />
-            <Sidebar
-                currentScreenLocal={currentScreenLocal}
-                setCurrentScreenLocal={setCurrentScreenLocal}
-                setSidebarOpen={setSidebarOpen}
-                sidebarOpen={sidebarOpen} // Pass sidebarOpen to Sidebar
-                handleLogoutAdmin={handleLogoutAdmin}
-                onLogout={onLogout}
+            <Sidebar 
+                currentScreenLocal={currentScreenLocal} 
+                setCurrentScreenLocal={setCurrentScreenLocal} 
+                setSidebarOpen={setSidebarOpen} 
+                handleLogoutAdmin={handleLogoutAdmin} 
+                onLogout={onLogout} 
             />
             <div className="md:ml-64 flex-1">
                 {renderContentScreen()}

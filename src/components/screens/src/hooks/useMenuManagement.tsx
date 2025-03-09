@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import type { MenuItem } from '../types/restaurant';
 import { useRestaurant } from '../context/RestaurantContext';
