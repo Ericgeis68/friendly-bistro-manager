@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
@@ -25,22 +24,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Filtrer les commandes en cours pour n'afficher que celles qui sont en attente
   const pendingOrdersToShow = pendingOrders.filter(order => order.status === 'pending');
 
-  const handleOrderReady = (order: Order) => {
-    const updatedOrder = { ...order, status: 'ready' as const };
-    setPendingOrders(prev => 
-      prev.map(o => o.id === order.id ? updatedOrder : o)
-    );
-    setCompletedOrders(prev => [...prev, updatedOrder]);
-    onOrderReady(order);
-    toast({
-      title: "Notification envoyée",
-      description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
-    });
-  };
-
-  // If showing completed orders, render the CompletedOrdersScreen component
+  // Si on montre les commandes terminées, utiliser le composant CompletedOrdersScreen
   if (showOrders === 'completed') {
     return (
       <CompletedOrdersScreen 
@@ -51,30 +38,33 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
     );
   }
 
-  const getStatusColor = (status: Order['status']) => {
-    switch (status) {
-      case 'ready':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'delivered':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: Order['status']) => {
-    switch (status) {
-      case 'ready':
-        return 'En cours';
-      case 'delivered':
-        return 'Livré';
-      case 'cancelled':
-        return 'Annulé';
-      default:
-        return status;
-    }
+  const handleOrderReady = (order: Order) => {
+    const updatedOrder = { ...order, status: 'ready' as const, mealsStatus: 'ready' as const };
+    
+    // Mettre à jour la commande dans pendingOrders
+    setPendingOrders(prev => 
+      prev.map(o => o.id === order.id ? updatedOrder : o)
+    );
+    
+    // Mettre à jour ou ajouter la commande dans completedOrders
+    setCompletedOrders(prev => {
+      const existingOrderIndex = prev.findIndex(o => o.id === order.id);
+      if (existingOrderIndex !== -1) {
+        // Si la commande existe déjà, mettre à jour son statut
+        const newOrders = [...prev];
+        newOrders[existingOrderIndex] = updatedOrder;
+        return newOrders;
+      }
+      // Si la commande n'existe pas, l'ajouter
+      return [...prev, updatedOrder];
+    });
+    
+    onOrderReady(order);
+    
+    toast({
+      title: "Notification envoyée",
+      description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
+    });
   };
 
   const countItems = (itemName: string, cooking?: string): number => {
@@ -82,7 +72,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
     pendingOrdersToShow.forEach((order) => {
       order.meals.forEach((meal) => {
         if (meal.name === itemName && (!cooking || meal.cooking === cooking)) {
-          count += meal.quantity;
+          count += meal.quantity || 0;
         }
       });
     });
