@@ -1,9 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import type { Order } from '../types/restaurant';
 import { toast } from "@/hooks/use-toast";
-import { useSyncService } from './useSyncService';
-import { syncService } from '../services/syncService';
 
 export const useOrderManagement = () => {
   const [pendingOrders, setPendingOrders] = useState<Order[]>(() => {
@@ -17,64 +14,41 @@ export const useOrderManagement = () => {
   });
 
   const [pendingNotifications, setPendingNotifications] = useState<Order[]>([]);
-  const { syncMode } = useSyncService();
 
   useEffect(() => {
     localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
-    
-    if (syncMode !== 'standalone') {
-      syncService.syncOrders(pendingOrders, completedOrders);
-    }
-  }, [pendingOrders, completedOrders, syncMode]);
+  }, [pendingOrders]);
 
   useEffect(() => {
     localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
   }, [completedOrders]);
 
-  useEffect(() => {
-    const handleOrderUpdate = (data: { pendingOrders: Order[], completedOrders: Order[] }) => {
-      const pendingOrdersString = JSON.stringify(data.pendingOrders);
-      const completedOrdersString = JSON.stringify(data.completedOrders);
-      const currentPendingOrdersString = JSON.stringify(pendingOrders);
-      const currentCompletedOrdersString = JSON.stringify(completedOrders);
-      
-      if (pendingOrdersString !== currentPendingOrdersString) {
-        setPendingOrders(data.pendingOrders);
-      }
-      
-      if (completedOrdersString !== currentCompletedOrdersString) {
-        setCompletedOrders(data.completedOrders);
-      }
-    };
-
-    if (syncMode !== 'standalone') {
-      // Directly use syncService instead of require
-      syncService.addEventListener('orderUpdate', handleOrderUpdate);
-      
-      return () => {
-        syncService.removeEventListener('orderUpdate', handleOrderUpdate);
-      };
-    }
-  }, [syncMode, pendingOrders, completedOrders]);
-
   const handleOrderReady = (order: Order) => {
+    // For meal orders only (used in kitchen)
     if (order.meals.length > 0) {
+      // Create a copy of the order with "ready" status
       const updatedOrder = { ...order, status: 'ready' as const, mealsStatus: 'ready' as const };
       
+      // MODIFICATION: Keep the order in pendingOrders for the waitress view but update its status
       setPendingOrders(prev => 
         prev.map(o => o.id === order.id ? updatedOrder : o)
       );
       
+      // Also add the order to completedOrders for the kitchen view
       setCompletedOrders(prev => {
+        // Check if it's already in completedOrders
         const existingOrderIndex = prev.findIndex(o => o.id === order.id);
         if (existingOrderIndex !== -1) {
+          // Update it if it exists
           const newOrders = [...prev];
           newOrders[existingOrderIndex] = updatedOrder;
           return newOrders;
         }
+        // Add it if it doesn't exist
         return [...prev, updatedOrder];
       });
       
+      // Add notification for the waitress
       setPendingNotifications(prev => [...prev, updatedOrder]);
       
       toast({
@@ -85,19 +59,27 @@ export const useOrderManagement = () => {
   };
 
   const handleOrderComplete = (order: Order) => {
+    // Important: Keep the current status (don't change to 'delivered' yet for kitchen view)
+    // This will be moved to completed orders but keep the 'ready' status in kitchen view
     const updatedOrder = { ...order };
     
+    // If it's a drink order (not handled by kitchen), we can mark it as delivered immediately
     if (order.drinks.length > 0 && order.meals.length === 0) {
       updatedOrder.status = 'delivered';
     }
     
+    // For meal orders, we only remove it from pendingOrders if it's still there
+    // (It might already be in completedOrders if kitchen marked it as ready)
     if (order.meals.length > 0) {
+      // Remove from pendingOrders regardless of status
       setPendingOrders(prev => prev.filter(o => o.id !== order.id));
       
+      // Update status to 'delivered' in completedOrders
       setCompletedOrders(prev => 
         prev.map(o => o.id === order.id ? { ...o, status: 'delivered' as const } : o)
       );
     } else {
+      // For drink orders, just remove from pending and add to completed
       setPendingOrders(prev => prev.filter(o => o.id !== order.id));
       setCompletedOrders(prev => {
         const existingOrderIndex = prev.findIndex(o => o.id === order.id);
@@ -110,6 +92,7 @@ export const useOrderManagement = () => {
       });
     }
     
+    // Different messages based on order type
     if (order.drinks.length > 0) {
       updatedOrder.status = 'delivered';
       toast({
@@ -125,8 +108,10 @@ export const useOrderManagement = () => {
   };
 
   const handleOrderCancel = (cancelledOrder: Order) => {
+    // Remove the order from pendingOrders
     setPendingOrders(prev => prev.filter(order => order.id !== cancelledOrder.id));
     
+    // Add or update the order in completedOrders with the status "cancelled"
     const updatedOrder = { ...cancelledOrder, status: 'cancelled' as const };
     setCompletedOrders(prev => {
       const existingOrderIndex = prev.findIndex(o => o.id === cancelledOrder.id);
@@ -138,6 +123,7 @@ export const useOrderManagement = () => {
       return [...prev, updatedOrder];
     });
     
+    // Different messages based on order type
     if (cancelledOrder.drinks.length > 0) {
       toast({
         title: "Commande boissons annulée",
@@ -152,6 +138,7 @@ export const useOrderManagement = () => {
   };
   
   const handleDrinksComplete = (order: Order) => {
+    // This should only be called for drink orders now
     if (order.drinks.length > 0) {
       handleOrderComplete(order);
     }
