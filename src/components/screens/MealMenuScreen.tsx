@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
 import MealItem from '../ui/MealItem';
 import CookingDialog from '../ui/CookingDialog';
+import { DEFAULT_COOKING_OPTIONS } from '../../utils/itemGrouping';
 
 interface MealMenuScreenProps {
   tableNumber: string;
@@ -33,14 +35,17 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
   );
   const [showRemoveCookingDialog, setShowRemoveCookingDialog] = useState(false);
   const [selectedMealToRemove, setSelectedMealToRemove] = useState<number | null>(null);
+  const [cookingOptions, setCookingOptions] = useState<string[]>(() => {
+    // Load cooking options from localStorage or use defaults
+    const savedOptions = localStorage.getItem('cookingOptions');
+    return savedOptions ? JSON.parse(savedOptions) : DEFAULT_COOKING_OPTIONS;
+  });
 
   useEffect(() => {
     // Initialize with proper quantities to avoid NaN issues
     setLocalMealsMenu(mealsMenu.map(meal => ({ ...meal, quantity: meal.quantity || 0 })));
     setLocalTempMeals(tempMeals.map(meal => ({ ...meal, quantity: meal.quantity || 0 })));
   }, [mealsMenu, tempMeals]);
-
-  const cookingOptions = ['BLEU', 'SAIGNANT', 'A POINT', 'CUIT', 'BIEN CUIT'];
 
   const updateQuantity = (id: number, increment: number) => {
     if (increment > 0 && (id === 1 || id === 2)) {
@@ -69,6 +74,13 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
 
     const mealToUpdate = localMealsMenu.find(meal => meal.id === selectedMeal);
     if (mealToUpdate) {
+      // Save custom cooking option if it's not in the default list
+      if (!cookingOptions.includes(cooking)) {
+        const newOptions = [...cookingOptions, cooking];
+        setCookingOptions(newOptions);
+        localStorage.setItem('cookingOptions', JSON.stringify(newOptions));
+      }
+
       setLocalTempMeals([...localTempMeals, {...mealToUpdate, quantity: 1, cooking}]);
       setLocalMealsMenu(localMealsMenu.map(meal => {
         if (meal.id === selectedMeal) {
@@ -165,6 +177,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
           title="Choisir la cuisson"
           options={cookingOptions}
           onSelect={handleCookingChoice}
+          allowCustom={true}
         />
       )}
 
@@ -173,6 +186,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
           title="Choisir la cuisson à retirer"
           options={allCookingOptions}
           onSelect={handleRemoveCookingChoice}
+          allowCustom={false}
         />
       )}
 

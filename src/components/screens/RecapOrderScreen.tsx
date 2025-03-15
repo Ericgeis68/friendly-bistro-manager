@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
+import { groupMenuItems } from '../../utils/itemGrouping';
 
 interface RecapOrderScreenProps {
   tableNumber: string;
@@ -21,12 +22,10 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const [amountReceived, setAmountReceived] = useState('');
   const { drinks = [], meals = [] } = order;
 
-  // Calculate drink total with proper quantity handling
   const drinkTotal = drinks.reduce((sum, item) => {
     return sum + (item.price * (item.quantity || 1));
   }, 0);
   
-  // Calculate meal total with proper quantity handling
   const mealTotal = meals.reduce((sum, item) => {
     return sum + (item.price * (item.quantity || 1));
   }, 0);
@@ -34,16 +33,8 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const totalAmount = drinkTotal + mealTotal;
   const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
 
-  // Group meals by name and cooking style with proper quantity handling
-  const groupedMeals = meals.reduce<Record<string, MenuItem>>((acc, meal) => {
-    const key = `${meal.name}-${meal.cooking || 'none'}`;
-    if (acc[key]) {
-      acc[key].quantity = (acc[key].quantity || 1) + (meal.quantity || 1);
-    } else {
-      acc[key] = { ...meal, quantity: meal.quantity || 1 };
-    }
-    return acc;
-  }, {});
+  const groupedMeals = groupMenuItems(meals);
+  const groupedDrinks = groupMenuItems(drinks, false);
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -61,7 +52,7 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
         {drinks.length > 0 && (
           <div className="bg-white rounded-xl shadow-md p-4 mb-4">
             <h2 className="font-bold mb-2 text-lg border-b pb-2 text-gray-800">Boissons</h2>
-            {drinks.map(item => (
+            {Object.values(groupedDrinks).map(item => (
               <div key={item.id} className="flex justify-between mb-2 text-gray-800">
                 <div>
                   <span className="font-medium">{item.name}</span>

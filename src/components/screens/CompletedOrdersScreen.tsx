@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { groupMenuItems } from '../../utils/itemGrouping';
 
 interface CompletedOrdersScreenProps {
   orders: Order[];
@@ -15,8 +17,11 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
   onBack,
   userRole = 'waitress'
 }) => {
-  const formatOrderDate = (date: string) => {
+  const formatOrderDate = (date: string | number) => {
     try {
+      if (typeof date === 'number') {
+        return format(new Date(date), 'dd/MM/yyyy HH:mm', { locale: fr });
+      }
       return format(new Date(date), 'dd/MM/yyyy HH:mm', { locale: fr });
     } catch {
       return 'Date indisponible';
@@ -36,24 +41,26 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
 
   const filteredOrders = orders.filter(order => {
     if (userRole === 'cuisine') {
-      return (order.status === 'ready' || order.status === 'delivered' || order.status === 'cancelled') && !order.id.includes('-drinks');
+      // Only show meal orders in the kitchen (no drinks)
+      return (order.status === 'ready' || order.status === 'delivered' || order.status === 'cancelled') && 
+              order.meals.length > 0;
     } else {
       return (order.status === 'delivered' || order.status === 'cancelled');
     }
   });
 
   const getOrderType = (order: Order) => {
-    if (order.id.includes('-drinks')) {
+    if (order.id.includes('-drinks') || order.drinks.length > 0) {
       return 'Boissons';
     } else {
       return 'Repas';
     }
   };
 
-  const getStatusText = (status: Order['status']) => {
+  const getStatusText = (status: Order['status'], userRole: string) => {
     switch (status) {
       case 'ready':
-        return 'En cours';
+        return userRole === 'cuisine' ? 'En cours' : 'Prêt';
       case 'delivered':
         return 'Livré';
       case 'cancelled':
@@ -96,6 +103,10 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
             .replace('-drinks', '')
             .replace('-meals', '');
             
+          // Group meals and drinks by name and cooking style
+          const groupedMeals = groupMenuItems(order.meals);
+          const groupedDrinks = groupMenuItems(order.drinks, false);
+            
           return (
             <div key={getUniqueKey(order)} className="bg-white rounded-2xl p-4 shadow">
               <div className="flex justify-between items-center mb-2">
@@ -113,14 +124,14 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
                   <span className={`px-2 py-1 rounded-full ${
                     getStatusColor(order.status)
                   }`}>
-                    {getStatusText(order.status)}
+                    {getStatusText(order.status, userRole)}
                   </span>
                 </div>
               </div>
               {order.meals && order.meals.length > 0 && (
                 <div className="mt-2">
                   <div className="font-medium mb-1">Repas:</div>
-                  {order.meals.map((meal, mealIndex) => (
+                  {Object.values(groupedMeals).map((meal, mealIndex) => (
                     <div key={`${order.id}-meal-${mealIndex}`} className="text-gray-600 ml-2">
                       {meal.name} x{meal.quantity || 1} {meal.cooking && `(${meal.cooking})`}
                     </div>
@@ -130,7 +141,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
               {order.drinks && order.drinks.length > 0 && (
                 <div className="mt-2">
                   <div className="font-medium mb-1">Boissons:</div>
-                  {order.drinks.map((drink, drinkIndex) => (
+                  {Object.values(groupedDrinks).map((drink, drinkIndex) => (
                     <div key={`${order.id}-drink-${drinkIndex}`} className="text-gray-600 ml-2">
                       {drink.name} x{drink.quantity || 1}
                     </div>

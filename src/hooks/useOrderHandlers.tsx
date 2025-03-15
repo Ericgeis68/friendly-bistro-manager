@@ -1,10 +1,11 @@
+
 import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
-import type { Order, MenuItem, ScreenType } from '../types/restaurant';
+import type { Order, MenuItem, ScreenType, UserRole } from '../types/restaurant';
 
 interface UseOrderHandlersProps {
   loggedInUser: string;
-  setLoggedInUser: (user: string) => void;
+  setLoggedInUser: (user: string | null) => void;
   setCurrentScreen: (screen: ScreenType) => void;
   tableNumber: string;
   tableComment: string;
@@ -22,7 +23,6 @@ interface UseOrderHandlersProps {
   handleOrderCancel: (order: Order) => void;
   handleDrinksComplete: (order: Order) => void;
   setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  completedOrders: Order[];
 }
 
 export const useOrderHandlers = ({
@@ -44,8 +44,7 @@ export const useOrderHandlers = ({
   handleOrderComplete,
   handleOrderCancel,
   handleDrinksComplete,
-  setCompletedOrders,
-  completedOrders
+  setCompletedOrders
 }: UseOrderHandlersProps) => {
   const handleLogin = (user: string) => {
     setLoggedInUser(user);
@@ -59,7 +58,7 @@ export const useOrderHandlers = ({
   };
 
   const handleLogout = () => {
-    setLoggedInUser('');
+    setLoggedInUser(null);
     setCurrentScreen('login');
     setTableNumber('');
     setTableComment('');
@@ -74,28 +73,52 @@ export const useOrderHandlers = ({
   };
 
   const handleSubmitOrder = () => {
-    if (order.meals.length === 0 && order.drinks.length === 0) {
-      return;
+    // Create separate orders for drinks and meals
+    if (order.drinks.length > 0) {
+      const drinksOrder: Order = {
+        id: generateOrderId() + '-drinks',
+        waitress: loggedInUser!,
+        meals: [],
+        drinks: [...order.drinks],
+        table: tableNumber,
+        tableComment: tableComment || undefined,
+        status: 'pending',
+        drinksStatus: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      
+      setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
+      
+      toast({
+        title: "Commande boissons envoyée",
+        description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
+      });
     }
     
-    const newOrder: Order = {
-      id: generateOrderId(),
-      waitress: loggedInUser!,
-      meals: [...order.meals],
-      drinks: [...order.drinks],
-      table: tableNumber,
-      tableComment: tableComment || undefined,
-      status: 'pending',
-      drinksStatus: order.drinks.length > 0 ? 'pending' : undefined,
-      mealsStatus: order.meals.length > 0 ? 'pending' : undefined,
-      createdAt: new Date().toISOString()
-    };
-
-    setPendingOrders(prevOrders => [...prevOrders, newOrder]);
-    toast({
-      title: "Commande envoyée",
-      description: `La commande pour la table ${tableNumber} a été envoyée en cuisine.`,
-    });
+    if (order.meals.length > 0) {
+      const mealsOrder: Order = {
+        id: generateOrderId() + '-meals',
+        waitress: loggedInUser!,
+        meals: [...order.meals],
+        drinks: [],
+        table: tableNumber,
+        tableComment: tableComment || undefined,
+        status: 'pending',
+        mealsStatus: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      
+      setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
+      
+      toast({
+        title: "Commande repas envoyée",
+        description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
+      });
+    }
+    
+    if (order.drinks.length === 0 && order.meals.length === 0) {
+      return;
+    }
 
     setDrinksMenu((prevDrinksMenu: MenuItem[]) => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
     setMealsMenu((prevMealsMenu: MenuItem[]) => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
@@ -115,106 +138,48 @@ export const useOrderHandlers = ({
   };
 
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals' | 'both') => {
-    if (type === 'both') {
+    // For completely separate orders, we won't need the 'both' type anymore
+    if (type === 'drinks' && order.drinks.length > 0) {
+      handleOrderComplete(order);
+      toast({
+        title: "Commande boissons terminée",
+        description: `La commande de boissons pour la table ${order.table} a été terminée.`,
+      });
+    } else if (type === 'meals' && order.meals.length > 0) {
+      handleOrderComplete(order);
+      toast({
+        title: "Commande repas terminée",
+        description: `La commande de repas pour la table ${order.table} a été terminée.`,
+      });
+    } else if (type === 'both' && order.drinks.length > 0 && order.meals.length > 0) {
+      // Handle 'both' case - mark everything as complete
       handleOrderComplete(order);
       toast({
         title: "Commande terminée",
         description: `La commande pour la table ${order.table} a été terminée.`,
       });
-      return;
-    }
-
-    if (type === 'drinks') {
-      if (!order.meals.length) {
-        handleOrderComplete(order);
-        toast({
-          title: "Commande terminée",
-          description: `La commande pour la table ${order.table} a été terminée.`,
-        });
-      } else {
-        handleDrinksComplete(order);
-      }
-    } else if (type === 'meals') {
-      const mealsOnlyOrder: Order = {
-        ...order,
-        id: `${order.id}-meals`,
-        drinks: [],
-        status: 'delivered',
-        mealsStatus: 'delivered',
-        drinksStatus: undefined,
-        createdAt: order.createdAt
-      };
-      
-      if (!order.drinks.length || order.drinksStatus === 'delivered') {
-        handleOrderComplete(order);
-        toast({
-          title: "Commande terminée",
-          description: `La commande pour la table ${order.table} a été terminée.`,
-        });
-      } else {
-        const drinksOnlyOrder: Order = {
-          ...order,
-          meals: [],
-          mealsStatus: undefined,
-          status: 'pending'
-        };
-        
-        setCompletedOrders(prev => [...prev, mealsOnlyOrder]);
-        setPendingOrders(prevOrders => 
-          prevOrders.map(o => o.id === order.id ? drinksOnlyOrder : o)
-        );
-        
-        toast({
-          title: "Repas livrés",
-          description: `Les repas pour la table ${order.table} ont été livrés.`,
-        });
-      }
     }
   };
 
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals' | 'all') => {
-    if (type === 'all') {
-      handleOrderCancel(order);
+    // Since orders are now separate, we just cancel the entire order
+    handleOrderCancel(order);
+    
+    if (order.drinks.length > 0) {
+      toast({
+        title: "Commande boissons annulée",
+        description: `La commande de boissons pour la table ${order.table} a été annulée.`,
+      });
+    } else if (order.meals.length > 0) {
+      toast({
+        title: "Commande repas annulée",
+        description: `La commande de repas pour la table ${order.table} a été annulée.`,
+      });
+    } else {
       toast({
         title: "Commande annulée",
         description: `La commande pour la table ${order.table} a été annulée.`,
       });
-      return;
-    }
-
-    const updatedOrder = { ...order };
-    
-    if (type === 'drinks') {
-      updatedOrder.drinks = [];
-      if (updatedOrder.drinksStatus) {
-        updatedOrder.drinksStatus = 'pending';
-      }
-      
-      toast({
-        title: "Boissons annulées",
-        description: `Les boissons pour la table ${order.table} ont été annulées.`,
-      });
-    } else if (type === 'meals') {
-      updatedOrder.meals = [];
-      if (updatedOrder.mealsStatus) {
-        updatedOrder.mealsStatus = 'pending';
-      }
-      
-      toast({
-        title: "Repas annulés",
-        description: `Les repas pour la table ${order.table} ont été annulés.`,
-      });
-    }
-
-    if (
-      (updatedOrder.drinks.length === 0 || !updatedOrder.drinksStatus) &&
-      (updatedOrder.meals.length === 0 || !updatedOrder.mealsStatus)
-    ) {
-      handleOrderCancel(order);
-    } else {
-      setPendingOrders(prevOrders =>
-        prevOrders.map(o => o.id === order.id ? updatedOrder : o)
-      );
     }
   };
 

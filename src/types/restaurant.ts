@@ -28,3 +28,5 @@ export type MenuItems = {
 export type ScreenType = 'login' | 'waitress' | 'cuisine' | 'admin' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'splitPayment';
 
 export type UserRole = 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin';
+
+export type CookingOption = string;

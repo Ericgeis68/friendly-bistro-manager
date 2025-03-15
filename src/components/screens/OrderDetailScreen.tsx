@@ -1,31 +1,29 @@
-
 import React from 'react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import type { Order, MenuItem } from '../../types/restaurant';
 import { useToast } from '@/hooks/use-toast';
+import { groupMenuItems } from '../../utils/itemGrouping';
 
 interface OrderDetailScreenProps {
   order: Order;
   onBack: () => void;
-  onOrderComplete: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
+  onOrderComplete: (order: Order, type: 'drinks' | 'meals') => void;
+  onOrderCancel: (order: Order, type: 'drinks' | 'meals' | 'all') => void; // Add this line
 }
 
 const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   order,
   onBack,
-  onOrderComplete
+  onOrderComplete,
+  onOrderCancel
 }) => {
-  const { toast } = useToast();
-  
-  const handleOrderComplete = (type: 'drinks' | 'meals' | 'both') => {
+  // Add a handleCompleteOrder function that calls onOrderComplete and then navigates back
+  const handleCompleteOrder = (type: 'drinks' | 'meals') => {
     onOrderComplete(order, type);
-    toast({
-      title: type === 'both' ? "Commande terminée" : type === 'drinks' ? "Boissons livrées" : "Repas livrés",
-      description: `Table ${order.table}`
-    });
+    // Navigate back to the waitress home screen after completing the order
+    onBack();
   };
 
-  // Formater la date
   const formatDate = (dateString: string | number) => {
     if (typeof dateString === 'number') {
       dateString = new Date(dateString).toISOString();
@@ -37,7 +35,6 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
     });
   };
 
-  // Calculer le prix total
   const calculateTotal = (items: MenuItem[]) => {
     return items.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0).toFixed(2);
   };
@@ -46,6 +43,9 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   const hasMeals = order.meals && order.meals.length > 0;
   const isDrinksReady = order.drinksStatus === 'ready';
   const isMealsReady = order.mealsStatus === 'ready';
+
+  const groupedDrinks = groupMenuItems(order.drinks, false);
+  const groupedMeals = groupMenuItems(order.meals);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -77,7 +77,7 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
                 </div>
               )}
             </div>
-            {order.drinks.map((drink, index) => (
+            {Object.values(groupedDrinks).map((drink, index) => (
               <div key={index} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
                 <div className="flex items-center">
                   <span className="font-medium">
@@ -94,7 +94,7 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
             </div>
             {isDrinksReady && (
               <button
-                onClick={() => handleOrderComplete('drinks')}
+                onClick={() => handleCompleteOrder('drinks')}
                 className="mt-4 bg-green-600 text-white py-2 px-4 rounded-md w-full flex items-center justify-center"
               >
                 <CheckCircle2 className="mr-2" size={18} />
@@ -114,7 +114,7 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
                 </div>
               )}
             </div>
-            {order.meals.map((meal, index) => (
+            {Object.values(groupedMeals).map((meal, index) => (
               <div key={index} className="flex justify-between py-2 border-b border-gray-100 last:border-0">
                 <div className="flex flex-col">
                   <div className="flex items-center">
@@ -138,7 +138,7 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
             </div>
             {isMealsReady && (
               <button
-                onClick={() => handleOrderComplete('meals')}
+                onClick={() => handleCompleteOrder('meals')}
                 className="mt-4 bg-green-600 text-white py-2 px-4 rounded-md w-full flex items-center justify-center"
               >
                 <CheckCircle2 className="mr-2" size={18} />
@@ -148,9 +148,14 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
           </div>
         )}
 
-        {(isDrinksReady && isMealsReady) && (
+        {(isDrinksReady && isMealsReady && hasDrinks && hasMeals) && (
           <button
-            onClick={() => handleOrderComplete('both')}
+            onClick={() => {
+              // Complete both drinks and meals, then navigate back
+              onOrderComplete(order, 'drinks');
+              onOrderComplete(order, 'meals');
+              onBack();
+            }}
             className="mt-4 bg-blue-600 text-white py-3 px-4 rounded-md w-full flex items-center justify-center"
           >
             <CheckCircle2 className="mr-2" size={18} />

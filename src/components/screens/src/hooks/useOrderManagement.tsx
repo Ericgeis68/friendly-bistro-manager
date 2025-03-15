@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import type { Order } from '../types/restaurant';
 import { toast } from "@/hooks/use-toast";
@@ -32,17 +33,6 @@ export const useOrderManagement = () => {
       prev.map(o => o.id === order.id ? updatedOrder : o)
     );
     
-    // Mettre à jour la commande dans completedOrders si elle existe, sinon l'ajouter
-    setCompletedOrders(prev => {
-      const existingOrderIndex = prev.findIndex(o => o.id === order.id);
-      if (existingOrderIndex !== -1) {
-        const newOrders = [...prev];
-        newOrders[existingOrderIndex] = updatedOrder;
-        return newOrders;
-      }
-      return [...prev, updatedOrder];
-    });
-    
     // Ajouter la notification pour la serveuse
     setPendingNotifications(prev => [...prev, updatedOrder]);
     
@@ -56,7 +46,7 @@ export const useOrderManagement = () => {
     // Mettre à jour le statut de la commande
     const updatedOrder = { ...order, status: 'delivered' as const };
     
-    // Mettre à jour la commande dans completedOrders si elle existe, sinon l'ajouter
+    // Ajouter ou mettre à jour la commande dans completedOrders
     setCompletedOrders(prev => {
       const existingOrderIndex = prev.findIndex(o => o.id === order.id);
       if (existingOrderIndex !== -1) {
@@ -99,15 +89,11 @@ export const useOrderManagement = () => {
   };
   
   const handleDrinksComplete = (order: Order) => {
-    // Créer une commande uniquement pour les boissons
-    const drinksOnlyOrder: Order = {
-      ...order,
-      id: `${order.id}-drinks`,
-      meals: [],
-      status: 'delivered' as const,
-      drinksStatus: 'delivered' as const,
-      mealsStatus: undefined
-    };
+    // Si la commande n'a pas de repas, marquer toute la commande comme livrée
+    if (!order.meals || order.meals.length === 0) {
+      handleOrderComplete(order);
+      return;
+    }
     
     // Mettre à jour la commande dans pendingOrders (sans les boissons)
     const orderWithoutDrinks: Order = {
@@ -120,17 +106,6 @@ export const useOrderManagement = () => {
     setPendingOrders(prev => 
       prev.map(o => o.id === order.id ? orderWithoutDrinks : o)
     );
-    
-    // Ajouter ou mettre à jour la commande des boissons dans completedOrders
-    setCompletedOrders(prev => {
-      const existingOrderIndex = prev.findIndex(o => o.id === drinksOnlyOrder.id);
-      if (existingOrderIndex !== -1) {
-        const newOrders = [...prev];
-        newOrders[existingOrderIndex] = drinksOnlyOrder;
-        return newOrders;
-      }
-      return [...prev, drinksOnlyOrder];
-    });
     
     toast({
       title: "Boissons livrées",

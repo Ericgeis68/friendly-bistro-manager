@@ -15,6 +15,17 @@ interface CuisineScreenProps {
 
 // Component for order cards
 const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady: (order: Order) => void }) => {
+  // Group meals by name and cooking style to combine quantities
+  const groupedMeals: Record<string, MenuItem> = {};
+  
+  order.meals.forEach((meal) => {
+    const key = `${meal.name}-${meal.cooking || 'standard'}`;
+    if (!groupedMeals[key]) {
+      groupedMeals[key] = { ...meal, quantity: 0 };
+    }
+    groupedMeals[key].quantity = (groupedMeals[key].quantity || 0) + (meal.quantity || 1);
+  });
+
   return (
     <div className="bg-white rounded-xl p-4 shadow w-64">
       <div className="flex justify-between items-start mb-2">
@@ -27,9 +38,9 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
         </div>
       </div>
       <ul className="list-disc pl-6">
-        {order.meals.map((meal, index) => (
+        {Object.values(groupedMeals).map((meal, index) => (
           <li key={`${order.id}-meal-${index}`}>
-            {meal.name} x{meal.quantity || 1} {meal.cooking && `(${meal.cooking})`}
+            {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
           </li>
         ))}
       </ul>
@@ -48,25 +59,51 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
 // Component for dashboard table
 const DashboardTable = ({ tableRows }: { tableRows: { name: string; cooking: string; count: number }[] }) => {
   return (
-    <div className="w-full">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">Plat</th>
-            <th className="border px-4 py-2">Cuisson</th>
-            <th className="border px-4 py-2">Quantité</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tableRows.map((row, idx) => (
-            <tr key={`row-${idx}`}>
-              <td className="border px-4 py-2">{row.name}</td>
-              <td className="border px-4 py-2">{row.cooking}</td>
-              <td className="border px-4 py-2">{row.count}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="w-full p-6 bg-white rounded-2xl shadow-lg">
+      <div className="overflow-hidden">
+        <div className="mb-6">
+          <h3 className="text-2xl font-semibold text-gray-800">Vue d'ensemble des plats</h3>
+          <p className="text-gray-500">Récapitulatif des plats en cours de préparation</p>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 tracking-wider rounded-l-lg">Plat</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 tracking-wider">Cuisson</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 tracking-wider rounded-r-lg">Quantité</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {tableRows.map((row, idx) => (
+                <tr 
+                  key={`row-${idx}`}
+                  className="hover:bg-gray-50 transition-colors duration-200"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">{row.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full font-medium">
+                      {row.cooking}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
+                      {row.count}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {tableRows.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Aucun plat en préparation</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -84,6 +121,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Filtrer les commandes en cours pour n'afficher que celles qui sont en attente
+  // et qui ont des repas (pas seulement des boissons)
   const pendingOrdersToShow = pendingOrders.filter(order => 
     order.status === 'pending' && order.meals && order.meals.length > 0
   );
@@ -92,7 +130,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   if (showOrders === 'completed') {
     return (
       <CompletedOrdersScreen 
-        orders={completedOrders}
+        orders={completedOrders.filter(order => order.meals && order.meals.length > 0)}
         onBack={() => setShowOrders('pending')}
         userRole="cuisine"
       />
@@ -100,26 +138,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   }
 
   const handleOrderReady = (order: Order) => {
-    const updatedOrder = { ...order, status: 'ready' as const, mealsStatus: 'ready' as const };
-    
-    // Mettre à jour la commande dans pendingOrders
-    setPendingOrders(prev => 
-      prev.map(o => o.id === order.id ? updatedOrder : o)
-    );
-    
-    // Mettre à jour ou ajouter la commande dans completedOrders
-    setCompletedOrders(prev => {
-      const existingOrderIndex = prev.findIndex(o => o.id === order.id);
-      if (existingOrderIndex !== -1) {
-        // Si la commande existe déjà, mettre à jour son statut
-        const newOrders = [...prev];
-        newOrders[existingOrderIndex] = updatedOrder;
-        return newOrders;
-      }
-      // Si la commande n'existe pas, l'ajouter
-      return [...prev, updatedOrder];
-    });
-    
     onOrderReady(order);
     
     toast({
@@ -136,13 +154,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
     });
   };
 
-  // Improved grouping for Entrecôte items by cooking style
+  // Improved grouping for meals by cooking style
   const countItemsByCooking = () => {
-    // Structure: { itemName: { cookingStyle: count } }
-    const counts: Record<string, Record<string, number>> = {};
-    
-    // Group all entrecote variants together by cooking style
-    const entrecoteCounts: Record<string, number> = {};
+    // Structure to store grouped items
+    const groupedItems: Record<string, Record<string, number>> = {};
     
     pendingOrdersToShow.forEach((order) => {
       order.meals.forEach((meal) => {
@@ -150,38 +165,26 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         const cookingStyle = meal.cooking || 'standard';
         const quantity = meal.quantity || 1;
         
-        // Special handling for any Entrecôte variants (including "Entrecôte spéciale")
-        if (itemName.toLowerCase().includes('entrecôte')) {
-          if (!entrecoteCounts[cookingStyle]) {
-            entrecoteCounts[cookingStyle] = 0;
-          }
-          entrecoteCounts[cookingStyle] += quantity;
-        } else {
-          // Regular items
-          if (!counts[itemName]) {
-            counts[itemName] = {};
-          }
-          
-          if (!counts[itemName][cookingStyle]) {
-            counts[itemName][cookingStyle] = 0;
-          }
-          
-          counts[itemName][cookingStyle] += quantity;
+        // Create item category if it doesn't exist
+        if (!groupedItems[itemName]) {
+          groupedItems[itemName] = {};
         }
+        
+        // Add or update cooking style count
+        if (!groupedItems[itemName][cookingStyle]) {
+          groupedItems[itemName][cookingStyle] = 0;
+        }
+        
+        groupedItems[itemName][cookingStyle] += quantity;
       });
     });
     
-    // Add entrecote counts as a special item
-    if (Object.keys(entrecoteCounts).length > 0) {
-      counts['Entrecôte (tous types)'] = entrecoteCounts;
-    }
-    
-    return counts;
+    return groupedItems;
   };
 
   const itemCounts = countItemsByCooking();
   
-  // Prepare the rows for display with improved Entrecôte grouping
+  // Prepare the rows for display with grouped items
   const prepareTableRows = () => {
     const tableRows: { name: string; cooking: string; count: number }[] = [];
     

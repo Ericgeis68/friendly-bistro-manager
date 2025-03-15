@@ -99,15 +99,11 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       setRemainingBalance(totalAmount - totalPaid);
       setIsValidPayment(Math.abs(totalAmount - totalPaid) < 0.01);
     } else {
-      let totalPaid = 0;
-      Object.entries(personPayments).forEach(([personId]) => {
-        totalPaid += calculatePersonTotal(personId);
-      });
-
-      setRemainingBalance(totalAmount - totalPaid);
+      // For item-based payment, don't update the remaining balance here
+      // It will be updated in handleNextPerson
       setIsValidPayment(Math.abs(remainingBalance) < 0.01);
     }
-  }, [paymentMethod, equalPaymentsByPerson, personPayments, totalAmount]);
+  }, [paymentMethod, equalPaymentsByPerson, totalAmount]);
 
   const calculatePersonTotal = (personId: string) => {
     let personTotal = 0;
@@ -147,11 +143,13 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
     }
   };
 
+  // Modify the handleAmountChange function to not update the remaining balance
   const handleAmountChange = (personId: string, amount: string) => {
     const numericAmount = parseFloat(amount) || 0;
     const personTotal = calculatePersonTotal(personId);
     setAmountReceived(amount);
 
+    // Only update the local state, don't update the remaining balance yet
     setPersonPayments(prev => {
       const person = prev[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
       return {
@@ -214,8 +212,6 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   const currentChange = (parseFloat(amountReceived) || 0) - currentPersonTotal;
 
   const handleNextPerson = () => {
-    console.log("Before set currentPersonIndex:", currentPersonIndex);
-
     const updatedDrinks: MenuItem[] = [];
     const updatedMeals: MenuItem[] = [];
 
@@ -235,6 +231,10 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       }
     });
 
+    // Calculate the total for this person
+    const personTotal = currentPersonTotal;
+
+    // Update person payments
     setPersonPayments(prev => {
       const amount = parseFloat(amountReceived) || 0;
       return {
@@ -243,11 +243,12 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
           drinks: updatedDrinks,
           meals: updatedMeals,
           amount: amount,
-          change: amount - currentPersonTotal
+          change: amount - personTotal
         }
       };
     });
 
+    // Update available items by removing selected quantities
     setAvailableDrinks(prevDrinks => {
       return prevDrinks.map(drink => {
         const personQuantity = personDrinkQuantitiesMap[drink.id] || 0;
@@ -268,35 +269,21 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       }).filter(meal => (meal.quantity || 0) > 0);
     });
 
-    setRemainingBalance(prevBalance => {
-      let newPersonTotal = 0;
-      updatedDrinks.forEach(drink => {
-        newPersonTotal += drink.price * (drink.quantity || 0);
-      });
-      updatedMeals.forEach(meal => {
-        newPersonTotal += meal.price * (meal.quantity || 0);
-      });
-      return prevBalance - newPersonTotal;
-    });
+    // Update remaining balance only when clicking "Next Person"
+    setRemainingBalance(prevBalance => prevBalance - personTotal);
 
+    // Reset for next person
     setAmountReceived('');
-
     setPersonDrinkQuantities(prev => ({
       ...prev,
       [currentPersonId]: {}
     }));
-
     setPersonMealQuantities(prev => ({
       ...prev,
       [currentPersonId]: {}
     }));
 
-    setCurrentPersonIndex(prev => {
-      const nextIndex = prev + 1;
-      console.log("After set currentPersonIndex:", nextIndex);
-      return nextIndex;
-    });
-
+    // Move to next person
     if (currentPersonIndex < numberOfPeople - 1) {
       setCurrentPersonIndex(prev => prev + 1);
     }
