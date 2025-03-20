@@ -3,6 +3,10 @@ import { Menu, RefreshCw } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
+// Ajoutez ces imports ici mais sans redéfinir toast
+import { ref, update, serverTimestamp, set } from 'firebase/database';
+import { database } from '../../utils/firebase';
+// Supprimez l'import en double de toast
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -120,12 +124,54 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Fonction pour marquer une commande comme prête dans Firebase
+  const marquerCommandePrete = (idCommande: string) => {
+    // Référence à la commande dans Firebase
+    const refCommande = ref(database, `orders/${idCommande}`);
+    
+    // Mettre à jour le statut de la commande dans Firebase
+    update(refCommande, {
+      status: 'ready',
+      readyTime: serverTimestamp(),
+      notified: false // Réinitialiser le statut de notification pour que tous les clients soient notifiés
+    })
+    .then(() => {
+      console.log(`Commande ${idCommande} marquée comme prête`);
+      toast({
+        title: "Commande prête",
+        description: "La commande a été marquée comme prête et tous les appareils ont été notifiés.",
+      });
+      
+      // Mettre également à jour le statut de notification dans un emplacement séparé pour une meilleure synchronisation
+      const refNotification = ref(database, `notifications/${idCommande}`);
+      set(refNotification, {
+        orderId: idCommande,
+        status: 'ready',
+        timestamp: serverTimestamp(),
+        read: false
+      });
+    })
+    .catch(erreur => {
+      console.error("Erreur lors de la mise à jour du statut:", erreur);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut de la commande.",
+        variant: "destructive",
+      });
+    });
+  };
+
   // Filtrer les commandes en cours pour n'afficher que celles qui sont en attente
   // et qui ont des repas (pas seulement des boissons)
   const pendingOrdersToShow = pendingOrders.filter(order => 
     order.status === 'pending' && order.meals && order.meals.length > 0
   );
-
+  
+  // Ajouter une vérification pour éliminer les doublons basée sur l'ID de commande
+  const uniquePendingOrders = Array.from(
+    new Map(pendingOrdersToShow.map(order => [order.id, order])).values()
+  );
+  
   // Si on montre les commandes terminées, utiliser le composant CompletedOrdersScreen
   if (showOrders === 'completed') {
     return (
@@ -138,6 +184,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   }
 
   const handleOrderReady = (order: Order) => {
+    // Appeler la fonction Firebase pour mettre à jour le statut
+    marquerCommandePrete(order.id);
+    
+    // Appeler ensuite la fonction onOrderReady pour mettre à jour l'état local
     onOrderReady(order);
     
     toast({
@@ -246,19 +296,27 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         </div>
       )}
 
-      <div className="p-4 mt-4 flex flex-wrap gap-4">
-        {showOrders === 'pending' && pendingOrdersToShow.map((order) => (
-          <OrderCard 
-            key={order.id} 
-            order={order} 
-            handleOrderReady={handleOrderReady} 
-          />
-        ))}
-        
-        {showOrders === 'dashboard' && (
-          <DashboardTable tableRows={tableRows} />
-        )}
+      <div className="flex-1 p-4 overflow-auto">
+        <div className="flex flex-wrap gap-4 justify-center">
+          {uniquePendingOrders.length === 0 ? (
+            <div className="text-center text-gray-500 mt-10">
+              Aucune commande en attente
+            </div>
+          ) : (
+            uniquePendingOrders.map(order => (
+              <OrderCard 
+                key={order.id} 
+                order={order} 
+                handleOrderReady={onOrderReady} 
+              />
+            ))
+          )}
+        </div>
       </div>
+      
+      {showOrders === 'dashboard' && (
+        <DashboardTable tableRows={tableRows} />
+      )}
     </div>
   );
 };

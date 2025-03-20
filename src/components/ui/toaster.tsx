@@ -1,4 +1,3 @@
-import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
   ToastClose,
@@ -7,6 +6,10 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+// Choisissez un seul import pour useToast, pas les deux
+import { useToast } from "@/hooks/use-toast"
+// Supprimez cette ligne qui crée le conflit
+// import { useToast } from "@/components/ui/use-toast"
 
 export function Toaster() {
   const { toasts } = useToast()

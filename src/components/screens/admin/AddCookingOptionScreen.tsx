@@ -38,7 +38,7 @@ const AddCookingOptionScreen: React.FC<AddCookingOptionScreenProps> = ({
             placeholder="Ex: BLEU, SAIGNANT, etc."
           />
           <p className="text-gray-500 text-xs mt-1">
-            Le nom sera converti en majuscules.
+            Le nom sera converti en majuscules et sauvegardé sur Firebase.
           </p>
         </div>
         <button 

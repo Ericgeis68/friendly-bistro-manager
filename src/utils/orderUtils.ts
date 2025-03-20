@@ -1,3 +1,4 @@
+
 export const generateOrderId = () => {
   const date = new Date();
   const year = date.getFullYear().toString().slice(-2);
@@ -6,3 +7,4 @@ export const generateOrderId = () => {
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
   return `CMD-${year}${month}${day}-${random}`;
 };
+
