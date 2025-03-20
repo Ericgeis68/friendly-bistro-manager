@@ -2,7 +2,7 @@
 import React from 'react';
 import { Bell } from 'lucide-react';
 import { Order } from '../../../types/restaurant';
-import { Badge } from "../../ui/badge";
+import { Badge } from "../../../components/ui/badge";
 import ActionButton from './ActionButton';
 import { groupMenuItems } from '../../../utils/itemGrouping';
 import { format } from 'date-fns';
@@ -16,31 +16,23 @@ interface OrderCardProps {
 
 const formatOrderDate = (date: string | number) => {
   try {
-    if (!date) return 'Heure indisponible';
-    
     if (typeof date === 'number') {
       return format(new Date(date), 'HH:mm', { locale: fr });
     }
     return format(new Date(date), 'HH:mm', { locale: fr });
-  } catch (error) {
-    console.error("Error formatting date:", date, error);
+  } catch {
     return 'Heure indisponible';
   }
 };
 
 const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCancel }) => {
-  // Safety: ensure order has all required properties
-  if (!order || !order.id || !order.table) {
-    console.warn("Invalid order:", order);
-    return null;
-  }
+  // Ensure meals and drinks are arrays before accessing them
+  const safeMeals = Array.isArray(order.meals) ? order.meals : [];
+  const safeDrinks = Array.isArray(order.drinks) ? order.drinks : [];
   
-  // Ensure arrays are properly initialized
-  const meals = Array.isArray(order.meals) ? order.meals : [];
-  const drinks = Array.isArray(order.drinks) ? order.drinks : [];
-  
-  const groupedMeals = groupMenuItems(meals);
-  const groupedDrinks = groupMenuItems(drinks, false);
+  // Group items only if arrays are not empty
+  const groupedMeals = safeMeals.length > 0 ? groupMenuItems(safeMeals) : {};
+  const groupedDrinks = safeDrinks.length > 0 ? groupMenuItems(safeDrinks, false) : {};
 
   return (
     <div className="bg-white rounded-2xl shadow overflow-hidden">
@@ -54,11 +46,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
               )}
             </div>
             <div className="text-sm text-gray-500">
-              {formatOrderDate(order.createdAt)} - {order.waitress || 'Inconnu'}
+              {formatOrderDate(order.createdAt)} - {order.waitress}
             </div>
           </div>
           <div className="flex gap-2">
-            {drinks.length > 0 && (
+            {safeDrinks.length > 0 && (
               <ActionButton 
                 order={order} 
                 type="drinks" 
@@ -67,7 +59,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
                 onCancel={onOrderCancel}
               />
             )}
-            {meals.length > 0 && order.mealsStatus === 'ready' && (
+            {safeMeals.length > 0 && order.mealsStatus === 'ready' && (
               <ActionButton 
                 order={order} 
                 type="meals" 
@@ -79,7 +71,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
             {/* Unified cancel button that handles the appropriate order type */}
             <ActionButton 
               order={order} 
-              type={drinks.length > 0 ? "drinks" : "meals"} 
+              type={safeDrinks.length > 0 ? "drinks" : "meals"} 
               onComplete={onOrderComplete} 
               onCancel={onOrderCancel}
             />
@@ -87,24 +79,20 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
         </div>
       </div>
 
-      {drinks.length > 0 && (
+      {safeDrinks.length > 0 && (
         <div className="p-4 bg-blue-50">
           <div className="flex justify-between items-center">
             <h3 className="font-medium text-blue-800 mb-2">Boissons</h3>
           </div>
-          {Object.values(groupedDrinks).length > 0 ? (
-            Object.values(groupedDrinks).map((drink, index) => (
-              <div key={index} className="text-gray-700 ml-2">
-                {drink.name} x{drink.quantity}
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-500 ml-2">Aucune boisson spécifiée</div>
-          )}
+          {Object.values(groupedDrinks).map((drink, index) => (
+            <div key={index} className="text-gray-700 ml-2">
+              {drink.name} x{drink.quantity}
+            </div>
+          ))}
         </div>
       )}
 
-      {meals.length > 0 && (
+      {safeMeals.length > 0 && (
         <div className="p-4 bg-orange-50">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
@@ -117,15 +105,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
               )}
             </div>
           </div>
-          {Object.values(groupedMeals).length > 0 ? (
-            Object.values(groupedMeals).map((meal, index) => (
-              <div key={index} className="text-gray-700 ml-2">
-                {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-500 ml-2">Aucun repas spécifié</div>
-          )}
+          {Object.values(groupedMeals).map((meal, index) => (
+            <div key={index} className="text-gray-700 ml-2">
+              {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+            </div>
+          ))}
         </div>
       )}
     </div>

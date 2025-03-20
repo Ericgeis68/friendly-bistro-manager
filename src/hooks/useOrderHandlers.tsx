@@ -1,8 +1,9 @@
+
 import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
 import type { Order, MenuItem, ScreenType, UserRole } from '../types/restaurant';
-import { db } from '../lib/firebase';
-import { ref, set, push, update } from "firebase/database";
+import { ref, set } from "firebase/database";
+import { database } from '../utils/firebase';
 
 interface UseOrderHandlersProps {
   loggedInUser: string;
@@ -24,7 +25,6 @@ interface UseOrderHandlersProps {
   handleOrderCancel: (order: Order) => void;
   handleDrinksComplete: (order: Order) => void;
   setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  completedOrders: Order[]; 
 }
 
 export const useOrderHandlers = ({
@@ -74,159 +74,97 @@ export const useOrderHandlers = ({
     setTempMeals([]);
   };
 
-  const handleSubmitOrder = async () => {
-    if (!tableNumber || (!order.drinks.length && !order.meals.length)) {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer une commande vide ou sans numéro de table.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    let isOfflineMode = false;
-    let offlineOrdersStorage: Order[] = [];
-
+  const handleSubmitOrder = () => {
+    console.log("In handleSubmitOrder function");
+    console.log("Order drinks:", order.drinks.length, "Order meals:", order.meals.length);
+    console.log("LoggedInUser:", loggedInUser);
+    console.log("TableNumber:", tableNumber);
+    
+    // Create separate orders for drinks and meals
     if (order.drinks.length > 0) {
-      const orderId = generateOrderId() + '-drinks';
-      
-      try {
-        const orderRef = ref(db, `orders/${orderId}`);
-        await set(orderRef, {
-          id: orderId,
-          table: tableNumber,
-          table_comment: tableComment || null,
-          waitress: loggedInUser!,
-          status: 'pending',
-          drinks_status: 'pending',
-          created_at: new Date().toISOString()
-        });
-        
-        order.drinks.forEach(async (drink) => {
-          const orderItemRef = ref(db, `order_items/${orderId}/${drink.id}`);
-          await set(orderItemRef, {
-            order_id: orderId,
-            menu_item_id: drink.id,
-            name: drink.name,
-            price: drink.price,
-            quantity: drink.quantity || 0,
-            type: 'drink'
-          });
-        });
-      } catch (error) {
-        console.error("Erreur Firebase:", error);
-        isOfflineMode = true;
-        
-        toast({
-          title: "Mode hors-ligne activé",
-          description: "La commande sera enregistrée localement jusqu'à ce que la connexion soit rétablie.",
-          variant: "default"
-        });
-      }
-      
+      console.log("Creating drinks order");
       const drinksOrder: Order = {
-        id: orderId,
+        id: generateOrderId() + '-drinks',
         waitress: loggedInUser!,
         meals: [],
         drinks: [...order.drinks],
         table: tableNumber,
-        tableComment: tableComment || undefined,
+        tableComment: tableComment || '', // Use empty string instead of undefined
         status: 'pending',
         drinksStatus: 'pending',
         createdAt: new Date().toISOString()
       };
       
-      setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
+      console.log("Drinks order to save:", drinksOrder);
       
-      if (isOfflineMode) {
-        offlineOrdersStorage.push(drinksOrder);
-        localStorage.setItem('offlineOrders', JSON.stringify(
-          [...JSON.parse(localStorage.getItem('offlineOrders') || '[]'), drinksOrder]
-        ));
-      }
-      
-      toast({
-        title: "Commande boissons envoyée",
-        description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
-      });
+      // Save to Firebase pendingOrders with the ID as the key
+      const orderRef = ref(database, `pendingOrders/${drinksOrder.id}`);
+      set(orderRef, drinksOrder)
+        .then(() => {
+          console.log("Drink order saved to Firebase successfully");
+          // Update local state
+          setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
+          
+          toast({
+            title: "Commande boissons envoyée",
+            description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
+          });
+        })
+        .catch(error => {
+          console.error("Error saving drink order to Firebase:", error);
+          toast({
+            title: "Erreur",
+            description: "Erreur lors de l'envoi de la commande de boissons.",
+            variant: "destructive",
+          });
+        });
     }
     
     if (order.meals.length > 0) {
-      const orderId = generateOrderId() + '-meals';
-      
-      try {
-        const orderRef = ref(db, `orders/${orderId}`);
-        await set(orderRef, {
-          id: orderId,
-          table: tableNumber,
-          table_comment: tableComment || null,
-          waitress: loggedInUser!,
-          status: 'pending',
-          meals_status: 'pending',
-          created_at: new Date().toISOString()
-        });
-        
-        order.meals.forEach(async (meal) => {
-          const orderItemRef = ref(db, `order_items/${orderId}/${meal.id}`);
-          await set(orderItemRef, {
-            order_id: orderId,
-            menu_item_id: meal.id,
-            name: meal.name,
-            price: meal.price,
-            quantity: meal.quantity || 0,
-            cooking: meal.cooking,
-            type: 'meal'
-          });
-        });
-      } catch (error) {
-        console.error("Erreur Firebase:", error);
-        isOfflineMode = true;
-        
-        if (!offlineOrdersStorage.length) {
-          toast({
-            title: "Mode hors-ligne activé",
-            description: "La commande sera enregistrée localement jusqu'à ce que la connexion soit rétablie.",
-            variant: "default"
-          });
-        }
-      }
-      
+      console.log("Creating meals order");
       const mealsOrder: Order = {
-        id: orderId,
+        id: generateOrderId() + '-meals',
         waitress: loggedInUser!,
         meals: [...order.meals],
         drinks: [],
         table: tableNumber,
-        tableComment: tableComment || undefined,
+        tableComment: tableComment || '', // Use empty string instead of undefined
         status: 'pending',
         mealsStatus: 'pending',
         createdAt: new Date().toISOString()
       };
       
-      setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
+      console.log("Meals order to save:", mealsOrder);
       
-      if (isOfflineMode) {
-        offlineOrdersStorage.push(mealsOrder);
-        localStorage.setItem('offlineOrders', JSON.stringify(
-          [...JSON.parse(localStorage.getItem('offlineOrders') || '[]'), mealsOrder]
-        ));
-      }
-      
-      toast({
-        title: "Commande repas envoyée",
-        description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
-      });
+      // Save to Firebase pendingOrders with the ID as the key
+      const orderRef = ref(database, `pendingOrders/${mealsOrder.id}`);
+      set(orderRef, mealsOrder)
+        .then(() => {
+          console.log("Meal order saved to Firebase successfully");
+          // Update local state
+          setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
+          
+          toast({
+            title: "Commande repas envoyée",
+            description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
+          });
+        })
+        .catch(error => {
+          console.error("Error saving meal order to Firebase:", error);
+          toast({
+            title: "Erreur",
+            description: "Erreur lors de l'envoi de la commande de repas.",
+            variant: "destructive",
+          });
+        });
     }
     
     if (order.drinks.length === 0 && order.meals.length === 0) {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer une commande vide.",
-        variant: "destructive"
-      });
+      console.log("No items in order, returning");
       return;
     }
 
+    console.log("Resetting order state");
     setDrinksMenu((prevDrinksMenu: MenuItem[]) => prevDrinksMenu.map(drink => ({ ...drink, quantity: 0 })));
     setMealsMenu((prevMealsMenu: MenuItem[]) => prevMealsMenu.map(meal => ({ ...meal, quantity: 0 })));
     setTempMeals([]);
@@ -244,29 +182,28 @@ export const useOrderHandlers = ({
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
   };
 
+  // Assurez-vous que la fonction handleOrderCompleteWithType est correctement implémentée
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals' | 'both') => {
-    if (type === 'drinks' && order.drinks.length > 0) {
-      handleOrderComplete(order);
-      toast({
-        title: "Commande boissons terminée",
-        description: `La commande de boissons pour la table ${order.table} a été terminée.`,
-      });
-    } else if (type === 'meals' && order.meals.length > 0) {
-      handleOrderComplete(order);
-      toast({
-        title: "Commande repas terminée",
-        description: `La commande de repas pour la table ${order.table} a été terminée.`,
-      });
-    } else if (type === 'both' && order.drinks.length > 0 && order.meals.length > 0) {
-      handleOrderComplete(order);
-      toast({
-        title: "Commande terminée",
-        description: `La commande pour la table ${order.table} a été terminée.`,
-      });
-    }
-  };
+  console.log("Completing order with type:", type, "Order:", order.id);
+  
+  // Ajout de logs pour le débogage
+  if (type === 'drinks') {
+    console.log("Completing drinks");
+    handleDrinksComplete(order);
+  } else if (type === 'meals') {
+    console.log("Completing meals");
+    handleOrderComplete(order);
+  } else if (type === 'both') {
+    console.log("Completing both");
+    // Si les deux sont terminés, marquer la commande comme complète
+    const updatedOrder = { ...order, status: 'completed' };
+    setCompletedOrders(prev => [...prev, updatedOrder]);
+    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
+  }
+};
 
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals' | 'all') => {
+    // Since orders are now separate, we just cancel the entire order
     handleOrderCancel(order);
     
     if (order.drinks.length > 0) {

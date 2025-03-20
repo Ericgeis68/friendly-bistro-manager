@@ -1,3 +1,4 @@
+
 import type { MenuItem } from '../types/restaurant';
 
 /**
