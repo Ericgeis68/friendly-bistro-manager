@@ -1,19 +1,26 @@
-import * as React from "react"
+// The file should export a hook named useMobile, but it seems it doesn't.
+// Let's create or update this file to properly export the hook
 
-const MOBILE_BREAKPOINT = 768
+import { useEffect, useState } from 'react';
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+export const useMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+  useEffect(() => {
+    // Function to check if viewport width is mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // Common breakpoint for mobile devices
+    };
 
-  return !!isMobile
-}
+    // Initial check
+    checkMobile();
+
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile);
+
+    // Clean up event listener
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
