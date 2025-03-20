@@ -2,7 +2,7 @@
 import React from 'react';
 import { Bell } from 'lucide-react';
 import { Order } from '../../../types/restaurant';
-import { Badge } from "../../../components/ui/badge";
+import { Badge } from "../../ui/badge";
 import ActionButton from './ActionButton';
 import { groupMenuItems } from '../../../utils/itemGrouping';
 import { format } from 'date-fns';
@@ -26,13 +26,8 @@ const formatOrderDate = (date: string | number) => {
 };
 
 const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCancel }) => {
-  // Ensure meals and drinks are arrays before accessing them
-  const safeMeals = Array.isArray(order.meals) ? order.meals : [];
-  const safeDrinks = Array.isArray(order.drinks) ? order.drinks : [];
-  
-  // Group items only if arrays are not empty
-  const groupedMeals = safeMeals.length > 0 ? groupMenuItems(safeMeals) : {};
-  const groupedDrinks = safeDrinks.length > 0 ? groupMenuItems(safeDrinks, false) : {};
+  const groupedMeals = groupMenuItems(order.meals);
+  const groupedDrinks = groupMenuItems(order.drinks, false);
 
   return (
     <div className="bg-white rounded-2xl shadow overflow-hidden">
@@ -50,7 +45,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
             </div>
           </div>
           <div className="flex gap-2">
-            {safeDrinks.length > 0 && (
+            {order.drinks.length > 0 && (
               <ActionButton 
                 order={order} 
                 type="drinks" 
@@ -59,7 +54,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
                 onCancel={onOrderCancel}
               />
             )}
-            {safeMeals.length > 0 && order.mealsStatus === 'ready' && (
+            {order.meals.length > 0 && order.mealsStatus === 'ready' && (
               <ActionButton 
                 order={order} 
                 type="meals" 
@@ -71,7 +66,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
             {/* Unified cancel button that handles the appropriate order type */}
             <ActionButton 
               order={order} 
-              type={safeDrinks.length > 0 ? "drinks" : "meals"} 
+              type={order.drinks.length > 0 ? "drinks" : "meals"} 
               onComplete={onOrderComplete} 
               onCancel={onOrderCancel}
             />
@@ -79,7 +74,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
         </div>
       </div>
 
-      {safeDrinks.length > 0 && (
+      {order.drinks.length > 0 && (
         <div className="p-4 bg-blue-50">
           <div className="flex justify-between items-center">
             <h3 className="font-medium text-blue-800 mb-2">Boissons</h3>
@@ -92,7 +87,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
         </div>
       )}
 
-      {safeMeals.length > 0 && (
+      {order.meals.length > 0 && (
         <div className="p-4 bg-orange-50">
           <div className="flex justify-between items-center">
             <div className="flex items-center">

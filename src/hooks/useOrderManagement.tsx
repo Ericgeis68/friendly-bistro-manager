@@ -1,93 +1,33 @@
 import { useState, useEffect } from 'react';
 import type { Order } from '../types/restaurant';
 import { toast } from "@/hooks/use-toast";
-import { ref, set, remove, update, get, onValue } from "firebase/database";
-import { database, pendingOrdersRef, completedOrdersRef } from '../utils/firebase';
 
 export const useOrderManagement = () => {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>(() => {
+    const savedOrders = localStorage.getItem('pendingOrders');
+    return savedOrders ? JSON.parse(savedOrders) : [];
+  });
+
+  const [completedOrders, setCompletedOrders] = useState<Order[]>(() => {
+    const savedCompletedOrders = localStorage.getItem('completedOrders');
+    return savedCompletedOrders ? JSON.parse(savedCompletedOrders) : [];
+  });
+
   const [pendingNotifications, setPendingNotifications] = useState<Order[]>([]);
 
-  // Load pending orders from Firebase
   useEffect(() => {
-    console.log("Setting up pendingOrders listener");
-    const unsubscribe = onValue(pendingOrdersRef, (snapshot) => {
-      console.log("Pending orders updated in Firebase");
-      const data = snapshot.val();
-      if (data) {
-        const ordersArray = Object.values(data) as Order[];
-        console.log("Pending orders from Firebase:", ordersArray.length);
-        setPendingOrders(ordersArray);
-      } else {
-        console.log("No pending orders in Firebase");
-        setPendingOrders([]);
-      }
-    }, (error) => {
-      console.error("Error loading pending orders:", error);
-    });
+    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
+  }, [pendingOrders]);
 
-    return () => unsubscribe();
-  }, []);
-
-  // Load completed orders from Firebase
   useEffect(() => {
-    console.log("Setting up completedOrders listener");
-    const unsubscribe = onValue(completedOrdersRef, (snapshot) => {
-      console.log("Completed orders updated in Firebase");
-      const data = snapshot.val();
-      if (data) {
-        const ordersArray = Object.values(data) as Order[];
-        console.log("Completed orders from Firebase:", ordersArray.length);
-        setCompletedOrders(ordersArray);
-      } else {
-        console.log("No completed orders in Firebase");
-        setCompletedOrders([]);
-      }
-    }, (error) => {
-      console.error("Error loading completed orders:", error);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const savePendingOrderToFirebase = (order: Order) => {
-    console.log("Saving pending order to Firebase:", order.id);
-    const orderRef = ref(database, `pendingOrders/${order.id}`);
-    set(orderRef, order)
-      .then(() => console.log("Order saved successfully"))
-      .catch(error => console.error("Error saving order:", error));
-  };
-
-  const saveCompletedOrderToFirebase = (order: Order) => {
-    console.log("Saving completed order to Firebase:", order.id);
-    const orderRef = ref(database, `completedOrders/${order.id}`);
-    set(orderRef, order)
-      .then(() => console.log("Completed order saved successfully"))
-      .catch(error => console.error("Error saving completed order:", error));
-  };
-
-  const removePendingOrderFromFirebase = (orderId: string) => {
-    console.log("Removing pending order from Firebase:", orderId);
-    const orderRef = ref(database, `pendingOrders/${orderId}`);
-    remove(orderRef)
-      .then(() => console.log("Order removed successfully"))
-      .catch(error => console.error("Error removing order:", error));
-  };
+    localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
+  }, [completedOrders]);
 
   const handleOrderReady = (order: Order) => {
     // For meal orders only (used in kitchen)
     if (order.meals.length > 0) {
       // Create a copy of the order with "ready" status
       const updatedOrder = { ...order, status: 'ready' as const, mealsStatus: 'ready' as const };
-      
-      // Update the order in pendingOrders for the waitress view
-      const pendingOrderRef = ref(database, `pendingOrders/${order.id}`);
-      update(pendingOrderRef, updatedOrder);
-      
-      // Also add the order to completedOrders for the kitchen view
-      const completedOrderRef = ref(database, `completedOrders/${order.id}`);
-      set(completedOrderRef, updatedOrder);
       
       // MODIFICATION: Keep the order in pendingOrders for the waitress view but update its status
       setPendingOrders(prev => 
@@ -132,22 +72,6 @@ export const useOrderManagement = () => {
     // (It might already be in completedOrders if kitchen marked it as ready)
     if (order.meals.length > 0) {
       // Remove from pendingOrders regardless of status
-      removePendingOrderFromFirebase(order.id);
-      
-      // Update status to 'delivered' in completedOrders
-      const completedOrderRef = ref(database, `completedOrders/${order.id}`);
-      get(completedOrderRef).then((snapshot) => {
-        if (snapshot.exists()) {
-          // Update existing order
-          update(completedOrderRef, { status: 'delivered' });
-        } else {
-          // Add new order with delivered status
-          const deliveredOrder = { ...order, status: 'delivered' as const };
-          set(completedOrderRef, deliveredOrder);
-        }
-      });
-      
-      // Remove from pendingOrders regardless of status
       setPendingOrders(prev => prev.filter(o => o.id !== order.id));
       
       // Update status to 'delivered' in completedOrders
@@ -155,19 +79,6 @@ export const useOrderManagement = () => {
         prev.map(o => o.id === order.id ? { ...o, status: 'delivered' as const } : o)
       );
     } else {
-      // For drink orders, just remove from pending and add to completed
-      removePendingOrderFromFirebase(order.id);
-      
-      // Check if it exists in completedOrders
-      const completedOrderRef = ref(database, `completedOrders/${order.id}`);
-      get(completedOrderRef).then((snapshot) => {
-        if (snapshot.exists()) {
-          update(completedOrderRef, updatedOrder);
-        } else {
-          set(completedOrderRef, updatedOrder);
-        }
-      });
-      
       // For drink orders, just remove from pending and add to completed
       setPendingOrders(prev => prev.filter(o => o.id !== order.id));
       setCompletedOrders(prev => {
@@ -198,17 +109,10 @@ export const useOrderManagement = () => {
 
   const handleOrderCancel = (cancelledOrder: Order) => {
     // Remove the order from pendingOrders
-    removePendingOrderFromFirebase(cancelledOrder.id);
-    
-    // Add or update the order in completedOrders with the status "cancelled"
-    const updatedOrder = { ...cancelledOrder, status: 'cancelled' as const };
-    const completedOrderRef = ref(database, `completedOrders/${cancelledOrder.id}`);
-    set(completedOrderRef, updatedOrder);
-    
-    // Remove the order from pendingOrders
     setPendingOrders(prev => prev.filter(order => order.id !== cancelledOrder.id));
     
     // Add or update the order in completedOrders with the status "cancelled"
+    const updatedOrder = { ...cancelledOrder, status: 'cancelled' as const };
     setCompletedOrders(prev => {
       const existingOrderIndex = prev.findIndex(o => o.id === cancelledOrder.id);
       if (existingOrderIndex !== -1) {
@@ -250,8 +154,6 @@ export const useOrderManagement = () => {
     handleOrderReady,
     handleOrderComplete,
     handleOrderCancel,
-    handleDrinksComplete,
-    savePendingOrderToFirebase,
-    saveCompletedOrderToFirebase
+    handleDrinksComplete
   };
 };
