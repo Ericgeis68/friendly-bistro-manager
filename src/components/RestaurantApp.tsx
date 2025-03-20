@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import type { MenuItem, Order, ScreenType, UserRole } from '../types/restaurant';
 import { useOrderManagement } from '../hooks/useOrderManagement';
 import { useMenuManagement } from '../hooks/useMenuManagement';
@@ -17,6 +18,8 @@ import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import SplitPaymentScreen from './screens/SplitPaymentScreen';
 import { DEFAULT_COOKING_OPTIONS } from '../utils/itemGrouping';
+import { onValue, ref } from 'firebase/database';
+import { cookingOptionsRef, database } from '../utils/firebase';
 
 const WaitressScreens = ({
   loggedInUser,
@@ -57,6 +60,9 @@ const WaitressScreens = ({
     }
   }, [showPendingOrders, pendingNotifications, loggedInUser, handleNotificationAcknowledge]);
 
+  console.log("WaitressScreens - pendingOrders:", pendingOrders.length);
+  console.log("WaitressScreens - filtered orders:", pendingOrders.filter(order => order.waitress === loggedInUser).length);
+
   if (showCompletedOrders) {
     return (
       <CompletedOrdersScreen
@@ -69,17 +75,20 @@ const WaitressScreens = ({
     );
   }
   
+  // Dans la section où PendingOrdersScreen est rendu, assurons-nous que la fonction onOrderComplete
+  // est correctement passée et implémentée :
+  
   if (showPendingOrders) {
+    const filteredOrders = pendingOrders.filter(order => order.waitress === loggedInUser);
+    console.log("Showing pending orders screen with:", filteredOrders.length, "orders");
+    
     return (
       <PendingOrdersScreen
-        orders={pendingOrders.filter(order => order.waitress === loggedInUser)}
+        orders={filteredOrders}
         onBack={() => setShowPendingOrders(false)}
         onOrderComplete={(order, type) => {
-          if (order.drinks.length > 0) {
-            handleOrderCompleteWithType(order, 'drinks');
-          } else if (order.meals.length > 0) {
-            handleOrderCompleteWithType(order, 'meals');
-          }
+          console.log("Order complete called with type:", type);
+          handleOrderCompleteWithType(order, type);
         }}
         onOrderCancel={handleOrderCancelWithType}
         setPendingOrders={setPendingOrders}
@@ -97,13 +106,8 @@ const WaitressScreens = ({
       pendingNotifications={pendingNotifications.filter(order => order.waitress === loggedInUser)}
       onNotificationAcknowledge={handleNotificationAcknowledge}
       pendingOrders={pendingOrders.filter(order => order.waitress === loggedInUser)}
-      onOrderComplete={(order, type) => {
-        if (order.drinks.length > 0) {
-          handleOrderCompleteWithType(order, 'drinks');
-        } else if (order.meals.length > 0) {
-          handleOrderCompleteWithType(order, 'meals');
-        }
-      }}
+      onOrderComplete={handleOrderCompleteWithType}
+      onOrderCancel={handleOrderCancelWithType}
     />
   );
 };
@@ -117,10 +121,29 @@ const RestaurantApp: React.FC = () => {
     meals: []
   });
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
-  const [cookingOptions, setCookingOptions] = useState<string[]>(() => {
-    const savedOptions = localStorage.getItem('cookingOptions');
-    return savedOptions ? JSON.parse(savedOptions) : DEFAULT_COOKING_OPTIONS;
-  });
+  const [cookingOptions, setCookingOptions] = useState<string[]>(DEFAULT_COOKING_OPTIONS);
+
+  useEffect(() => {
+    const unsubscribe = onValue(cookingOptionsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setCookingOptions(data);
+      } else {
+        const savedOptions = localStorage.getItem('cookingOptions');
+        if (savedOptions) {
+          try {
+            const parsedOptions = JSON.parse(savedOptions);
+            setCookingOptions(parsedOptions);
+          } catch (e) {
+            console.error("Error parsing cookingOptions from localStorage:", e);
+            setCookingOptions(DEFAULT_COOKING_OPTIONS);
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const {
     currentScreen,
@@ -187,8 +210,7 @@ const RestaurantApp: React.FC = () => {
     handleOrderComplete,
     handleOrderCancel,
     handleDrinksComplete,
-    setCompletedOrders,
-    completedOrders
+    setCompletedOrders
   });
 
   if (currentScreen === 'login') {
