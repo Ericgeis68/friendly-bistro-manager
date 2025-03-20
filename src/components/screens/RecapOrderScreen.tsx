@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
@@ -36,18 +35,6 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
 
   const groupedMeals = groupMenuItems(meals);
   const groupedDrinks = groupMenuItems(drinks, false);
-
-  // Ensure we have items to submit
-  const hasItemsToSubmit = drinks.length > 0 || meals.length > 0;
-
-  const onSubmitOrder = () => {
-    console.log("Submit order button clicked");
-    console.log("Has items to submit:", hasItemsToSubmit);
-    if (hasItemsToSubmit) {
-      console.log("Calling handleSubmitOrder");
-      handleSubmitOrder();
-    }
-  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -117,9 +104,8 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
           </div>}
         </div>
         <button
-          onClick={onSubmitOrder}
-          disabled={!hasItemsToSubmit}
-          className={`w-full h-12 text-lg ${!hasItemsToSubmit ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md mb-2`}
+          onClick={handleSubmitOrder}
+          className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md mb-2"
         >
           Valider la commande
         </button>

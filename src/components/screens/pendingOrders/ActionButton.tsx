@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Trash2, CheckCircle } from 'lucide-react';
 import { Order } from '../../../types/restaurant';

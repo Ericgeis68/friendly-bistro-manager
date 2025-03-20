@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Edit, Plus, Trash2, X } from 'lucide-react';
 import { MenuItems, MenuItem } from '../../../types/restaurant';

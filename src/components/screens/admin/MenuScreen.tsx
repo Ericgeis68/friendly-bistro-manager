@@ -1,13 +1,14 @@
 
 import React from 'react';
-import { MenuItems } from '../../../types/restaurant';
+import { useRestaurant } from '@/context/RestaurantContext';
 
 interface MenuScreenProps {
-  menuItems: MenuItems;
   handleEditMenu: () => void;
 }
 
-const MenuScreen: React.FC<MenuScreenProps> = ({ menuItems, handleEditMenu }) => {
+const MenuScreen: React.FC<MenuScreenProps> = ({ handleEditMenu }) => {
+  const { menuItems } = useRestaurant();
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">

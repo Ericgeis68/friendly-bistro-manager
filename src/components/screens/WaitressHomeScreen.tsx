@@ -14,7 +14,6 @@ interface WaitressHomeScreenProps {
   onNotificationAcknowledge: (orderId: string) => void;
   pendingOrders: Order[];
   onOrderComplete: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
-  onOrderCancel?: (order: Order, type: 'drinks' | 'meals' | 'all') => void;
 }
 
 const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
@@ -26,8 +25,7 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   pendingNotifications,
   onNotificationAcknowledge,
   pendingOrders,
-  onOrderComplete,
-  onOrderCancel = () => {} // Provide default implementation
+  onOrderComplete
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -50,7 +48,15 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         order={selectedOrder} 
         onBack={handleBack}
         onOrderComplete={onOrderComplete}
-        onOrderCancel={onOrderCancel}
+        onOrderCancel={(order, type) => {
+          // Implémentation simplifiée: on annule la commande et on revient en arrière
+          if (type === 'all') {
+            onOrderComplete(order, 'both');
+          } else {
+            onOrderComplete(order, type);
+          }
+          handleBack();
+        }}
       />
     );
   }

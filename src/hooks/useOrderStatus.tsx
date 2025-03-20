@@ -1,45 +1,52 @@
 
-import { useState, useEffect } from 'react';
-import type { Order } from '../types/restaurant';
-import { toast } from "@/hooks/use-toast";
+import { useState } from 'react';
 import { db } from '../lib/firebase';
-import { ref, set, update, get, remove } from "firebase/database";
+import { ref, update } from "firebase/database";
+import { toast } from "@/hooks/use-toast";
+import type { Order } from '../types/restaurant';
 
-export const useOrderManagement = () => {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+export function useOrderStatus() {
   const [pendingNotifications, setPendingNotifications] = useState<Order[]>([]);
 
-  useEffect(() => {
-    const savedOrders = localStorage.getItem('pendingOrders');
-    if (savedOrders) {
-      setPendingOrders(JSON.parse(savedOrders));
+  const updateFirebaseOrderStatus = async (
+    orderId: string,
+    status: string,
+    mealsStatus?: string,
+    drinksStatus?: string
+  ) => {
+    try {
+      const orderRef = ref(db, `orders/${orderId}`);
+      const updateData: Record<string, string> = { status };
+      
+      if (mealsStatus) updateData.meals_status = mealsStatus;
+      if (drinksStatus) updateData.drinks_status = drinksStatus;
+      
+      await update(orderRef, updateData);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la commande:', error);
+      return false;
     }
+  };
 
-    const savedCompletedOrders = localStorage.getItem('completedOrders');
-    if (savedCompletedOrders) {
-      setCompletedOrders(JSON.parse(savedCompletedOrders));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
-  }, [pendingOrders]);
-
-  useEffect(() => {
-    localStorage.setItem('completedOrders', JSON.stringify(completedOrders));
-  }, [completedOrders]);
-
-  const handleOrderReady = async (order: Order) => {
+  const handleOrderReady = async (
+    order: Order,
+    setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>,
+    setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>
+  ) => {
     if (order.meals.length > 0) {
       const updatedOrder = { ...order, status: 'ready' as const, mealsStatus: 'ready' as const };
       
       try {
-        const orderRef = ref(db, `orders/${order.id}`);
-        await update(orderRef, { 
-          status: 'ready',
-          meals_status: 'ready'
-        });
+        const success = await updateFirebaseOrderStatus(order.id, 'ready', 'ready');
+        if (!success) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de marquer la commande comme prête.",
+            variant: "destructive"
+          });
+          return;
+        }
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la commande:', error);
         toast({
@@ -73,18 +80,26 @@ export const useOrderManagement = () => {
     }
   };
 
-  const handleOrderComplete = async (order: Order) => {
+  const handleOrderComplete = async (
+    order: Order,
+    setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>,
+    setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>
+  ) => {
     const updatedOrder = { ...order };
     
     if (order.drinks.length > 0 && order.meals.length === 0) {
       updatedOrder.status = 'delivered';
       
       try {
-        const orderRef = ref(db, `orders/${order.id}`);
-        await update(orderRef, { 
-          status: 'delivered',
-          drinks_status: 'delivered'
-        });
+        const success = await updateFirebaseOrderStatus(order.id, 'delivered', undefined, 'delivered');
+        if (!success) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de marquer la commande comme livrée.",
+            variant: "destructive"
+          });
+          return;
+        }
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la commande:', error);
         toast({
@@ -100,11 +115,15 @@ export const useOrderManagement = () => {
       setPendingOrders(prev => prev.filter(o => o.id !== order.id));
       
       try {
-        const orderRef = ref(db, `orders/${order.id}`);
-        await update(orderRef, { 
-          status: 'delivered',
-          meals_status: 'delivered'
-        });
+        const success = await updateFirebaseOrderStatus(order.id, 'delivered', 'delivered');
+        if (!success) {
+          toast({
+            title: "Erreur",
+            description: "Impossible de marquer la commande comme livrée.",
+            variant: "destructive"
+          });
+          return;
+        }
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la commande:', error);
         toast({
@@ -145,12 +164,23 @@ export const useOrderManagement = () => {
     }
   };
 
-  const handleOrderCancel = async (cancelledOrder: Order) => {
+  const handleOrderCancel = async (
+    cancelledOrder: Order,
+    setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>,
+    setCompletedOrders: React.Dispatch<React.SetStateAction<Order[]>>
+  ) => {
     setPendingOrders(prev => prev.filter(order => order.id !== cancelledOrder.id));
     
     try {
-      const orderRef = ref(db, `orders/${cancelledOrder.id}`);
-      await update(orderRef, { status: 'cancelled' });
+      const success = await updateFirebaseOrderStatus(cancelledOrder.id, 'cancelled');
+      if (!success) {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'annuler la commande.",
+          variant: "destructive"
+        });
+        return;
+      }
     } catch (error) {
       console.error('Erreur lors de l\'annulation de la commande:', error);
       toast({
@@ -185,22 +215,11 @@ export const useOrderManagement = () => {
     }
   };
 
-  const handleDrinksComplete = (order: Order) => {
-    if (order.drinks.length > 0) {
-      handleOrderComplete(order);
-    }
-  };
-
   return {
-    pendingOrders,
-    setPendingOrders,
-    completedOrders,
-    setCompletedOrders,
     pendingNotifications,
     setPendingNotifications,
     handleOrderReady,
     handleOrderComplete,
-    handleOrderCancel,
-    handleDrinksComplete
+    handleOrderCancel
   };
-};
+}
