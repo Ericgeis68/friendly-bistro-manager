@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { Menu, RefreshCw } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { Menu } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
-// Ajoutez ces imports ici mais sans redéfinir toast
 import { ref, update, serverTimestamp, set } from 'firebase/database';
 import { database } from '../../utils/firebase';
-// Supprimez l'import en double de toast
+import { sortOrdersByCreationTime } from '../../utils/orderUtils';
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -30,6 +30,13 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
     groupedMeals[key].quantity = (groupedMeals[key].quantity || 0) + (meal.quantity || 1);
   });
 
+  // Format de l'heure
+  const formatTime = (dateString: string | number) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="bg-white rounded-xl p-4 shadow w-64">
       <div className="flex justify-between items-start mb-2">
@@ -39,6 +46,11 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
             {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
           </h3>
           <p className="text-sm text-gray-600">Serveuse: {order.waitress}</p>
+          {order.createdAt && (
+            <p className="text-xs text-gray-500">
+              {formatTime(order.createdAt)}
+            </p>
+          )}
         </div>
       </div>
       <ul className="list-disc pl-6">
@@ -123,6 +135,25 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 }) => {
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sortedPendingOrders, setSortedPendingOrders] = useState<Order[]>([]);
+
+  // Trier les commandes par ordre d'arrivée chaque fois que pendingOrders change
+  useEffect(() => {
+    // Filtrer et trier les commandes en cours
+    const filteredOrders = pendingOrders.filter(order => 
+      order.status === 'pending' && order.meals && order.meals.length > 0
+    );
+    
+    // Trier par date de création
+    const sorted = sortOrdersByCreationTime(filteredOrders);
+    
+    // Éliminer les doublons
+    const uniqueSorted = Array.from(
+      new Map(sorted.map(order => [order.id, order])).values()
+    );
+    
+    setSortedPendingOrders(uniqueSorted);
+  }, [pendingOrders]);
 
   // Fonction pour marquer une commande comme prête dans Firebase
   const marquerCommandePrete = (idCommande: string) => {
@@ -160,17 +191,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       });
     });
   };
-
-  // Filtrer les commandes en cours pour n'afficher que celles qui sont en attente
-  // et qui ont des repas (pas seulement des boissons)
-  const pendingOrdersToShow = pendingOrders.filter(order => 
-    order.status === 'pending' && order.meals && order.meals.length > 0
-  );
-  
-  // Ajouter une vérification pour éliminer les doublons basée sur l'ID de commande
-  const uniquePendingOrders = Array.from(
-    new Map(pendingOrdersToShow.map(order => [order.id, order])).values()
-  );
   
   // Si on montre les commandes terminées, utiliser le composant CompletedOrdersScreen
   if (showOrders === 'completed') {
@@ -196,20 +216,12 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
     });
   };
 
-  const refreshOrders = () => {
-    // This function is just a visual effect since the actual data should already be current
-    toast({
-      title: "Données actualisées",
-      description: "Les commandes ont été mises à jour.",
-    });
-  };
-
   // Improved grouping for meals by cooking style
   const countItemsByCooking = () => {
     // Structure to store grouped items
     const groupedItems: Record<string, Record<string, number>> = {};
     
-    pendingOrdersToShow.forEach((order) => {
+    sortedPendingOrders.forEach((order) => {
       order.meals.forEach((meal) => {
         const itemName = meal.name;
         const cookingStyle = meal.cooking || 'standard';
@@ -271,12 +283,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           {showOrders === 'pending' ? 'Commandes en cours' : 
            showOrders === 'dashboard' ? 'Tableau de bord' : 'Commandes terminées'}
         </h1>
-        <button 
-          onClick={refreshOrders} 
-          className="text-blue-600 hover:text-blue-800"
-        >
-          <RefreshCw size={24} />
-        </button>
+        <div className="w-6"></div> {/* Spacer to keep the title centered */}
       </nav>
       
       {menuOpen && (
@@ -298,12 +305,12 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
       <div className="flex-1 p-4 overflow-auto">
         <div className="flex flex-wrap gap-4 justify-center">
-          {uniquePendingOrders.length === 0 ? (
+          {sortedPendingOrders.length === 0 ? (
             <div className="text-center text-gray-500 mt-10">
               Aucune commande en attente
             </div>
           ) : (
-            uniquePendingOrders.map(order => (
+            sortedPendingOrders.map(order => (
               <OrderCard 
                 key={order.id} 
                 order={order} 

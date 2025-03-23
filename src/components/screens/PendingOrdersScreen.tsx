@@ -7,7 +7,6 @@ import FilterBar from './pendingOrders/FilterBar';
 import SearchBar from './pendingOrders/SearchBar';
 import OrderCard from './pendingOrders/OrderCard';
 import { useFilteredOrders } from '@/hooks/useFilteredOrders';
-// Suppression de l'import dupliqué de useEffect
 import { ref, onValue, update } from 'firebase/database';
 import { database } from '@/utils/firebase';
 import { toast } from '@/hooks/use-toast';
@@ -33,9 +32,6 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedType, setSelectedType] = useState<'drinks' | 'meals' | 'both' | null>(null);
-
-  // Suppression de l'import au milieu du code
-  // import React, { useEffect } from 'react';
   
   useEffect(() => {
     // Listen for changes in the notifications collection
@@ -61,7 +57,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
             // Afficher la notification toast
             toast({
               title: "Commande prête",
-              description: `La commande pour la table ${notification.tableNumber} est prête à être servie.`,
+              description: `La commande pour la table ${notification.table || notification.tableNumber} est prête à être servie.`,
               variant: "default",
               duration: 5000,
             });
@@ -110,6 +106,7 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
 
   console.log("PendingOrdersScreen - Orders:", safeOrders.length);
   console.log("PendingOrdersScreen - Filtered Orders:", filteredOrders.length);
+  console.log("PendingOrdersScreen - Current Filter:", filter);
 
   return (
     <div className="min-h-screen bg-gray-100">

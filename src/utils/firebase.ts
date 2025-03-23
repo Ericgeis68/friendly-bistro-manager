@@ -16,14 +16,29 @@ console.log("Initializing Firebase...");
 let app;
 let database;
 let cookingOptionsRef;
+let menuItemsRef;
+let pendingOrdersRef;
+let completedOrdersRef;
+let notificationsRef;
 
 try {
   app = initializeApp(firebaseConfig);
   console.log("Firebase initialized successfully");
   database = getDatabase(app);
   cookingOptionsRef = ref(database, 'cookingOptions');
+  menuItemsRef = ref(database, 'menuItems');
+  pendingOrdersRef = ref(database, 'pendingOrders');
+  completedOrdersRef = ref(database, 'completedOrders');
+  notificationsRef = ref(database, 'notifications');
 } catch (error) {
   console.error("Error initializing Firebase:", error);
 }
 
-export { database, cookingOptionsRef };
+export { 
+  database, 
+  cookingOptionsRef,
+  menuItemsRef,
+  pendingOrdersRef,
+  completedOrdersRef,
+  notificationsRef
+};

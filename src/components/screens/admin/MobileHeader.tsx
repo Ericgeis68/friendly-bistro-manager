@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Menu } from 'lucide-react';
+import { useMobile } from '@/hooks/use-mobile';
 
 interface MobileHeaderProps {
   currentScreenLocal: string;
@@ -13,24 +14,36 @@ const MobileHeader = ({
   setSidebarOpen,
   sidebarOpen
 }: MobileHeaderProps) => {
+  const isMobile = useMobile();
+  
+  const getScreenTitle = () => {
+    switch (currentScreenLocal) {
+      case 'dashboard': return 'Tableau de Bord';
+      case 'menu': return 'Menus';
+      case 'cooking': return 'Cuissons';
+      case 'dailySales': return 'Ventes du Jour';
+      case 'settings': return 'Paramètres';
+      case 'editMenu': return 'Modifier Menu';
+      case 'addMenuItem': return 'Ajouter Élément';
+      case 'editItem': return 'Modifier Élément';
+      case 'editCooking': return 'Modifier Cuisson';
+      case 'addCookingOption': return 'Ajouter Cuisson';
+      default: return 'Admin';
+    }
+  };
+
   return (
-    <div className="md:hidden bg-gray-800 text-white p-4 flex items-center justify-between">
-      <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
+    <div className="bg-gray-800 text-white p-4 flex items-center justify-between shadow-md">
+      <button 
+        onClick={() => setSidebarOpen(!sidebarOpen)} 
+        className="text-white p-1 rounded hover:bg-gray-700 transition-colors"
+      >
         <Menu size={24} />
       </button>
       <h1 className="text-lg font-bold">
-        {currentScreenLocal === 'dashboard' && 'Tableau de Bord'}
-        {currentScreenLocal === 'menu' && 'Menu'}
-        {currentScreenLocal === 'cooking' && 'Cuissons'}
-        {currentScreenLocal === 'dailySales' && 'Ventes du Jour'}
-        {currentScreenLocal === 'settings' && 'Paramètres'}
-        {currentScreenLocal === 'editMenu' && 'Modifier Menu'}
-        {currentScreenLocal === 'addMenuItem' && 'Ajouter Élément'}
-        {currentScreenLocal === 'editItem' && 'Modifier Élément'}
-        {currentScreenLocal === 'editCooking' && 'Modifier Cuissons'}
-        {currentScreenLocal === 'addCookingOption' && 'Ajouter Cuisson'}
+        {getScreenTitle()}
       </h1>
-      <div className="w-6"></div> {/* Spacer to center title */}
+      <div className="w-6"></div> {/* Spacer pour centrer le titre */}
     </div>
   );
 };

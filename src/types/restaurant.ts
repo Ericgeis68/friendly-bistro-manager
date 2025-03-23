@@ -5,6 +5,7 @@ export type MenuItem = {
   price: number;
   quantity?: number;
   cooking?: string;
+  needsCooking?: boolean; // New field to indicate if this item needs cooking options
 };
 
 export type Order = {

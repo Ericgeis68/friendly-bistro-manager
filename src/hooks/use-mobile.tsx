@@ -1,5 +1,3 @@
-// The file should export a hook named useMobile, but it seems it doesn't.
-// Let's create or update this file to properly export the hook
 
 import { useEffect, useState } from 'react';
 
@@ -7,18 +5,18 @@ export const useMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Function to check if viewport width is mobile
+    // Fonction pour vérifier si la largeur de la fenêtre correspond à un appareil mobile
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // Common breakpoint for mobile devices
+      setIsMobile(window.innerWidth < 768); // Point de rupture courant pour les appareils mobiles
     };
 
-    // Initial check
+    // Vérification initiale
     checkMobile();
 
-    // Add event listener for window resize
+    // Ajouter un écouteur d'événement pour le redimensionnement de la fenêtre
     window.addEventListener('resize', checkMobile);
 
-    // Clean up event listener
+    // Nettoyer l'écouteur d'événement
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 

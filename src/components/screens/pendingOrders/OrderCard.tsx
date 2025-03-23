@@ -34,18 +34,25 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
   const groupedMeals = safeMeals.length > 0 ? groupMenuItems(safeMeals) : {};
   const groupedDrinks = safeDrinks.length > 0 ? groupMenuItems(safeDrinks, false) : {};
 
+  // Determine the type of order for cancel action
+  const orderType = () => {
+    if (safeDrinks.length > 0 && safeMeals.length === 0) return 'drinks';
+    if (safeMeals.length > 0 && safeDrinks.length === 0) return 'meals';
+    return 'all';
+  };
+
   return (
-    <div className="bg-white rounded-2xl shadow overflow-hidden">
-      <div className="p-4 border-b">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow overflow-hidden">
+      <div className="p-4 border-b dark:border-gray-700">
         <div className="flex justify-between items-center">
           <div>
-            <div className="font-medium text-lg">
+            <div className="font-medium text-lg dark:text-white">
               Table {order.table}
               {order.tableComment && (
-                <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>
+                <span className="text-gray-600 dark:text-gray-400 text-sm ml-2">({order.tableComment})</span>
               )}
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {formatOrderDate(order.createdAt)} - {order.waitress}
             </div>
           </div>
@@ -71,7 +78,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
             {/* Unified cancel button that handles the appropriate order type */}
             <ActionButton 
               order={order} 
-              type={safeDrinks.length > 0 ? "drinks" : "meals"} 
+              type={orderType()} 
               onComplete={onOrderComplete} 
               onCancel={onOrderCancel}
             />
@@ -80,12 +87,12 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
       </div>
 
       {safeDrinks.length > 0 && (
-        <div className="p-4 bg-blue-50">
+        <div className="p-4 bg-blue-50 dark:bg-blue-900">
           <div className="flex justify-between items-center">
-            <h3 className="font-medium text-blue-800 mb-2">Boissons</h3>
+            <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Boissons</h3>
           </div>
           {Object.values(groupedDrinks).map((drink, index) => (
-            <div key={index} className="text-gray-700 ml-2">
+            <div key={index} className="text-gray-700 dark:text-gray-300 ml-2">
               {drink.name} x{drink.quantity}
             </div>
           ))}
@@ -93,10 +100,10 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
       )}
 
       {safeMeals.length > 0 && (
-        <div className="p-4 bg-orange-50">
+        <div className="p-4 bg-orange-50 dark:bg-orange-900">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <h3 className="font-medium text-orange-800 mb-2">Repas</h3>
+              <h3 className="font-medium text-orange-800 dark:text-orange-300 mb-2">Repas</h3>
               {order.mealsStatus === 'ready' && (
                 <Badge variant="secondary" className="ml-2 bg-green-500 text-white">
                   <Bell className="h-3 w-3 mr-1" />
@@ -106,7 +113,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
             </div>
           </div>
           {Object.values(groupedMeals).map((meal, index) => (
-            <div key={index} className="text-gray-700 ml-2">
+            <div key={index} className="text-gray-700 dark:text-gray-300 ml-2">
               {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
             </div>
           ))}

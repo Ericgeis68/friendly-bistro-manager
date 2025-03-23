@@ -23,6 +23,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   const [remainingBalance, setRemainingBalance] = useState(0);
   const [isValidPayment, setIsValidPayment] = useState(false);
   const [currentPersonIndex, setCurrentPersonIndex] = useState(0);
+  const [itemsCurrentPersonIndex, setItemsCurrentPersonIndex] = useState(0);
   const [amountReceived, setAmountReceived] = useState('');
   const [availableMeals, setAvailableMeals] = useState<MenuItem[]>([]);
   const [availableDrinks, setAvailableDrinks] = useState<MenuItem[]>([]);
@@ -99,8 +100,6 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       setRemainingBalance(totalAmount - totalPaid);
       setIsValidPayment(Math.abs(totalAmount - totalPaid) < 0.01);
     } else {
-      // For item-based payment, don't update the remaining balance here
-      // It will be updated in handleNextPerson
       setIsValidPayment(Math.abs(remainingBalance) < 0.01);
     }
   }, [paymentMethod, equalPaymentsByPerson, totalAmount]);
@@ -143,13 +142,11 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
     }
   };
 
-  // Modify the handleAmountChange function to not update the remaining balance
   const handleAmountChange = (personId: string, amount: string) => {
     const numericAmount = parseFloat(amount) || 0;
     const personTotal = calculatePersonTotal(personId);
     setAmountReceived(amount);
 
-    // Only update the local state, don't update the remaining balance yet
     setPersonPayments(prev => {
       const person = prev[personId] || { meals: [], drinks: [], amount: 0, change: 0 };
       return {
@@ -199,23 +196,24 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   };
 
   const currentPersonId = personIds[currentPersonIndex];
+  const itemsCurrentPersonId = personIds[itemsCurrentPersonIndex];
 
   const hasSelectedItems = () => {
-    const drinkQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
-    const mealQuantitiesMap = personMealQuantities[currentPersonId] || {};
+    const drinkQuantitiesMap = personDrinkQuantities[itemsCurrentPersonId] || {};
+    const mealQuantitiesMap = personMealQuantities[itemsCurrentPersonId] || {};
 
     return Object.values(drinkQuantitiesMap).some(quantity => quantity > 0) ||
       Object.values(mealQuantitiesMap).some(quantity => quantity > 0);
   };
 
-  const currentPersonTotal = calculatePersonTotal(currentPersonId);
+  const currentPersonTotal = calculatePersonTotal(itemsCurrentPersonId);
   const currentChange = (parseFloat(amountReceived) || 0) - currentPersonTotal;
 
   const handleNextPerson = () => {
     const updatedDrinks: MenuItem[] = [];
     const updatedMeals: MenuItem[] = [];
 
-    const personDrinkQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
+    const personDrinkQuantitiesMap = personDrinkQuantities[itemsCurrentPersonId] || {};
     availableDrinks.forEach(drink => {
       const quantity = personDrinkQuantitiesMap[drink.id] || 0;
       if (quantity > 0) {
@@ -223,7 +221,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       }
     });
 
-    const personMealQuantitiesMap = personMealQuantities[currentPersonId] || {};
+    const personMealQuantitiesMap = personMealQuantities[itemsCurrentPersonId] || {};
     availableMeals.forEach(meal => {
       const quantity = personMealQuantitiesMap[meal.id] || 0;
       if (quantity > 0) {
@@ -231,15 +229,13 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       }
     });
 
-    // Calculate the total for this person
     const personTotal = currentPersonTotal;
 
-    // Update person payments
     setPersonPayments(prev => {
       const amount = parseFloat(amountReceived) || 0;
       return {
         ...prev,
-        [currentPersonId]: {
+        [itemsCurrentPersonId]: {
           drinks: updatedDrinks,
           meals: updatedMeals,
           amount: amount,
@@ -248,7 +244,6 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       };
     });
 
-    // Update available items by removing selected quantities
     setAvailableDrinks(prevDrinks => {
       return prevDrinks.map(drink => {
         const personQuantity = personDrinkQuantitiesMap[drink.id] || 0;
@@ -269,23 +264,20 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
       }).filter(meal => (meal.quantity || 0) > 0);
     });
 
-    // Update remaining balance only when clicking "Next Person"
     setRemainingBalance(prevBalance => prevBalance - personTotal);
 
-    // Reset for next person
     setAmountReceived('');
     setPersonDrinkQuantities(prev => ({
       ...prev,
-      [currentPersonId]: {}
+      [itemsCurrentPersonId]: {}
     }));
     setPersonMealQuantities(prev => ({
       ...prev,
-      [currentPersonId]: {}
+      [itemsCurrentPersonId]: {}
     }));
 
-    // Move to next person
-    if (currentPersonIndex < numberOfPeople - 1) {
-      setCurrentPersonIndex(prev => prev + 1);
+    if (itemsCurrentPersonIndex < numberOfPeople - 1) {
+      setItemsCurrentPersonIndex(prev => prev + 1);
     }
   };
 
@@ -425,9 +417,9 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
 
               <button
                 onClick={() => handleEqualPaymentComplete(currentPersonId)}
-                disabled={!equalPaymentsByPerson[currentPersonId]?.amountReceived || equalPaymentsByPerson[currentPersonId]?.paid}
+                disabled={equalPaymentsByPerson[currentPersonId]?.paid}
                 className={`w-full h-12 text-lg text-white rounded-md flex items-center justify-center gap-2 ${
-                  !equalPaymentsByPerson[currentPersonId]?.amountReceived || equalPaymentsByPerson[currentPersonId]?.paid
+                  equalPaymentsByPerson[currentPersonId]?.paid
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-500 hover:bg-blue-600'
                 } transition-colors`}
@@ -443,14 +435,14 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
           <div className="bg-white rounded-2xl p-6 shadow-md transition-all duration-300 hover:shadow-lg">
             <h2 className="font-bold mb-4 text-lg text-gray-800">Paiement par article</h2>
             <div className="bg-blue-50 p-3 rounded-lg mb-4">
-              <h3 className="text-xl font-medium mb-2 text-blue-800">Personne {currentPersonIndex + 1}</h3>
+              <h3 className="text-xl font-medium mb-2 text-blue-800">Personne {itemsCurrentPersonIndex + 1}</h3>
             </div>
 
             <div className="mb-4">
               <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Boissons</h4>
               {availableDrinks.map(drink => {
                 const remaining = getRemainingQuantity(drink);
-                const personQuantitiesMap = personDrinkQuantities[currentPersonId] || {};
+                const personQuantitiesMap = personDrinkQuantities[itemsCurrentPersonId] || {};
                 const personQuantity = personQuantitiesMap[drink.id] || 0;
 
                 return (
@@ -462,7 +454,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                     <div className="flex items-center h-full justify-end">
                       <div className="flex items-center h-full">
                         <button
-                          onClick={() => updateDrinkQuantityForPerson(currentPersonId, drink, -1)}
+                          onClick={() => updateDrinkQuantityForPerson(itemsCurrentPersonId, drink, -1)}
                           disabled={personQuantity === 0}
                           className={`rounded-l-md px-3 py-2 ${
                             personQuantity === 0
@@ -474,7 +466,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                         </button>
                         <span className="mx-1 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
                         <button
-                          onClick={() => updateDrinkQuantityForPerson(currentPersonId, drink, 1)}
+                          onClick={() => updateDrinkQuantityForPerson(itemsCurrentPersonId, drink, 1)}
                           disabled={personQuantity >= remaining}
                           className={`rounded-r-md px-3 py-2 ${
                             personQuantity >= remaining
@@ -498,7 +490,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
               <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Repas</h4>
               {availableMeals.map(meal => {
                 const remaining = getRemainingQuantity(meal);
-                const personQuantitiesMap = personMealQuantities[currentPersonId] || {};
+                const personQuantitiesMap = personMealQuantities[itemsCurrentPersonId] || {};
                 const personQuantity = personQuantitiesMap[meal.id] || 0;
 
                 return (
@@ -511,7 +503,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                     <div className="flex items-center h-full justify-end">
                       <div className="flex items-center h-full">
                         <button
-                          onClick={() => updateMealQuantityForPerson(currentPersonId, meal, -1)}
+                          onClick={() => updateMealQuantityForPerson(itemsCurrentPersonId, meal, -1)}
                           disabled={personQuantity === 0}
                           className={`rounded-l-md px-3 py-2 ${
                             personQuantity === 0
@@ -523,7 +515,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                         </button>
                         <span className="mx-1 min-w-[30px] text-center text-blue-600 font-bold">{personQuantity}</span>
                         <button
-                          onClick={() => updateMealQuantityForPerson(currentPersonId, meal, 1)}
+                          onClick={() => updateMealQuantityForPerson(itemsCurrentPersonId, meal, 1)}
                           disabled={personQuantity >= remaining}
                           className={`rounded-r-md px-3 py-2 ${
                             personQuantity >= remaining
@@ -553,7 +545,7 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
                   <input
                     type="number"
                     value={amountReceived}
-                    onChange={(e) => handleAmountChange(currentPersonId, e.target.value)}
+                    onChange={(e) => handleAmountChange(itemsCurrentPersonId, e.target.value)}
                     className="w-full h-12 text-lg px-3 rounded-md border border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition-all"
                     placeholder="0.00"
                   />
@@ -568,13 +560,8 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
             </div>
 
             <button
-              disabled={!hasSelectedItems()}
               onClick={handleNextPerson}
-              className={`w-full h-12 text-lg text-white rounded-md mt-4 flex items-center justify-center gap-2 ${
-                hasSelectedItems()
-                ? 'bg-blue-500 hover:bg-blue-600'
-                : 'bg-gray-400 cursor-not-allowed'
-              } transition-colors`}
+              className="w-full h-12 text-lg text-white rounded-md mt-4 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 transition-colors"
             >
               <span>Personne suivante</span>
               <ArrowLeft className="transform rotate-180" size={18} />

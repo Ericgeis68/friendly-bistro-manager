@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Textarea } from "../ui/textarea";
 
@@ -16,6 +17,7 @@ const TableInputScreen: React.FC<TableInputScreenProps> = ({
 }) => {
   const [localTableNumber, setLocalTableNumber] = useState('');
   const [localTableComment, setLocalTableComment] = useState('');
+  const isDarkMode = document.documentElement.classList.contains('dark');
 
   const handleSubmit = () => {
     if (!localTableNumber || parseInt(localTableNumber) <= 0) {
@@ -27,25 +29,25 @@ const TableInputScreen: React.FC<TableInputScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white p-4 flex justify-between items-center">
-        <div className="text-lg font-medium text-gray-800">Numéro de table</div>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
+      <div className={`p-4 flex justify-between items-center ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Numéro de table</div>
         <div onClick={handleLogout} className="text-blue-500 cursor-pointer">Déconnexion</div>
       </div>
 
       <div className="p-4">
-        <div className="bg-white rounded-2xl p-6 shadow space-y-4">
+        <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 shadow space-y-4`}>
           <input
             type="number"
             placeholder="Entrez le numéro"
-            className="w-full h-12 text-lg px-3 rounded-md border border-gray-300 text-gray-800"
+            className={`w-full h-12 text-lg px-3 rounded-md border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800'}`}
             value={localTableNumber}
             onChange={(e) => setLocalTableNumber(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           />
           <Textarea
             placeholder="Commentaire sur la table (optionnel)"
-            className="w-full text-gray-800"
+            className={`w-full ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white text-gray-800'}`}
             value={localTableComment}
             onChange={(e) => setLocalTableComment(e.target.value)}
           />

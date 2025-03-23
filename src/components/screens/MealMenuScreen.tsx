@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
@@ -36,28 +35,39 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
   const [showRemoveCookingDialog, setShowRemoveCookingDialog] = useState(false);
   const [selectedMealToRemove, setSelectedMealToRemove] = useState<number | null>(null);
   const [cookingOptions, setCookingOptions] = useState<string[]>(() => {
-    // Load cooking options from localStorage or use defaults
     const savedOptions = localStorage.getItem('cookingOptions');
     return savedOptions ? JSON.parse(savedOptions) : DEFAULT_COOKING_OPTIONS;
   });
+  const isDarkMode = document.documentElement.classList.contains('dark');
 
   useEffect(() => {
-    // Initialize with proper quantities to avoid NaN issues
     setLocalMealsMenu(mealsMenu.map(meal => ({ ...meal, quantity: meal.quantity || 0 })));
     setLocalTempMeals(tempMeals.map(meal => ({ ...meal, quantity: meal.quantity || 0 })));
   }, [mealsMenu, tempMeals]);
 
   const updateQuantity = (id: number, increment: number) => {
-    if (increment > 0 && (id === 1 || id === 2)) {
+    const mealItem = localMealsMenu.find(meal => meal.id === id);
+    
+    console.log("Updating quantity for meal:", mealItem, "increment:", increment);
+    
+    if (increment > 0 && mealItem?.needsCooking) {
+      console.log("Opening cooking dialog for meal:", mealItem);
       setSelectedMeal(id);
       setShowCookingDialog(true);
       return;
     }
     
-    if (increment < 0 && (id === 1 || id === 2)) {
-      setSelectedMealToRemove(id);
-      setShowRemoveCookingDialog(true);
-      return;
+    if (increment < 0 && mealItem?.needsCooking) {
+      const hasCookingOptions = localTempMeals.some(meal => 
+        meal.id === id && meal.cooking
+      );
+      
+      if (hasCookingOptions) {
+        console.log("Opening remove cooking dialog for meal:", mealItem);
+        setSelectedMealToRemove(id);
+        setShowRemoveCookingDialog(true);
+        return;
+      }
     }
 
     const updatedMeals = localMealsMenu.map(meal => {
@@ -74,7 +84,6 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
 
     const mealToUpdate = localMealsMenu.find(meal => meal.id === selectedMeal);
     if (mealToUpdate) {
-      // Save custom cooking option if it's not in the default list
       if (!cookingOptions.includes(cooking)) {
         const newOptions = [...cookingOptions, cooking];
         setCookingOptions(newOptions);
@@ -82,6 +91,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
       }
 
       setLocalTempMeals([...localTempMeals, {...mealToUpdate, quantity: 1, cooking}]);
+      
       setLocalMealsMenu(localMealsMenu.map(meal => {
         if (meal.id === selectedMeal) {
           return {...meal, quantity: (meal.quantity || 0) + 1};
@@ -96,15 +106,18 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
 
   const handleRemoveCookingChoice = (cooking: string) => {
     if (!selectedMealToRemove) return;
+    
     const mealToRemove = localMealsMenu.find(meal => meal.id === selectedMealToRemove);
     if (mealToRemove) {
       const tempMealsIndex = localTempMeals.findIndex(meal => 
-        meal.name === mealToRemove.name && meal.cooking === cooking
+        meal.id === selectedMealToRemove && meal.cooking === cooking
       );
+      
       if(tempMealsIndex !== -1) {
         const newTempMeals = [...localTempMeals];
         newTempMeals.splice(tempMealsIndex, 1);
         setLocalTempMeals(newTempMeals);
+        
         setLocalMealsMenu(localMealsMenu.map(meal => {
           if (meal.id === selectedMealToRemove) {
             return { ...meal, quantity: Math.max(0, (meal.quantity || 0) - 1) };
@@ -119,10 +132,8 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
   };
 
   const handleValidate = () => {
-    // Filtrer les plats avec une quantité positive mais exclure les entrecôtes de la liste principale
-    // (car elles sont déjà dans tempMeals avec leurs cuissons)
     const orderedMeals = localMealsMenu.filter(m => 
-      (m.quantity || 0) > 0 && (m.id !== 1 && m.id !== 2)
+      (m.quantity || 0) > 0 && !m.needsCooking
     );
     
     setOrder(prev => ({
@@ -134,10 +145,8 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
     setCurrentScreen('category');
   };
 
-  // Calculer correctement le total
   const totalAmount = localMealsMenu.reduce((sum, meal) => {
-    // Ne pas compter les entrecôtes dans localMealsMenu pour éviter le double comptage
-    if (meal.id === 1 || meal.id === 2) {
+    if (meal.needsCooking) {
       return sum;
     }
     return sum + (meal.price * (meal.quantity || 0));
@@ -145,13 +154,15 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
     sum + (meal.price * (meal.quantity || 0)), 0
   );
 
-  const allCookingOptions = [...new Set(localTempMeals
-    .filter(meal => (selectedMealToRemove === 1 || selectedMealToRemove === 2) && 
-      meal.name === (selectedMealToRemove === 1 ? 'Entrecôte' : 'Entrecôte spécial'))
-    .map(meal => meal.cooking))];
+  const allCookingOptions = selectedMealToRemove 
+    ? localTempMeals
+        .filter(meal => meal.id === selectedMealToRemove)
+        .map(meal => meal.cooking || '')
+        .filter(Boolean)
+    : [];
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
+    <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <div className="bg-blue-500 p-4 text-white flex items-center">
         <button onClick={() => setCurrentScreen('category')} className="mr-2">
           <ArrowLeft size={24} />
@@ -172,7 +183,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
         ))}
       </div>
 
-      {showCookingDialog && (
+      {showCookingDialog && selectedMeal && (
         <CookingDialog
           title="Choisir la cuisson"
           options={cookingOptions}
@@ -181,7 +192,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
         />
       )}
 
-      {showRemoveCookingDialog && (
+      {showRemoveCookingDialog && allCookingOptions.length > 0 && (
         <CookingDialog
           title="Choisir la cuisson à retirer"
           options={allCookingOptions}
@@ -190,14 +201,14 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
         />
       )}
 
-      <div className="p-4 bg-white border-t">
-        <div className="flex justify-between mb-4 text-lg font-medium text-gray-800">
+      <div className={`p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border-t ${isDarkMode ? 'border-gray-700' : 'border-t-gray-200'}`}>
+        <div className={`flex justify-between mb-4 text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
           <span>Total</span>
           <span>{totalAmount.toFixed(2)} €</span>
         </div>
         <button
           onClick={handleValidate}
-          className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+          className={`w-full h-12 text-lg ${isDarkMode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
         >
           Valider la commande
         </button>

@@ -2,7 +2,7 @@
 import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
 import type { Order, MenuItem, ScreenType, UserRole } from '../types/restaurant';
-import { ref, set } from "firebase/database";
+import { ref, set, remove } from "firebase/database";
 import { database } from '../utils/firebase';
 
 interface UseOrderHandlersProps {
@@ -182,36 +182,39 @@ export const useOrderHandlers = ({
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
   };
 
-  // Assurez-vous que la fonction handleOrderCompleteWithType est correctement implémentée
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals' | 'both') => {
-  console.log("Completing order with type:", type, "Order:", order.id);
-  
-  // Ajout de logs pour le débogage
-  if (type === 'drinks') {
-    console.log("Completing drinks");
-    handleDrinksComplete(order);
-  } else if (type === 'meals') {
-    console.log("Completing meals");
-    handleOrderComplete(order);
-  } else if (type === 'both') {
-    console.log("Completing both");
-    // Si les deux sont terminés, marquer la commande comme complète
-    const updatedOrder = { ...order, status: 'completed' };
-    setCompletedOrders(prev => [...prev, updatedOrder]);
-    setPendingOrders(prev => prev.filter(o => o.id !== order.id));
-  }
-};
+    console.log("Completing order with type:", type, "Order:", order.id);
+    
+    if (type === 'drinks') {
+      console.log("Completing drinks");
+      handleDrinksComplete(order);
+    } else if (type === 'meals') {
+      console.log("Completing meals");
+      handleOrderComplete(order);
+    } else if (type === 'both') {
+      console.log("Completing both");
+      const updatedOrder: Order = { 
+        ...order, 
+        status: 'delivered' as const 
+      };
+      setCompletedOrders(prev => [...prev, updatedOrder]);
+      setPendingOrders(prev => prev.filter(o => o.id !== order.id));
+    }
+  };
 
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals' | 'all') => {
-    // Since orders are now separate, we just cancel the entire order
+    console.log("Cancelling order with type:", type, "Order:", order);
+    
+    // Handle cancel based on order type
     handleOrderCancel(order);
     
-    if (order.drinks.length > 0) {
+    // Show appropriate toast message based on type
+    if (type === 'drinks' || (order.drinks && order.drinks.length > 0 && order.meals && order.meals.length === 0)) {
       toast({
         title: "Commande boissons annulée",
         description: `La commande de boissons pour la table ${order.table} a été annulée.`,
       });
-    } else if (order.meals.length > 0) {
+    } else if (type === 'meals' || (order.meals && order.meals.length > 0 && order.drinks && order.drinks.length === 0)) {
       toast({
         title: "Commande repas annulée",
         description: `La commande de repas pour la table ${order.table} a été annulée.`,

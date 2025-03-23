@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -24,6 +25,28 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.5% 48%;
   }
 }
 
@@ -57,4 +80,115 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Dark mode transitions */
+.dark body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Enhanced dark mode styles */
+.dark {
+  color-scheme: dark;
+}
+
+/* Replace white backgrounds with gray in dark mode */
+.dark .bg-white,
+.dark [class*="bg-white"] {
+  @apply bg-gray-800 !important;
+}
+
+/* Improve contrast for text in dark mode */
+.dark .text-gray-800,
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  @apply text-gray-200 !important;
+}
+
+/* Make sure all text is visible in dark mode */
+.dark {
+  @apply text-gray-100;
+}
+
+/* Specific fixes for meal items and order recap in dark mode */
+.dark .bg-blue-50 {
+  @apply bg-blue-900/30 !important;
+}
+
+.dark .bg-orange-50 {
+  @apply bg-orange-900/30 !important;
+}
+
+.dark .text-blue-800 {
+  @apply text-blue-300 !important;
+}
+
+.dark .text-orange-800 {
+  @apply text-orange-300 !important;
+}
+
+.dark .text-gray-700 {
+  @apply text-gray-300 !important;
+}
+
+/* Replace blue and green buttons with darker variants */
+.dark .bg-blue-500 {
+  @apply bg-blue-700 !important;
+}
+
+.dark .bg-green-500 {
+  @apply bg-green-700 !important;
+}
+
+.dark .bg-red-500 {
+  @apply bg-red-700 !important;
+}
+
+.dark .hover\:bg-blue-600:hover {
+  @apply hover:bg-blue-800 !important;
+}
+
+.dark .hover\:bg-green-600:hover {
+  @apply hover:bg-green-800 !important;
+}
+
+.dark .hover\:bg-red-600:hover {
+  @apply hover:bg-red-800 !important;
+}
+
+/* Improve input fields in dark mode */
+.dark input,
+.dark textarea,
+.dark select {
+  @apply bg-gray-700 border-gray-600 text-white;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  @apply text-gray-400;
+}
+
+/* Improved borders for dark mode */
+.dark .border,
+.dark [class*="border-"] {
+  @apply border-gray-700;
+}
+
+/* Fix for specific components */
+.dark .bg-blue-100,
+.dark .bg-green-100 {
+  @apply bg-gray-700;
+}
+
+.dark .text-blue-500 {
+  @apply text-blue-300;
+}
+
+.dark .text-green-500 {
+  @apply text-green-300;
+}
+
+/* Add stronger contrast to card elements */
+.dark .shadow {
+  @apply shadow-gray-900;
 }

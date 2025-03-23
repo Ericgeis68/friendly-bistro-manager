@@ -35,7 +35,9 @@ const WaitressScreens = ({
   handleNotificationAcknowledge,
   handleOrderCompleteWithType,
   handleOrderCancelWithType,
-  setPendingOrders
+  setPendingOrders,
+  darkMode,
+  toggleDarkMode
 }: {
   loggedInUser: UserRole;
   showCompletedOrders: boolean;
@@ -51,6 +53,8 @@ const WaitressScreens = ({
   handleOrderCompleteWithType: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
   handleOrderCancelWithType: (order: Order, type: 'drinks' | 'meals' | 'all') => void;
   setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
 }) => {
   useEffect(() => {
     if (showPendingOrders) {
@@ -74,9 +78,6 @@ const WaitressScreens = ({
       />
     );
   }
-  
-  // Dans la section où PendingOrdersScreen est rendu, assurons-nous que la fonction onOrderComplete
-  // est correctement passée et implémentée :
   
   if (showPendingOrders) {
     const filteredOrders = pendingOrders.filter(order => order.waitress === loggedInUser);
@@ -108,6 +109,8 @@ const WaitressScreens = ({
       pendingOrders={pendingOrders.filter(order => order.waitress === loggedInUser)}
       onOrderComplete={handleOrderCompleteWithType}
       onOrderCancel={handleOrderCancelWithType}
+      darkMode={darkMode}
+      toggleDarkMode={toggleDarkMode}
     />
   );
 };
@@ -153,7 +156,9 @@ const RestaurantApp: React.FC = () => {
     showPendingOrders,
     setShowPendingOrders,
     showCompletedOrders,
-    setShowCompletedOrders
+    setShowCompletedOrders,
+    darkMode,
+    toggleDarkMode
   } = useScreenManagement();
 
   const {
@@ -234,6 +239,8 @@ const RestaurantApp: React.FC = () => {
         handleOrderCompleteWithType={handleOrderCompleteWithType}
         handleOrderCancelWithType={handleOrderCancelWithType}
         setPendingOrders={setPendingOrders}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
       />
     );
   }
@@ -305,7 +312,7 @@ const RestaurantApp: React.FC = () => {
       <AdminScreen 
         onLogout={handleLogout}
         setLoggedInUser={handleSetLoggedInUser}
-        setCurrentScreen={setCurrentScreen}
+        setCurrentScreen={(screen: ScreenType) => setCurrentScreen(screen)}
         cookingOptions={cookingOptions}
         setCookingOptions={setCookingOptions}
       />

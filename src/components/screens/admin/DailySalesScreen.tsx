@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCw, Calendar, Clock } from 'lucide-react';
 import { Order } from '../../../types/restaurant';
 import { format } from 'date-fns';
@@ -11,6 +11,7 @@ import { cn } from '../../../lib/utils';
 import { Label } from '../../../components/ui/label';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { toast } from '@/hooks/use-toast';
 
 interface DailySalesScreenProps {
   localOrders: Order[];
@@ -20,6 +21,7 @@ interface DailySalesScreenProps {
 const DailySalesScreen: React.FC<DailySalesScreenProps> = ({ localOrders, refreshOrders }) => {
   // État pour la date sélectionnée (par défaut aujourd'hui)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [loading, setLoading] = useState(false);
   
   // État pour le service sélectionné
   const [selectedService, setSelectedService] = useState<'midi' | 'soir' | 'personnalisé'>('midi');
@@ -28,10 +30,23 @@ const DailySalesScreen: React.FC<DailySalesScreenProps> = ({ localOrders, refres
   const [startTime, setStartTime] = useState<string>('11:00');
   const [endTime, setEndTime] = useState<string>('14:00');
   
+  const handleRefresh = () => {
+    setLoading(true);
+    refreshOrders();
+    setLoading(false);
+    toast({
+      title: "Actualisation",
+      description: "Les données ont été actualisées.",
+    });
+  };
+  
   // Fonction pour filtrer les commandes selon les critères
   const getFilteredOrders = () => {
+    // S'assurer que localOrders est un tableau
+    const safeOrders = Array.isArray(localOrders) ? localOrders : [];
+    
     // Filtrer pour n'avoir que les commandes livrées
-    const deliveredOrders = localOrders.filter(order => order.status === 'delivered');
+    const deliveredOrders = safeOrders.filter(order => order.status === 'delivered');
     
     // Créer les limites de temps basées sur la date sélectionnée
     const startOfDay = new Date(selectedDate);
@@ -78,17 +93,17 @@ const DailySalesScreen: React.FC<DailySalesScreenProps> = ({ localOrders, refres
   
   // Calcul des statistiques de ventes
   const totalDrinks = filteredOrders.reduce((acc, order) => 
-    acc + order.drinks.reduce((sum, drink) => sum + (drink.quantity || 1), 0), 0);
+    acc + (order.drinks ? order.drinks.reduce((sum, drink) => sum + (drink.quantity || 1), 0) : 0), 0);
   
   const totalMeals = filteredOrders.reduce((acc, order) => 
-    acc + order.meals.reduce((sum, meal) => sum + (meal.quantity || 1), 0), 0);
+    acc + (order.meals ? order.meals.reduce((sum, meal) => sum + (meal.quantity || 1), 0) : 0), 0);
 
   const totalRevenue = filteredOrders.reduce((acc, order) => {
-    const drinksRevenue = order.drinks.reduce((sum, drink) => 
-      sum + (drink.price * (drink.quantity || 1)), 0);
+    const drinksRevenue = order.drinks ? order.drinks.reduce((sum, drink) => 
+      sum + (drink.price * (drink.quantity || 1)), 0) : 0;
     
-    const mealsRevenue = order.meals.reduce((sum, meal) => 
-      sum + (meal.price * (meal.quantity || 1)), 0);
+    const mealsRevenue = order.meals ? order.meals.reduce((sum, meal) => 
+      sum + (meal.price * (meal.quantity || 1)), 0) : 0;
     
     return acc + drinksRevenue + mealsRevenue;
   }, 0);
@@ -99,32 +114,36 @@ const DailySalesScreen: React.FC<DailySalesScreenProps> = ({ localOrders, refres
   // Récupérer tous les éléments vendus
   filteredOrders.forEach(order => {
     // Ajouter les boissons
-    order.drinks.forEach(drink => {
-      const quantity = drink.quantity || 1;
-      if (!soldItems[drink.name]) {
-        soldItems[drink.name] = {
-          count: 0,
-          price: drink.price,
-          revenue: 0
-        };
-      }
-      soldItems[drink.name].count += quantity;
-      soldItems[drink.name].revenue += drink.price * quantity;
-    });
+    if (order.drinks && Array.isArray(order.drinks)) {
+      order.drinks.forEach(drink => {
+        const quantity = drink.quantity || 1;
+        if (!soldItems[drink.name]) {
+          soldItems[drink.name] = {
+            count: 0,
+            price: drink.price,
+            revenue: 0
+          };
+        }
+        soldItems[drink.name].count += quantity;
+        soldItems[drink.name].revenue += drink.price * quantity;
+      });
+    }
     
     // Ajouter les repas
-    order.meals.forEach(meal => {
-      const quantity = meal.quantity || 1;
-      if (!soldItems[meal.name]) {
-        soldItems[meal.name] = {
-          count: 0,
-          price: meal.price,
-          revenue: 0
-        };
-      }
-      soldItems[meal.name].count += quantity;
-      soldItems[meal.name].revenue += meal.price * quantity;
-    });
+    if (order.meals && Array.isArray(order.meals)) {
+      order.meals.forEach(meal => {
+        const quantity = meal.quantity || 1;
+        if (!soldItems[meal.name]) {
+          soldItems[meal.name] = {
+            count: 0,
+            price: meal.price,
+            revenue: 0
+          };
+        }
+        soldItems[meal.name].count += quantity;
+        soldItems[meal.name].revenue += meal.price * quantity;
+      });
+    }
   });
 
   return (
@@ -132,11 +151,12 @@ const DailySalesScreen: React.FC<DailySalesScreenProps> = ({ localOrders, refres
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl md:text-2xl font-bold">Ventes du Jour</h2>
         <button
-          onClick={refreshOrders}
+          onClick={handleRefresh}
           className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2 flex items-center"
+          disabled={loading}
         >
-          <RefreshCw size={20} className="mr-1" />
-          <span>Actualiser</span>
+          <RefreshCw size={20} className={`mr-1 ${loading ? 'animate-spin' : ''}`} />
+          <span>{loading ? 'Chargement...' : 'Actualiser'}</span>
         </button>
       </div>
 
