@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, LayoutDashboard, Coffee, Utensils, Settings } from 'lucide-react';
 import Sidebar from './admin/Sidebar';
@@ -44,18 +43,15 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
   const isMobile = useMobile();
   const { setPendingOrders, setCompletedOrders } = useOrderManagement();
 
-  // Charger toutes les commandes depuis Firebase
   useEffect(() => {
     const fetchAllOrders = async () => {
       try {
-        // Récupérer toutes les commandes (en cours et terminées)
         const pendingSnapshot = await get(pendingOrdersRef);
         const completedSnapshot = await get(completedOrdersRef);
         
         const pendingOrders = pendingSnapshot.exists() ? Object.values(pendingSnapshot.val()) as Order[] : [];
         const completedOrders = completedSnapshot.exists() ? Object.values(completedSnapshot.val()) as Order[] : [];
         
-        // Combiner les commandes
         setOrders([...pendingOrders, ...completedOrders]);
       } catch (error) {
         console.error("Erreur lors de la récupération des commandes:", error);
@@ -64,7 +60,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
 
     fetchAllOrders();
 
-    // Mettre en place des écouteurs pour les mises à jour en temps réel
     const unsubscribePending = onValue(pendingOrdersRef, () => {
       fetchAllOrders();
     });
@@ -79,17 +74,14 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     };
   }, []);
 
-  // Fonction pour rafraîchir les commandes
   const refreshOrders = async () => {
     try {
-      // Récupérer toutes les commandes (en cours et terminées)
       const pendingSnapshot = await get(pendingOrdersRef);
       const completedSnapshot = await get(completedOrdersRef);
       
       const pendingOrders = pendingSnapshot.exists() ? Object.values(pendingSnapshot.val()) as Order[] : [];
       const completedOrders = completedSnapshot.exists() ? Object.values(completedSnapshot.val()) as Order[] : [];
       
-      // Combiner les commandes
       setOrders([...pendingOrders, ...completedOrders]);
       
       toast({
@@ -106,9 +98,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     }
   };
 
-  // Reset application function that clears orders but preserves menu items
   const handleResetApplication = () => {
-    // Update local state to clear orders
     setPendingOrders([]);
     setCompletedOrders([]);
     
@@ -118,21 +108,15 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     });
   };
 
-  // Confirm logout handler
-  const handleConfirmLogout = () => {
-    if (window.confirm('Voulez-vous vraiment vous déconnecter?')) {
-      onLogout();
-    }
+  const handleLogoutAdmin = () => {
+    onLogout();
   };
 
-  // Save cooking options to Firebase and localStorage
   const saveCookingOptions = (options: string[]) => {
-    // Save to Firebase
     set(cookingOptionsRef, options)
       .then(() => {
         console.log("Cooking options saved to Firebase");
         
-        // Also save to localStorage as backup
         try {
           localStorage.setItem('cookingOptions', JSON.stringify(options));
         } catch (e) {
@@ -154,7 +138,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
       });
   };
 
-  // Add a new cooking option
   const handleAddCookingOption = (newOption: string) => {
     if (!cookingOptions.includes(newOption) && newOption.trim() !== '') {
       const updatedOptions = [...cookingOptions, newOption];
@@ -170,14 +153,12 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     }
   };
 
-  // Delete a cooking option
   const handleDeleteCookingOption = (optionToDelete: string) => {
     const updatedOptions = cookingOptions.filter(option => option !== optionToDelete);
     setCookingOptions(updatedOptions);
     saveCookingOptions(updatedOptions);
   };
 
-  // Edit a cooking option
   const handleEditCookingOption = (oldOption: string, newOption: string) => {
     if (oldOption === newOption || newOption.trim() === '') {
       setActiveScreen('cooking');
@@ -202,7 +183,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     setActiveScreen('cooking');
   };
 
-  // Navigation sidebar options
   const sidebarOptions = [
     { id: 'dashboard', label: 'Tableau de bord', icon: <LayoutDashboard /> },
     { id: 'menu', label: 'Menus', icon: <Coffee /> },
@@ -210,18 +190,15 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     { id: 'settings', label: 'Paramètres', icon: <Settings /> },
   ];
 
-  // Handle navigation in sidebar
   const handleNavigation = (screenId: AdminScreenType) => {
     setActiveScreen(screenId);
     setShowMobileMenu(false);
   };
 
-  // Mobile menu toggle
   const toggleMobileMenu = () => {
     setShowMobileMenu(!showMobileMenu);
   };
 
-  // Gestionnaires pour les écrans de menu
   const handleEditMenu = () => {
     setActiveScreen('editMenu');
   };
@@ -230,7 +207,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     setActiveScreen('menu');
   };
 
-  // Fonction de rendu des écrans
   const renderScreen = () => {
     switch (activeScreen) {
       case 'dashboard':
@@ -310,7 +286,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex h-screen overflow-hidden">
-        {/* Mobile header - toujours visible en mode mobile */}
         {isMobile && (
           <div className="fixed top-0 left-0 right-0 z-30">
             <MobileHeader
@@ -321,7 +296,6 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
           </div>
         )}
         
-        {/* Sidebar pour desktop - côté gauche de l'écran */}
         {!isMobile && (
           <div className="w-64 bg-white shadow-md h-screen fixed left-0 top-0 z-20">
             <div className="p-4 border-b">
@@ -330,15 +304,14 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
             <Sidebar 
               currentScreenLocal={activeScreen}
               setCurrentScreenLocal={handleNavigation}
-              sidebarOpen={true}  // Toujours visible en desktop
+              sidebarOpen={true}
               setSidebarOpen={() => {}}
-              handleLogoutAdmin={handleConfirmLogout}
+              handleLogoutAdmin={handleLogoutAdmin}
               onLogout={onLogout}
             />
           </div>
         )}
         
-        {/* Menu mobile - s'affiche en overlay lorsqu'activé */}
         {isMobile && showMobileMenu && (
           <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-40" onClick={toggleMobileMenu}>
             <div className="w-64 h-full bg-white shadow-md" onClick={e => e.stopPropagation()}>
@@ -351,14 +324,13 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
                 setCurrentScreenLocal={handleNavigation}
                 sidebarOpen={showMobileMenu}
                 setSidebarOpen={setShowMobileMenu}
-                handleLogoutAdmin={handleConfirmLogout}
+                handleLogoutAdmin={handleLogoutAdmin}
                 onLogout={onLogout}
               />
             </div>
           </div>
         )}
         
-        {/* Zone de contenu principal */}
         <div className={`flex-1 overflow-auto ${!isMobile ? 'ml-64' : ''} ${isMobile ? 'mt-14' : ''}`}>
           {renderScreen()}
         </div>

@@ -209,77 +209,102 @@ const SplitPaymentScreen: React.FC<SplitPaymentScreenProps> = ({
   const currentPersonTotal = calculatePersonTotal(itemsCurrentPersonId);
   const currentChange = (parseFloat(amountReceived) || 0) - currentPersonTotal;
 
+  // Fix the handleNextPerson function
   const handleNextPerson = () => {
-    const updatedDrinks: MenuItem[] = [];
-    const updatedMeals: MenuItem[] = [];
-
-    const personDrinkQuantitiesMap = personDrinkQuantities[itemsCurrentPersonId] || {};
-    availableDrinks.forEach(drink => {
-      const quantity = personDrinkQuantitiesMap[drink.id] || 0;
-      if (quantity > 0) {
-        updatedDrinks.push({ ...drink, quantity });
-      }
-    });
-
-    const personMealQuantitiesMap = personMealQuantities[itemsCurrentPersonId] || {};
-    availableMeals.forEach(meal => {
-      const quantity = personMealQuantitiesMap[meal.id] || 0;
-      if (quantity > 0) {
-        updatedMeals.push({ ...meal, quantity });
-      }
-    });
-
-    const personTotal = currentPersonTotal;
-
-    setPersonPayments(prev => {
-      const amount = parseFloat(amountReceived) || 0;
-      return {
-        ...prev,
-        [itemsCurrentPersonId]: {
-          drinks: updatedDrinks,
-          meals: updatedMeals,
-          amount: amount,
-          change: amount - personTotal
-        }
-      };
-    });
-
-    setAvailableDrinks(prevDrinks => {
-      return prevDrinks.map(drink => {
-        const personQuantity = personDrinkQuantitiesMap[drink.id] || 0;
-        return {
-          ...drink,
-          quantity: Math.max(0, (drink.quantity || 0) - personQuantity)
-        };
-      }).filter(drink => (drink.quantity || 0) > 0);
-    });
-
-    setAvailableMeals(prevMeals => {
-      return prevMeals.map(meal => {
-        const personQuantity = personMealQuantitiesMap[meal.id] || 0;
-        return {
-          ...meal,
-          quantity: Math.max(0, (meal.quantity || 0) - personQuantity)
-        };
-      }).filter(meal => (meal.quantity || 0) > 0);
-    });
-
-    setRemainingBalance(prevBalance => prevBalance - personTotal);
-
-    setAmountReceived('');
-    setPersonDrinkQuantities(prev => ({
-      ...prev,
-      [itemsCurrentPersonId]: {}
-    }));
-    setPersonMealQuantities(prev => ({
-      ...prev,
-      [itemsCurrentPersonId]: {}
-    }));
-
-    if (itemsCurrentPersonIndex < numberOfPeople - 1) {
-      setItemsCurrentPersonIndex(prev => prev + 1);
+  // Save current person's data first
+  const updatedPersonPayments = { ...personPayments };
+  
+  // Use the correct index based on payment method
+  const personDrinkQuantitiesMap = personDrinkQuantities[itemsCurrentPersonId] || {};
+  const updatedDrinks: MenuItem[] = [];
+  const updatedMeals: MenuItem[] = [];
+  
+  availableDrinks.forEach(drink => {
+    const quantity = personDrinkQuantitiesMap[drink.id] || 0;
+    if (quantity > 0) {
+      updatedDrinks.push({ ...drink, quantity });
     }
-  };
+  });
+  
+  const personMealQuantitiesMap = personMealQuantities[itemsCurrentPersonId] || {};
+  availableMeals.forEach(meal => {
+    const quantity = personMealQuantitiesMap[meal.id] || 0;
+    if (quantity > 0) {
+      updatedMeals.push({ ...meal, quantity });
+    }
+  });
+  
+  const personTotal = currentPersonTotal;
+  
+  // Update person payments
+  setPersonPayments(prev => {
+    const amount = parseFloat(amountReceived) || 0;
+    return {
+      ...prev,
+      [itemsCurrentPersonId]: {
+        drinks: updatedDrinks,
+        meals: updatedMeals,
+        amount: amount,
+        change: amount - personTotal
+      }
+    };
+  });
+  
+  // Update available items
+  setAvailableDrinks(prevDrinks => {
+    return prevDrinks.map(drink => {
+      const personQuantity = personDrinkQuantitiesMap[drink.id] || 0;
+      return {
+        ...drink,
+        quantity: Math.max(0, (drink.quantity || 0) - personQuantity)
+      };
+    }).filter(drink => (drink.quantity || 0) > 0);
+  });
+  
+  setAvailableMeals(prevMeals => {
+    return prevMeals.map(meal => {
+      const personQuantity = personMealQuantitiesMap[meal.id] || 0;
+      return {
+        ...meal,
+        quantity: Math.max(0, (meal.quantity || 0) - personQuantity)
+      };
+    }).filter(meal => (meal.quantity || 0) > 0);
+  });
+  
+  setRemainingBalance(prevBalance => prevBalance - personTotal);
+  
+  // Reset current person's selections
+  setAmountReceived('');
+  setPersonDrinkQuantities(prev => ({
+    ...prev,
+    [itemsCurrentPersonId]: {}
+  }));
+  setPersonMealQuantities(prev => ({
+    ...prev,
+    [itemsCurrentPersonId]: {}
+  }));
+  
+  // FIXED: Improved logic for incrementing person counters
+  if (paymentMethod === 'items') {
+    // Always increment the counter and add a new person if needed
+    const nextIndex = itemsCurrentPersonIndex + 1;
+    setItemsCurrentPersonIndex(nextIndex);
+    
+    // If we're moving beyond the current number of people, increase the total
+    if (nextIndex >= numberOfPeople) {
+      setNumberOfPeople(nextIndex + 1);
+    }
+  } else {
+    // For equal payment method
+    const nextIndex = currentPersonIndex + 1;
+    setCurrentPersonIndex(nextIndex);
+    
+    // If we're moving beyond the current number of people, increase the total
+    if (nextIndex >= numberOfPeople) {
+      setNumberOfPeople(nextIndex + 1);
+    }
+  }
+};
 
   const getRemainingQuantity = (item: MenuItem): number => {
     return item.quantity || 0;

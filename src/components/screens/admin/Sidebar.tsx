@@ -79,10 +79,7 @@ const Sidebar = ({
           Paramètres
         </button>
         <button
-          onClick={() => {
-            handleLogoutAdmin();
-            onLogout();
-          }}
+          onClick={handleLogoutAdmin}
           className="flex items-center py-2 px-4 rounded-md hover:bg-gray-700"
         >
           <ArrowLeft size={20} className="mr-2" />
