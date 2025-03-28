@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import type { MenuItem, Order, ScreenType, UserRole } from '../types/restaurant';
@@ -68,11 +69,14 @@ const WaitressScreens = ({
   console.log("WaitressScreens - filtered orders:", pendingOrders.filter(order => order.waitress === loggedInUser).length);
 
   if (showCompletedOrders) {
+    // Filter to only show orders for the logged-in waitress
+    const waitressCompletedOrders = completedOrders.filter(order => 
+      order.waitress === loggedInUser
+    );
+    
     return (
       <CompletedOrdersScreen
-        orders={completedOrders.filter(order => 
-          order.waitress === loggedInUser
-        )}
+        orders={waitressCompletedOrders}
         onBack={() => setShowCompletedOrders(false)}
         userRole="waitress"
       />

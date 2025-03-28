@@ -137,22 +137,33 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortedPendingOrders, setSortedPendingOrders] = useState<Order[]>([]);
 
-  // Trier les commandes par ordre d'arrivée chaque fois que pendingOrders change
+  // Filtre et trie les commandes par ordre d'arrivée chaque fois que pendingOrders change
   useEffect(() => {
-    // Filtrer et trier les commandes en cours
+    // Filtrer pour n'avoir que les commandes de repas et en cours
     const filteredOrders = pendingOrders.filter(order => 
-      order.status === 'pending' && order.meals && order.meals.length > 0
+      order.status === 'pending' && 
+      order.meals && 
+      order.meals.length > 0 &&
+      (!order.id.includes('-drinks')) // Exclure explicitement les commandes de boissons
     );
-    
-    // Trier par date de création
-    const sorted = sortOrdersByCreationTime(filteredOrders);
     
     // Éliminer les doublons
-    const uniqueSorted = Array.from(
-      new Map(sorted.map(order => [order.id, order])).values()
-    );
+    const uniqueOrderIds = new Set();
+    const uniqueOrders = filteredOrders.filter(order => {
+      // Créer une clé unique basée sur la table et l'heure de création
+      const orderKey = `${order.table}-${order.createdAt}`;
+      
+      if (!uniqueOrderIds.has(orderKey)) {
+        uniqueOrderIds.add(orderKey);
+        return true;
+      }
+      return false;
+    });
     
-    setSortedPendingOrders(uniqueSorted);
+    // Trier par date de création
+    const sorted = sortOrdersByCreationTime(uniqueOrders);
+    
+    setSortedPendingOrders(sorted);
   }, [pendingOrders]);
 
   // Fonction pour marquer une commande comme prête dans Firebase
@@ -196,7 +207,11 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   if (showOrders === 'completed') {
     return (
       <CompletedOrdersScreen 
-        orders={completedOrders.filter(order => order.meals && order.meals.length > 0)}
+        orders={completedOrders.filter(order => 
+          order.meals && 
+          order.meals.length > 0 && 
+          !order.id.includes('-drinks')
+        )}
         onBack={() => setShowOrders('pending')}
         userRole="cuisine"
       />
@@ -281,7 +296,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         </button>
         <h1 className="text-gray-800 font-bold text-2xl">
           {showOrders === 'pending' ? 'Commandes en cours' : 
-           showOrders === 'dashboard' ? 'Tableau de bord' : 'Commandes terminées'}
+           showOrders === 'dashboard' ? 'Vue d\'ensemble des plats' : 'Commandes terminées'}
         </h1>
         <div className="w-6"></div> {/* Spacer to keep the title centered */}
       </nav>
@@ -295,7 +310,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
             Commandes terminées
           </button>
           <button onClick={() => { setShowOrders('dashboard'); setMenuOpen(false); }} className="w-full text-left py-2 px-4 hover:bg-gray-100">
-            Tableau de bord
+            Vue d'ensemble des plats
           </button>
           <button onClick={onLogout} className="w-full text-left py-2 px-4 hover:bg-gray-100">
             Déconnexion
@@ -303,23 +318,25 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         </div>
       )}
 
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="flex flex-wrap gap-4 justify-center">
-          {sortedPendingOrders.length === 0 ? (
-            <div className="text-center text-gray-500 mt-10">
-              Aucune commande en attente
-            </div>
-          ) : (
-            sortedPendingOrders.map(order => (
-              <OrderCard 
-                key={order.id} 
-                order={order} 
-                handleOrderReady={onOrderReady} 
-              />
-            ))
-          )}
+      {showOrders === 'pending' && (
+        <div className="flex-1 p-4 overflow-auto">
+          <div className="flex flex-wrap gap-4 justify-center">
+            {sortedPendingOrders.length === 0 ? (
+              <div className="text-center text-gray-500 mt-10">
+                Aucune commande en attente
+              </div>
+            ) : (
+              sortedPendingOrders.map(order => (
+                <OrderCard 
+                  key={order.id} 
+                  order={order} 
+                  handleOrderReady={onOrderReady} 
+                />
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
       
       {showOrders === 'dashboard' && (
         <DashboardTable tableRows={tableRows} />

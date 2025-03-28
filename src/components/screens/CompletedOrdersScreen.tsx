@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
@@ -43,18 +42,52 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
     });
   };
 
-  // Base filter to show only relevant orders by status and type
-  const baseFilteredOrders = orders.filter(order => {
-    if (userRole === 'cuisine') {
-      // Only show meal orders in the kitchen (no drinks)
-      return (order.status === 'ready' || order.status === 'delivered' || order.status === 'cancelled') && 
-              Array.isArray(order.meals) && order.meals.length > 0;
-    } else {
-      return (order.status === 'delivered' || order.status === 'cancelled');
+  // Filter orders based on role and remove duplicates
+  const filteredBaseOrders = () => {
+    // First, apply basic filtering based on role
+    let baseFiltered = orders.filter(order => {
+      if (userRole === 'cuisine') {
+        // Only show meal orders in the kitchen (no drinks)
+        return (order.status === 'ready' || order.status === 'delivered' || order.status === 'cancelled') && 
+                Array.isArray(order.meals) && order.meals.length > 0;
+      } else {
+        return (order.status === 'delivered' || order.status === 'cancelled');
+      }
+    });
+
+    // For waitress view, keep meals and drinks separate but prevent duplicates by table
+    if (userRole === 'waitress') {
+      // Create a map to track unique orders by table, creation time and type
+      const uniqueOrdersMap = new Map();
+      
+      baseFiltered.forEach(order => {
+        const hasDrinks = Array.isArray(order.drinks) && order.drinks.length > 0;
+        const hasMeals = Array.isArray(order.meals) && order.meals.length > 0;
+        
+        // Skip orders with both drinks and meals (shouldn't happen with our current logic)
+        if (hasDrinks && hasMeals) {
+          return;
+        }
+        
+        const orderType = hasDrinks ? 'drinks' : 'meals';
+        const orderKey = `${order.table}-${orderType}-${order.createdAt}-${order.status}`;
+        
+        // Only keep the most recent order for each key
+        if (!uniqueOrdersMap.has(orderKey) || 
+            new Date(order.createdAt).getTime() > new Date(uniqueOrdersMap.get(orderKey).createdAt).getTime()) {
+          uniqueOrdersMap.set(orderKey, order);
+        }
+      });
+      
+      // Convert map back to array
+      baseFiltered = Array.from(uniqueOrdersMap.values());
     }
-  });
+    
+    return baseFiltered;
+  };
   
   // Apply search filter to the base filtered orders
+  const baseFilteredOrders = filteredBaseOrders();
   const filteredOrders = useFilteredOrders(baseFilteredOrders, 'all', searchQuery);
 
   const getOrderType = (order: Order) => {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
@@ -52,7 +51,6 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const groupedMeals = groupMenuItems(meals);
   const groupedDrinks = groupMenuItems(drinks, false);
 
-  // Ensure we have items to submit
   const hasItemsToSubmit = drinks.length > 0 || meals.length > 0;
 
   const onSubmitOrder = () => {
@@ -120,7 +118,6 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
               </div>
             )}
             
-            {/* Payment section - now part of the main content flow */}
             <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-md p-4 mb-4`}>
               <div className={`flex justify-between mb-4 text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                 <span>Total</span>
@@ -139,7 +136,6 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
                 </div>}
               </div>
               
-              {/* Changed button order and colors */}
               <Button
                 onClick={() => setCurrentScreen('splitPayment')}
                 className={`w-full h-12 text-lg mb-2 ${isDarkMode ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-400 hover:bg-gray-500'} text-white rounded-md`}
@@ -160,13 +156,12 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
         </ScrollArea>
       </div>
 
-      {/* Confirmation Dialog */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer la commande</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir valider cette commande ? Cette action ne peut pas être annulée.
+              Êtes-vous sûr de vouloir valider cette commande?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
