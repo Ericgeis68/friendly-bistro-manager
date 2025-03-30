@@ -48,7 +48,7 @@ const AddMenuItemScreen: React.FC<AddMenuItemScreenProps> = ({ handleCancelEdit 
       name,
       price: parseFloat(price),
       quantity: 0,
-      needsCooking: needsCooking
+      needsCooking: editCategory === 'meals' ? needsCooking : false
     };
 
     // Mettre à jour le menu
@@ -100,16 +100,18 @@ const AddMenuItemScreen: React.FC<AddMenuItemScreenProps> = ({ handleCancelEdit 
             className="w-full border rounded-md h-12 px-3"
           />
         </div>
-        <div className="mb-6 flex items-center space-x-2">
-          <Switch 
-            id="cooking-option" 
-            checked={needsCooking}
-            onCheckedChange={setNeedsCooking}
-          />
-          <Label htmlFor="cooking-option">
-            Demander la cuisson lors de la commande
-          </Label>
-        </div>
+        {editCategory === 'meals' && (
+          <div className="mb-6 flex items-center space-x-2">
+            <Switch 
+              id="cooking-option" 
+              checked={needsCooking}
+              onCheckedChange={setNeedsCooking}
+            />
+            <Label htmlFor="cooking-option">
+              Demander la cuisson lors de la commande
+            </Label>
+          </div>
+        )}
         <button 
           onClick={handleSubmit} 
           className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-md h-12 text-lg"
