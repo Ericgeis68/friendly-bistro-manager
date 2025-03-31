@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingBag, Clock, CheckCircle2, Bell } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle2, Bell, Moon, Sun } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import OrderDetailScreen from './OrderDetailScreen';
 import { useMobile } from '@/hooks/use-mobile';
@@ -17,6 +17,7 @@ interface WaitressHomeScreenProps {
   onOrderComplete: (order: Order, type: 'drinks' | 'meals' | 'both') => void;
   onOrderCancel?: (order: Order, type: 'drinks' | 'meals' | 'all') => void;
   darkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
 const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
@@ -30,7 +31,8 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   pendingOrders,
   onOrderComplete,
   onOrderCancel = () => {}, // Provide default implementation
-  darkMode
+  darkMode,
+  toggleDarkMode
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const isMobile = useMobile();
@@ -68,8 +70,20 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
       <div className={`p-4 flex justify-between items-center ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <div className="text-lg font-medium">
-          Bonjour {loggedInUser}
+        <div className="flex items-center">
+          <div className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            Bonjour {loggedInUser}
+          </div>
+          <button 
+            onClick={toggleDarkMode} 
+            className="ml-2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label={darkMode ? "Activer le mode clair" : "Activer le mode sombre"}
+          >
+            {darkMode ? 
+              <Sun size={20} className="text-yellow-400" /> : 
+              <Moon size={20} className="text-gray-500" />
+            }
+          </button>
         </div>
         <div onClick={handleLogout} className="text-blue-500 cursor-pointer">Déconnexion</div>
       </div>

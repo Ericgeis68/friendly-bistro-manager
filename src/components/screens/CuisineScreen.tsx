@@ -1,12 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
-import { Menu, LayoutHorizontal, LayoutGrid } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
 import { ref, update, serverTimestamp, set } from 'firebase/database';
 import { database } from '../../utils/firebase';
 import { sortOrdersByCreationTime } from '../../utils/orderUtils';
-import { ScrollArea } from '../ui/scroll-area';
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -38,7 +38,7 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
   };
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow min-w-64 flex-shrink-0 m-2">
+    <div className="bg-white rounded-xl p-4 shadow w-64">
       <div className="flex justify-between items-start mb-2">
         <div>
           <h3 className="text-lg font-medium">
@@ -136,7 +136,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortedPendingOrders, setSortedPendingOrders] = useState<Order[]>([]);
-  const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
 
   // Filtre et trie les commandes par ordre d'arrivée chaque fois que pendingOrders change
   useEffect(() => {
@@ -202,11 +201,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         variant: "destructive",
       });
     });
-  };
-  
-  // Toggle layout function
-  const toggleLayout = () => {
-    setLayout(prev => prev === 'horizontal' ? 'vertical' : 'horizontal');
   };
   
   // Si on montre les commandes terminées, utiliser le composant CompletedOrdersScreen
@@ -294,11 +288,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const tableRows = prepareTableRows();
 
-  // Define layout classes based on current layout setting
-  const orderContainerClasses = layout === 'horizontal' 
-    ? "flex overflow-x-auto hide-scrollbar pb-4"
-    : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4";
-
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-transparent p-4 flex items-center justify-between">
@@ -309,13 +298,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           {showOrders === 'pending' ? 'Commandes en cours' : 
            showOrders === 'dashboard' ? 'Vue d\'ensemble des plats' : 'Commandes terminées'}
         </h1>
-        <button 
-          onClick={toggleLayout}
-          className="text-gray-800 p-2 rounded-full hover:bg-gray-200 transition-colors"
-          title={layout === 'horizontal' ? 'Affichage vertical' : 'Affichage horizontal'}
-        >
-          {layout === 'horizontal' ? <LayoutGrid size={24} /> : <LayoutHorizontal size={24} />}
-        </button>
+        <div className="w-6"></div> {/* Spacer to keep the title centered */}
       </nav>
       
       {menuOpen && (
@@ -336,22 +319,22 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       )}
 
       {showOrders === 'pending' && (
-        <div className="flex-1 p-4">
-          {sortedPendingOrders.length === 0 ? (
-            <div className="text-center text-gray-500 w-full py-10">
-              Aucune commande en attente
-            </div>
-          ) : (
-            <div className={orderContainerClasses}>
-              {sortedPendingOrders.map(order => (
+        <div className="flex-1 p-4 overflow-auto">
+          <div className="flex flex-wrap gap-4 justify-center">
+            {sortedPendingOrders.length === 0 ? (
+              <div className="text-center text-gray-500 mt-10">
+                Aucune commande en attente
+              </div>
+            ) : (
+              sortedPendingOrders.map(order => (
                 <OrderCard 
                   key={order.id} 
                   order={order} 
-                  handleOrderReady={handleOrderReady} 
+                  handleOrderReady={onOrderReady} 
                 />
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       )}
       

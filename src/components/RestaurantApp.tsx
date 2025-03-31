@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import type { MenuItem, Order, ScreenType, UserRole } from '../types/restaurant';
@@ -36,7 +37,8 @@ const WaitressScreens = ({
   handleOrderCompleteWithType,
   handleOrderCancelWithType,
   setPendingOrders,
-  darkMode
+  darkMode,
+  toggleDarkMode
 }: {
   loggedInUser: UserRole;
   showCompletedOrders: boolean;
@@ -53,6 +55,7 @@ const WaitressScreens = ({
   handleOrderCancelWithType: (order: Order, type: 'drinks' | 'meals' | 'all') => void;
   setPendingOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   darkMode: boolean;
+  toggleDarkMode: () => void;
 }) => {
   useEffect(() => {
     if (showPendingOrders) {
@@ -66,6 +69,7 @@ const WaitressScreens = ({
   console.log("WaitressScreens - filtered orders:", pendingOrders.filter(order => order.waitress === loggedInUser).length);
 
   if (showCompletedOrders) {
+    // Filter to only show orders for the logged-in waitress
     const waitressCompletedOrders = completedOrders.filter(order => 
       order.waitress === loggedInUser
     );
@@ -110,6 +114,7 @@ const WaitressScreens = ({
       onOrderComplete={handleOrderCompleteWithType}
       onOrderCancel={handleOrderCancelWithType}
       darkMode={darkMode}
+      toggleDarkMode={toggleDarkMode}
     />
   );
 };
@@ -218,11 +223,7 @@ const RestaurantApp: React.FC = () => {
   });
 
   if (currentScreen === 'login') {
-    return <LoginScreen 
-      onLogin={handleLogin} 
-      darkMode={darkMode} 
-      toggleDarkMode={toggleDarkMode} 
-    />;
+    return <LoginScreen onLogin={handleLogin} />;
   }
 
   if (currentScreen === 'waitress' && loggedInUser) {
@@ -243,6 +244,7 @@ const RestaurantApp: React.FC = () => {
         handleOrderCancelWithType={handleOrderCancelWithType}
         setPendingOrders={setPendingOrders}
         darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
       />
     );
   }
@@ -263,7 +265,6 @@ const RestaurantApp: React.FC = () => {
         tableNumber={tableNumber}
         handleLogout={handleLogout}
         setCurrentScreen={setCurrentScreen}
-        darkMode={darkMode}
       />
     ),
     boissons: (
