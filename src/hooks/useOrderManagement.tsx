@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import type { Order } from '../types/restaurant';
 import { toast } from "@/hooks/use-toast";
@@ -10,7 +9,6 @@ export const useOrderManagement = () => {
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
   const [pendingNotifications, setPendingNotifications] = useState<Order[]>([]);
 
-  // Écouter les changements des commandes en cours
   useEffect(() => {
     console.log("Setting up pendingOrders listener");
     const unsubscribe = onValue(pendingOrdersRef, (snapshot) => {
@@ -30,7 +28,6 @@ export const useOrderManagement = () => {
     };
   }, []);
 
-  // Écouter les changements des commandes terminées
   useEffect(() => {
     console.log("Setting up completedOrders listener");
     const unsubscribe = onValue(completedOrdersRef, (snapshot) => {
@@ -50,7 +47,6 @@ export const useOrderManagement = () => {
     };
   }, []);
 
-  // Écouter les notifications en temps réel
   useEffect(() => {
     console.log("Setting up notifications listener");
     const unsubscribe = onValue(notificationsRef, (snapshot) => {
@@ -58,20 +54,17 @@ export const useOrderManagement = () => {
         console.log("Notifications data received");
         const notifications = snapshot.val();
         
-        // Map pendingOrders to their IDs for quick lookup
         const pendingOrdersMap = new Map();
         pendingOrders.forEach(order => {
           pendingOrdersMap.set(order.id, order);
         });
         
-        // Process notifications and find matching orders
         const notifiedOrders: Order[] = [];
         
         Object.entries(notifications).forEach(([key, notification]: [string, any]) => {
           if (!notification.read) {
             console.log("Processing unread notification:", notification);
             
-            // Find the matching order
             const matchingOrder = pendingOrdersMap.get(notification.orderId);
             
             if (matchingOrder) {
@@ -86,7 +79,6 @@ export const useOrderManagement = () => {
         console.log("Setting pending notifications:", notifiedOrders.length);
         setPendingNotifications(notifiedOrders);
 
-        // Jouer le son pour les nouvelles notifications
         if (notifiedOrders.length > 0) {
           try {
             const audio = new Audio('/notification-sound.mp3');
@@ -110,18 +102,15 @@ export const useOrderManagement = () => {
   const handleOrderReady = async (order: Order) => {
     console.log("Marking order as ready:", order.id);
     if (order.meals.length > 0) {
-      // Mettre à jour le statut de la commande
       const updatedOrder = { 
         ...order, 
         status: 'ready' as const, 
         mealsStatus: 'ready' as const 
       };
 
-      // Mettre à jour dans Firebase
       const orderRef = ref(database, `pendingOrders/${order.id}`);
       await update(orderRef, updatedOrder);
 
-      // Créer une nouvelle notification
       const newNotificationRef = push(notificationsRef);
       await set(newNotificationRef, {
         orderId: order.id,
@@ -132,7 +121,6 @@ export const useOrderManagement = () => {
         timestamp: Date.now()
       });
 
-      // Mettre à jour les états locaux
       setPendingOrders(prev => 
         prev.map(o => o.id === order.id ? updatedOrder : o)
       );
@@ -146,16 +134,13 @@ export const useOrderManagement = () => {
 
   const handleOrderComplete = async (order: Order) => {
     console.log("Completing order:", order.id);
-    // Supprimer de pendingOrders
     const pendingRef = ref(database, `pendingOrders/${order.id}`);
     await remove(pendingRef);
 
-    // Ajouter à completedOrders avec le statut 'delivered'
     const completedRef = ref(database, `completedOrders/${order.id}`);
     const updatedOrder = { ...order, status: 'delivered' as const };
     await set(completedRef, updatedOrder);
 
-    // Supprimer les notifications associées
     const notificationsSnapshot = await get(notificationsRef);
     if (notificationsSnapshot.exists()) {
       const notifications = notificationsSnapshot.val();
@@ -166,7 +151,6 @@ export const useOrderManagement = () => {
       });
     }
 
-    // Mettre à jour les états locaux
     setPendingOrders(prev => prev.filter(o => o.id !== order.id));
     setCompletedOrders(prev => [...prev, updatedOrder]);
     setPendingNotifications(prev => prev.filter(o => o.id !== order.id));
@@ -179,16 +163,13 @@ export const useOrderManagement = () => {
 
   const handleOrderCancel = async (order: Order) => {
     console.log("Cancelling order:", order.id);
-    // Supprimer de pendingOrders
     const pendingRef = ref(database, `pendingOrders/${order.id}`);
     await remove(pendingRef);
 
-    // Ajouter à completedOrders avec le statut 'cancelled'
     const completedRef = ref(database, `completedOrders/${order.id}`);
     const updatedOrder = { ...order, status: 'cancelled' as const };
     await set(completedRef, updatedOrder);
 
-    // Supprimer les notifications associées
     const notificationsSnapshot = await get(notificationsRef);
     if (notificationsSnapshot.exists()) {
       const notifications = notificationsSnapshot.val();
@@ -199,7 +180,6 @@ export const useOrderManagement = () => {
       });
     }
 
-    // Mettre à jour les états locaux
     setPendingOrders(prev => prev.filter(o => o.id !== order.id));
     setCompletedOrders(prev => [...prev, updatedOrder]);
     setPendingNotifications(prev => prev.filter(o => o.id !== order.id));
@@ -218,7 +198,6 @@ export const useOrderManagement = () => {
 
   const handleNotificationAcknowledge = async (orderId: string) => {
     console.log("Acknowledging notification for order:", orderId);
-    // Marquer toutes les notifications de cette commande comme lues
     const notificationsSnapshot = await get(notificationsRef);
     if (notificationsSnapshot.exists()) {
       const notifications = notificationsSnapshot.val();
@@ -230,8 +209,61 @@ export const useOrderManagement = () => {
       });
     }
 
-    // Mettre à jour l'état local
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
+  };
+
+  const resetOrders = async () => {
+    console.log("Resetting orders in local state and ensuring Firebase data is cleared");
+    
+    try {
+      // Clear all individual entries first
+      const pendingSnapshot = await get(pendingOrdersRef);
+      if (pendingSnapshot.exists()) {
+        const pendingData = pendingSnapshot.val();
+        for (const orderId in pendingData) {
+          await remove(ref(database, `pendingOrders/${orderId}`));
+          console.log(`Removed pending order ${orderId}`);
+        }
+      }
+      
+      const completedSnapshot = await get(completedOrdersRef);
+      if (completedSnapshot.exists()) {
+        const completedData = completedSnapshot.val();
+        for (const orderId in completedData) {
+          await remove(ref(database, `completedOrders/${orderId}`));
+          console.log(`Removed completed order ${orderId}`);
+        }
+      }
+      
+      const notificationsSnapshot = await get(notificationsRef);
+      if (notificationsSnapshot.exists()) {
+        const notificationsData = notificationsSnapshot.val();
+        for (const notifId in notificationsData) {
+          await remove(ref(database, `notifications/${notifId}`));
+        }
+      }
+      
+      // Then remove the entire nodes
+      await remove(pendingOrdersRef);
+      await remove(completedOrdersRef);
+      await remove(notificationsRef);
+      
+      // Specifically check and remove order 99 if it exists
+      await remove(ref(database, 'pendingOrders/99'));
+      await remove(ref(database, 'completedOrders/99'));
+      
+      console.log("Firebase data has been cleared");
+      
+      // Update local state
+      setPendingOrders([]);
+      setCompletedOrders([]);
+      setPendingNotifications([]);
+      
+      console.log("All order data has been reset in the local state");
+    } catch (error) {
+      console.error("Error clearing Firebase data:", error);
+      throw error;
+    }
   };
 
   return {
@@ -245,6 +277,7 @@ export const useOrderManagement = () => {
     handleOrderComplete,
     handleOrderCancel,
     handleDrinksComplete,
-    handleNotificationAcknowledge
+    handleNotificationAcknowledge,
+    resetOrders
   };
 };

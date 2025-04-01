@@ -41,7 +41,7 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
   const [selectedCookingOption, setSelectedCookingOption] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);
   const isMobile = useMobile();
-  const { setPendingOrders, setCompletedOrders } = useOrderManagement();
+  const { setPendingOrders, setCompletedOrders, resetOrders } = useOrderManagement();
 
   useEffect(() => {
     const fetchAllOrders = async () => {
@@ -99,13 +99,8 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
   };
 
   const handleResetApplication = () => {
-    setPendingOrders([]);
-    setCompletedOrders([]);
-    
-    toast({
-      title: "Application réinitialisée localement",
-      description: "Toutes les commandes ont été supprimées localement.",
-    });
+    resetOrders();
+    setOrders([]);
   };
 
   const handleLogoutAdmin = () => {
