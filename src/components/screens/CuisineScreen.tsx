@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, LayoutGrid, LayoutList } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
 import { ref, update, serverTimestamp, set } from 'firebase/database';
 import { database } from '../../utils/firebase';
 import { sortOrdersByCreationTime } from '../../utils/orderUtils';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Toggle } from "@/components/ui/toggle";
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -136,6 +138,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [showOrders, setShowOrders] = useState<'pending' | 'completed' | 'dashboard'>('pending');
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortedPendingOrders, setSortedPendingOrders] = useState<Order[]>([]);
+  const [isHorizontalLayout, setIsHorizontalLayout] = useState(true);
 
   // Filtre et trie les commandes par ordre d'arrivée chaque fois que pendingOrders change
   useEffect(() => {
@@ -288,17 +291,32 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const tableRows = prepareTableRows();
 
+  // Fonction pour basculer entre l'affichage horizontal et vertical
+  const toggleLayout = () => {
+    setIsHorizontalLayout(!isHorizontalLayout);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-transparent p-4 flex items-center justify-between">
-        <button onClick={() => setMenuOpen(!menuOpen)} className="text-gray-800 font-bold text-xl flex items-center">
+      <nav className="bg-blue-500 p-4 flex items-center justify-between">
+        <button onClick={() => setMenuOpen(!menuOpen)} className="text-white font-bold text-xl flex items-center">
           <Menu className="mr-2 text-2xl" />
         </button>
-        <h1 className="text-gray-800 font-bold text-2xl">
+        <h1 className="text-white font-bold text-2xl">
           {showOrders === 'pending' ? 'Commandes en cours' : 
            showOrders === 'dashboard' ? 'Vue d\'ensemble des plats' : 'Commandes terminées'}
         </h1>
-        <div className="w-6"></div> {/* Spacer to keep the title centered */}
+        {showOrders === 'pending' && (
+          <Toggle 
+            aria-label="Changer l'affichage"
+            pressed={isHorizontalLayout}
+            onPressedChange={toggleLayout}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isHorizontalLayout ? <LayoutList size={18} /> : <LayoutGrid size={18} />}
+          </Toggle>
+        )}
+        {showOrders !== 'pending' && <div className="w-8"></div>} {/* Spacer pour garder le titre centré */}
       </nav>
       
       {menuOpen && (
@@ -320,21 +338,41 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
       {showOrders === 'pending' && (
         <div className="flex-1 p-4 overflow-auto">
-          <div className="flex flex-wrap gap-4 justify-center">
-            {sortedPendingOrders.length === 0 ? (
-              <div className="text-center text-gray-500 mt-10">
-                Aucune commande en attente
+          {isHorizontalLayout ? (
+            <ScrollArea className="w-full h-[calc(100vh-5rem)]">
+              <div className="flex gap-4 p-2">
+                {sortedPendingOrders.length === 0 ? (
+                  <div className="text-center text-gray-500 w-full py-10">
+                    Aucune commande en attente
+                  </div>
+                ) : (
+                  sortedPendingOrders.map(order => (
+                    <OrderCard 
+                      key={order.id} 
+                      order={order} 
+                      handleOrderReady={handleOrderReady} 
+                    />
+                  ))
+                )}
               </div>
-            ) : (
-              sortedPendingOrders.map(order => (
-                <OrderCard 
-                  key={order.id} 
-                  order={order} 
-                  handleOrderReady={onOrderReady} 
-                />
-              ))
-            )}
-          </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex flex-col gap-4 items-center">
+              {sortedPendingOrders.length === 0 ? (
+                <div className="text-center text-gray-500 mt-10">
+                  Aucune commande en attente
+                </div>
+              ) : (
+                sortedPendingOrders.map(order => (
+                  <OrderCard 
+                    key={order.id} 
+                    order={order} 
+                    handleOrderReady={handleOrderReady} 
+                  />
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
       
