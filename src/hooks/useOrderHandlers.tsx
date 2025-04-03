@@ -1,8 +1,7 @@
-
 import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
 import type { Order, MenuItem, ScreenType, UserRole } from '../types/restaurant';
-import { ref, set, remove } from "firebase/database";
+import { ref, set, remove, get, update } from "firebase/database";
 import { database } from '../utils/firebase';
 
 interface UseOrderHandlersProps {
@@ -74,94 +73,160 @@ export const useOrderHandlers = ({
     setTempMeals([]);
   };
 
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     console.log("In handleSubmitOrder function");
     console.log("Order drinks:", order.drinks.length, "Order meals:", order.meals.length);
     console.log("LoggedInUser:", loggedInUser);
     console.log("TableNumber:", tableNumber);
     
-    // Create separate orders for drinks and meals
+    if (order.drinks.length === 0 && order.meals.length === 0) {
+      console.log("No items in order, returning");
+      return;
+    }
+    
+    const pendingOrdersRef = ref(database, 'pendingOrders');
+    const existingOrdersSnapshot = await get(pendingOrdersRef);
+    const existingOrders = existingOrdersSnapshot.exists() ? Object.values(existingOrdersSnapshot.val()) as Order[] : [];
+    
+    const sameTableOrders = existingOrders.filter((existingOrder: Order) => 
+      existingOrder.table === tableNumber && 
+      existingOrder.waitress === loggedInUser
+    );
+    
+    console.log("Existing orders for this table:", sameTableOrders.length);
+    
+    const generateId = generateOrderId();
+    
     if (order.drinks.length > 0) {
       console.log("Creating drinks order");
-      const drinksOrder: Order = {
-        id: generateOrderId() + '-drinks',
-        waitress: loggedInUser!,
-        meals: [],
-        drinks: [...order.drinks],
-        table: tableNumber,
-        tableComment: tableComment || '', // Use empty string instead of undefined
-        status: 'pending',
-        drinksStatus: 'pending',
-        createdAt: new Date().toISOString()
-      };
       
-      console.log("Drinks order to save:", drinksOrder);
+      const existingDrinkOrder = sameTableOrders.find((existingOrder: Order) => 
+        existingOrder.drinks && existingOrder.drinks.length > 0 && 
+        (!existingOrder.meals || existingOrder.meals.length === 0)
+      );
       
-      // Save to Firebase pendingOrders with the ID as the key
-      const orderRef = ref(database, `pendingOrders/${drinksOrder.id}`);
-      set(orderRef, drinksOrder)
-        .then(() => {
-          console.log("Drink order saved to Firebase successfully");
-          // Update local state
-          setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
-          
-          toast({
-            title: "Commande boissons envoyée",
-            description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
-          });
-        })
-        .catch(error => {
-          console.error("Error saving drink order to Firebase:", error);
-          toast({
-            title: "Erreur",
-            description: "Erreur lors de l'envoi de la commande de boissons.",
-            variant: "destructive",
-          });
+      if (existingDrinkOrder) {
+        console.log("A drink order already exists for this table");
+        toast({
+          title: "Attention",
+          description: `Une commande de boissons existe déjà pour la table ${tableNumber}.`,
+          variant: "destructive",
         });
+      } else {
+        const drinksOrder: Order = {
+          id: generateId(tableNumber, 'drinks'),
+          waitress: loggedInUser!,
+          meals: [],
+          drinks: [...order.drinks],
+          table: tableNumber,
+          tableComment: tableComment || '',
+          status: 'pending',
+          drinksStatus: 'pending',
+          createdAt: new Date().toISOString()
+        };
+        
+        console.log("Drinks order to save:", drinksOrder);
+        
+        const isDuplicate = pendingOrders.some(existingOrder => 
+          existingOrder.table === drinksOrder.table && 
+          existingOrder.waitress === drinksOrder.waitress &&
+          existingOrder.drinks.length > 0 && 
+          existingOrder.meals.length === 0
+        );
+        
+        if (!isDuplicate) {
+          const orderRef = ref(database, `pendingOrders/${drinksOrder.id}`);
+          set(orderRef, drinksOrder)
+            .then(() => {
+              console.log("Drink order saved to Firebase successfully");
+              
+              if (!pendingOrders.some(o => o.id === drinksOrder.id)) {
+                setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
+              }
+              
+              toast({
+                title: "Commande boissons envoyée",
+                description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
+              });
+            })
+            .catch(error => {
+              console.error("Error saving drink order to Firebase:", error);
+              toast({
+                title: "Erreur",
+                description: "Erreur lors de l'envoi de la commande de boissons.",
+                variant: "destructive",
+              });
+            });
+        } else {
+          console.log("Duplicate drink order detected, not saving");
+        }
+      }
     }
     
     if (order.meals.length > 0) {
       console.log("Creating meals order");
-      const mealsOrder: Order = {
-        id: generateOrderId() + '-meals',
-        waitress: loggedInUser!,
-        meals: [...order.meals],
-        drinks: [],
-        table: tableNumber,
-        tableComment: tableComment || '', // Use empty string instead of undefined
-        status: 'pending',
-        mealsStatus: 'pending',
-        createdAt: new Date().toISOString()
-      };
       
-      console.log("Meals order to save:", mealsOrder);
+      const existingMealOrder = sameTableOrders.find((existingOrder: Order) => 
+        existingOrder.meals && existingOrder.meals.length > 0 && 
+        (!existingOrder.drinks || existingOrder.drinks.length === 0)
+      );
       
-      // Save to Firebase pendingOrders with the ID as the key
-      const orderRef = ref(database, `pendingOrders/${mealsOrder.id}`);
-      set(orderRef, mealsOrder)
-        .then(() => {
-          console.log("Meal order saved to Firebase successfully");
-          // Update local state
-          setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
-          
-          toast({
-            title: "Commande repas envoyée",
-            description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
-          });
-        })
-        .catch(error => {
-          console.error("Error saving meal order to Firebase:", error);
-          toast({
-            title: "Erreur",
-            description: "Erreur lors de l'envoi de la commande de repas.",
-            variant: "destructive",
-          });
+      if (existingMealOrder) {
+        console.log("A meal order already exists for this table");
+        toast({
+          title: "Attention",
+          description: `Une commande de repas existe déjà pour la table ${tableNumber}.`,
+          variant: "destructive",
         });
-    }
-    
-    if (order.drinks.length === 0 && order.meals.length === 0) {
-      console.log("No items in order, returning");
-      return;
+      } else {
+        const mealsOrder: Order = {
+          id: generateId(tableNumber, 'meals'),
+          waitress: loggedInUser!,
+          meals: [...order.meals],
+          drinks: [],
+          table: tableNumber,
+          tableComment: tableComment || '',
+          status: 'pending',
+          mealsStatus: 'pending',
+          createdAt: new Date().toISOString()
+        };
+        
+        console.log("Meals order to save:", mealsOrder);
+        
+        const isDuplicate = pendingOrders.some(existingOrder => 
+          existingOrder.table === mealsOrder.table && 
+          existingOrder.waitress === mealsOrder.waitress &&
+          existingOrder.meals.length > 0 && 
+          existingOrder.drinks.length === 0
+        );
+        
+        if (!isDuplicate) {
+          const orderRef = ref(database, `pendingOrders/${mealsOrder.id}`);
+          set(orderRef, mealsOrder)
+            .then(() => {
+              console.log("Meal order saved to Firebase successfully");
+              
+              if (!pendingOrders.some(o => o.id === mealsOrder.id)) {
+                setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
+              }
+              
+              toast({
+                title: "Commande repas envoyée",
+                description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
+              });
+            })
+            .catch(error => {
+              console.error("Error saving meal order to Firebase:", error);
+              toast({
+                title: "Erreur",
+                description: "Erreur lors de l'envoi de la commande de repas.",
+                variant: "destructive",
+              });
+            });
+        } else {
+          console.log("Duplicate meal order detected, not saving");
+        }
+      }
     }
 
     console.log("Resetting order state");
@@ -178,7 +243,19 @@ export const useOrderHandlers = ({
     setCurrentScreen('waitress');
   };
 
-  const handleNotificationAcknowledge = (orderId: string) => {
+  const handleNotificationAcknowledge = async (orderId: string) => {
+    // Mettre à jour le statut de lecture dans Firebase
+    const notificationsSnapshot = await get(ref(database, 'notifications'));
+    if (notificationsSnapshot.exists()) {
+      const notifications = notificationsSnapshot.val();
+      Object.entries(notifications).forEach(async ([key, notification]: [string, any]) => {
+        if (notification.orderId === orderId) {
+          await update(ref(database, `notifications/${key}`), { read: true });
+        }
+      });
+    }
+    
+    // Mettre à jour l'état local
     setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
   };
 
@@ -205,10 +282,8 @@ export const useOrderHandlers = ({
   const handleOrderCancelWithType = (order: Order, type: 'drinks' | 'meals' | 'all') => {
     console.log("Cancelling order with type:", type, "Order:", order);
     
-    // Handle cancel based on order type
     handleOrderCancel(order);
     
-    // Show appropriate toast message based on type
     if (type === 'drinks' || (order.drinks && order.drinks.length > 0 && order.meals && order.meals.length === 0)) {
       toast({
         title: "Commande boissons annulée",

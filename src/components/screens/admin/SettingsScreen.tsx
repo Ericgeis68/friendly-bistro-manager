@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { ref, remove, get } from 'firebase/database';
-import { database, pendingOrdersRef, completedOrdersRef, notificationsRef } from '../../../utils/firebase';
+import { ref, remove, get, set, query, orderByChild, equalTo } from 'firebase/database';
+import { database, pendingOrdersRef, completedOrdersRef, notificationsRef, orderItemsRef, ordersRef } from '../../../utils/firebase';
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -45,68 +46,137 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     try {
       console.log("Suppression des commandes en cours...");
       
-      // First, get all pending orders to log them
-      const pendingSnapshot = await get(pendingOrdersRef);
-      if (pendingSnapshot.exists()) {
-        console.log("Suppression de", Object.keys(pendingSnapshot.val()).length, "commandes en cours");
+      // Tables problématiques connues
+      const problematicTables = ['99', '56', '64', '79'];
+      const problematicOrderIds = ['CMD-250320-067-meals'];
+      
+      // Créer un tableau des références à toutes les collections à nettoyer
+      const collectionsToClean = [
+        { name: 'pendingOrders', ref: pendingOrdersRef },
+        { name: 'completedOrders', ref: completedOrdersRef },
+        { name: 'notifications', ref: notificationsRef },
+        { name: 'orderItems', ref: orderItemsRef },
+        { name: 'orders', ref: ordersRef }
+      ];
+      
+      // Fonction pour supprimer une commande et ses références associées
+      const deleteOrderCompletely = async (orderId) => {
+        console.log(`Suppression complète de la commande ${orderId} de toutes les collections`);
         
-        // Delete each pending order individually to ensure complete removal
-        const pendingOrders = pendingSnapshot.val();
-        for (const orderId in pendingOrders) {
-          await remove(ref(database, `pendingOrders/${orderId}`));
-          console.log(`Commande en cours ${orderId} supprimée`);
+        // Supprimer de toutes les collections
+        for (const collection of collectionsToClean) {
+          await remove(ref(database, `${collection.name}/${orderId}`));
+          await set(ref(database, `${collection.name}/${orderId}`), null);
+        }
+      };
+      
+      // 1. Supprimer les commandes problématiques spécifiques par ID
+      for (const orderId of problematicOrderIds) {
+        await deleteOrderCompletely(orderId);
+      }
+      
+      // 2. Supprimer les commandes par table problématique
+      for (const tableNumber of problematicTables) {
+        console.log(`Recherche et suppression des commandes pour la table ${tableNumber}`);
+        
+        // Parcourir chaque collection et supprimer les commandes liées à cette table
+        for (const collection of collectionsToClean) {
+          const snapshot = await get(collection.ref);
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            for (const key in data) {
+              const item = data[key];
+              // Vérifier si c'est une commande avec cette table
+              if (item && (item.table === tableNumber || item.table === Number(tableNumber) || 
+                  item.tableNumber === tableNumber || item.tableNumber === Number(tableNumber))) {
+                console.log(`Suppression de ${collection.name}/${key} (table ${tableNumber})`);
+                await remove(ref(database, `${collection.name}/${key}`));
+                await set(ref(database, `${collection.name}/${key}`), null);
+              }
+            }
+          }
         }
       }
       
-      // Force removal of the entire pendingOrders node
-      await remove(pendingOrdersRef);
-      console.log("Node pendingOrders supprimé");
-      
-      console.log("Suppression des commandes terminées...");
-      
-      // Get completed orders ref and verify if it exists
-      const completedSnapshot = await get(completedOrdersRef);
-      if (completedSnapshot.exists()) {
-        console.log("Suppression de", Object.keys(completedSnapshot.val()).length, "commandes terminées");
-        
-        // Delete each completed order individually to ensure complete removal
-        const completedOrders = completedSnapshot.val();
-        for (const orderId in completedOrders) {
-          await remove(ref(database, `completedOrders/${orderId}`));
-          console.log(`Commande terminée ${orderId} supprimée`);
+      // 3. Supprimer toutes les entrées de statut "offline" et timestamps numériques
+      console.log("Suppression des entrées offline et timestamps...");
+      const dbRootRef = ref(database, '/');
+      const rootSnapshot = await get(dbRootRef);
+      if (rootSnapshot.exists()) {
+        const rootData = rootSnapshot.val();
+        for (const key in rootData) {
+          // Supprimer les entrées avec valeur "offline"
+          if (rootData[key] === "offline") {
+            console.log(`Suppression de l'entrée offline: ${key}`);
+            await remove(ref(database, key));
+          }
+          
+          // Supprimer les entrées avec clés numériques (timestamps)
+          if (!isNaN(Number(key)) && key.length > 10) {
+            console.log(`Suppression de l'entrée timestamp: ${key}`);
+            await remove(ref(database, key));
+          }
         }
       }
       
-      // Force removal of the entire completedOrders node
-      await remove(completedOrdersRef);
-      console.log("Node completedOrders supprimé");
+      // 4. Suppression totale des collections principales
+      console.log("Suppression complète des collections principales...");
       
-      console.log("Suppression des notifications...");
-      
-      // Get notifications ref and verify if it exists
-      const notificationsSnapshot = await get(notificationsRef);
-      if (notificationsSnapshot.exists()) {
-        console.log("Suppression de", Object.keys(notificationsSnapshot.val()).length, "notifications");
+      for (const collection of collectionsToClean) {
+        console.log(`Vidage de la collection ${collection.name}...`);
         
-        // Delete each notification individually
-        const notifications = notificationsSnapshot.val();
-        for (const notifId in notifications) {
-          await remove(ref(database, `notifications/${notifId}`));
+        // D'abord supprimer tous les éléments individuellement
+        const snapshot = await get(collection.ref);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          for (const key in data) {
+            await remove(ref(database, `${collection.name}/${key}`));
+          }
         }
+        
+        // Puis réinitialiser complètement la collection
+        await remove(collection.ref);
+        await set(collection.ref, null);
       }
       
-      // Force removal of the entire notifications node
-      await remove(notificationsRef);
-      console.log("Node notifications supprimé");
-      
-      // Make extra sure all data is cleared by removing the entire nodes again
-      await remove(ref(database, 'pendingOrders'));
-      await remove(ref(database, 'completedOrders'));
-      await remove(ref(database, 'notifications'));
-      
-      // Check if order 99 specifically exists and remove it if found
-      await remove(ref(database, 'pendingOrders/99'));
-      await remove(ref(database, 'completedOrders/99'));
+      // 5. Vérification finale et réinitialisation complète
+      setTimeout(async () => {
+        try {
+          // Vérification finale pour les commandes problématiques
+          for (const orderId of problematicOrderIds) {
+            await deleteOrderCompletely(orderId);
+          }
+          
+          // Vérification finale pour les tables problématiques
+          for (const tableNumber of problematicTables) {
+            console.log(`Vérification finale pour la table ${tableNumber}`);
+            for (const collection of collectionsToClean) {
+              const pathRef = ref(database, `${collection.name}`);
+              const snapshot = await get(pathRef);
+              if (snapshot.exists()) {
+                const data = snapshot.val();
+                for (const key in data) {
+                  const item = data[key];
+                  if (item && (item.table === tableNumber || item.table === Number(tableNumber) ||
+                      item.tableNumber === tableNumber || item.tableNumber === Number(tableNumber))) {
+                    await remove(ref(database, `${collection.name}/${key}`));
+                    await set(ref(database, `${collection.name}/${key}`), null);
+                  }
+                }
+              }
+            }
+          }
+          
+          // Réinitialisation complète en définissant chaque collection à null puis en la recréant vide
+          for (const collection of collectionsToClean) {
+            await set(collection.ref, null);
+            await set(collection.ref, {});
+          }
+          
+        } catch (error) {
+          console.error("Erreur lors de la vérification finale:", error);
+        }
+      }, 1000);
       
       toast({
         title: "Application réinitialisée",

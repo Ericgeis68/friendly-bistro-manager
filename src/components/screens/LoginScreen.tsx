@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from 'lucide-react';
@@ -56,7 +55,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, darkMode, toggleDark
             variant="outline"
             className={`w-full h-12 text-lg ${darkMode ? 'border-gray-700 hover:bg-gray-700' : ''}`}
           >
-            Cuisine
+            Grillade
           </Button>
           
           <Button 

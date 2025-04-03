@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Clock, CheckCircle2, Bell } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import OrderDetailScreen from './OrderDetailScreen';
@@ -34,6 +34,35 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const isMobile = useMobile();
+  const [processedNotifications, setProcessedNotifications] = useState<Set<string>>(new Set());
+
+  // Effet pour jouer un son de notification quand de nouvelles notifications arrivent
+  useEffect(() => {
+    if (pendingNotifications.length > 0) {
+      // Identifier les nouvelles notifications non traitées
+      const newNotifications = pendingNotifications.filter(notification => {
+        const notificationId = `${notification.id}-${Date.now()}`;
+        return !processedNotifications.has(notificationId);
+      });
+      
+      if (newNotifications.length > 0) {
+        // Jouer le son uniquement pour les nouvelles notifications
+        try {
+          const audio = new Audio('/notification-sound.mp3');
+          audio.play().catch(e => console.log('Erreur de lecture audio:', e));
+        } catch (error) {
+          console.error("Erreur lors de la lecture du son:", error);
+        }
+        
+        // Marquer ces notifications comme traitées localement
+        const updatedProcessed = new Set(processedNotifications);
+        newNotifications.forEach(notification => {
+          updatedProcessed.add(`${notification.id}-${Date.now()}`);
+        });
+        setProcessedNotifications(updatedProcessed);
+      }
+    }
+  }, [pendingNotifications, processedNotifications]);
 
   const handleViewOrderDetails = (orderId: string) => {
     console.log("Viewing order details for:", orderId);
@@ -65,6 +94,17 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
     );
   }
 
+  // Dédupliquer les notifications pour éviter les doublons
+  const uniqueNotifications = [...pendingNotifications];
+  const seenOrderIds = new Set();
+  const filteredNotifications = uniqueNotifications.filter(notification => {
+    if (seenOrderIds.has(notification.id)) {
+      return false; // Ignorer les doublons
+    }
+    seenOrderIds.add(notification.id);
+    return true;
+  });
+
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
       <div className={`p-4 flex justify-between items-center ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -74,9 +114,9 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         <div onClick={handleLogout} className="text-blue-500 cursor-pointer">Déconnexion</div>
       </div>
 
-      {pendingNotifications.length > 0 && (
+      {filteredNotifications.length > 0 && (
         <div className="p-4">
-          {pendingNotifications.map((notification) => (
+          {filteredNotifications.map((notification) => (
             <div
               key={notification.id}
               className={`${darkMode ? 'bg-blue-900' : 'bg-blue-100'} p-4 rounded-lg mb-4 flex justify-between items-center`}
@@ -115,9 +155,9 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         >
           <Clock size={48} className={`mb-3 ${darkMode ? 'text-blue-300' : 'text-blue-500'}`} />
           <span className={`text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>Commandes en cours</span>
-          {pendingNotifications.length > 0 && (
+          {filteredNotifications.length > 0 && (
             <div className="absolute top-4 right-4 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
-              {pendingNotifications.length}
+              {filteredNotifications.length}
             </div>
           )}
         </button>

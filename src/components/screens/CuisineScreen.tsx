@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Menu, LayoutGrid, LayoutList } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
-import { ref, update, serverTimestamp, set } from 'firebase/database';
-import { database } from '../../utils/firebase';
+import { ref, update, serverTimestamp, set, push, get } from 'firebase/database';
+import { database, notificationsRef } from '../../utils/firebase';
 import { sortOrdersByCreationTime } from '../../utils/orderUtils';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
@@ -19,9 +18,7 @@ interface CuisineScreenProps {
   onOrderReady: (order: Order) => void;
 }
 
-// Component for order cards
 const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady: (order: Order) => void }) => {
-  // Group meals by name and cooking style to combine quantities
   const groupedMeals: Record<string, MenuItem> = {};
   
   order.meals.forEach((meal) => {
@@ -32,7 +29,6 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
     groupedMeals[key].quantity = (groupedMeals[key].quantity || 0) + (meal.quantity || 1);
   });
 
-  // Format de l'heure
   const formatTime = (dateString: string | number) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -74,7 +70,6 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
   );
 };
 
-// Component for dashboard table
 const DashboardTable = ({ tableRows }: { tableRows: { name: string; cooking: string; count: number }[] }) => {
   return (
     <div className="w-full p-6 bg-white rounded-2xl shadow-lg">
@@ -126,7 +121,6 @@ const DashboardTable = ({ tableRows }: { tableRows: { name: string; cooking: str
   );
 };
 
-// Main component
 const CuisineScreen: React.FC<CuisineScreenProps> = ({
   pendingOrders,
   completedOrders,
@@ -140,20 +134,16 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   const [sortedPendingOrders, setSortedPendingOrders] = useState<Order[]>([]);
   const [isHorizontalLayout, setIsHorizontalLayout] = useState(true);
 
-  // Filtre et trie les commandes par ordre d'arrivée chaque fois que pendingOrders change
   useEffect(() => {
-    // Filtrer pour n'avoir que les commandes de repas et en cours
     const filteredOrders = pendingOrders.filter(order => 
       order.status === 'pending' && 
       order.meals && 
       order.meals.length > 0 &&
-      (!order.id.includes('-drinks')) // Exclure explicitement les commandes de boissons
+      (!order.id.includes('-drinks'))
     );
     
-    // Éliminer les doublons
     const uniqueOrderIds = new Set();
     const uniqueOrders = filteredOrders.filter(order => {
-      // Créer une clé unique basée sur la table et l'heure de création
       const orderKey = `${order.table}-${order.createdAt}`;
       
       if (!uniqueOrderIds.has(orderKey)) {
@@ -163,50 +153,52 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       return false;
     });
     
-    // Trier par date de création
     const sorted = sortOrdersByCreationTime(uniqueOrders);
     
     setSortedPendingOrders(sorted);
   }, [pendingOrders]);
 
-  // Fonction pour marquer une commande comme prête dans Firebase
-  const marquerCommandePrete = (idCommande: string) => {
-    // Référence à la commande dans Firebase
-    const refCommande = ref(database, `orders/${idCommande}`);
+  const marquerCommandePrete = async (order: Order) => {
+    const idCommande = order.id;
+    const refCommande = ref(database, `pendingOrders/${idCommande}`);
     
-    // Mettre à jour le statut de la commande dans Firebase
-    update(refCommande, {
-      status: 'ready',
-      readyTime: serverTimestamp(),
-      notified: false // Réinitialiser le statut de notification pour que tous les clients soient notifiés
-    })
-    .then(() => {
+    try {
+      await update(refCommande, {
+        status: 'ready',
+        mealsStatus: 'ready',
+        readyTime: serverTimestamp(),
+        notified: false
+      });
+      
       console.log(`Commande ${idCommande} marquée comme prête`);
+      
+      const newNotificationRef = ref(database, `notifications/${idCommande}`);
+      await set(newNotificationRef, {
+        orderId: idCommande,
+        waitress: order.waitress,
+        table: order.table,
+        status: 'ready',
+        read: false,
+        timestamp: Date.now()
+      });
+      
+      console.log(`Notification créée pour la commande ${idCommande}`);
+      
       toast({
         title: "Commande prête",
         description: "La commande a été marquée comme prête et tous les appareils ont été notifiés.",
       });
-      
-      // Mettre également à jour le statut de notification dans un emplacement séparé pour une meilleure synchronisation
-      const refNotification = ref(database, `notifications/${idCommande}`);
-      set(refNotification, {
-        orderId: idCommande,
-        status: 'ready',
-        timestamp: serverTimestamp(),
-        read: false
-      });
-    })
-    .catch(erreur => {
+    }
+    catch (erreur) {
       console.error("Erreur lors de la mise à jour du statut:", erreur);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour le statut de la commande.",
         variant: "destructive",
       });
-    });
+    }
   };
-  
-  // Si on montre les commandes terminées, utiliser le composant CompletedOrdersScreen
+
   if (showOrders === 'completed') {
     return (
       <CompletedOrdersScreen 
@@ -222,21 +214,15 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
   }
 
   const handleOrderReady = (order: Order) => {
-    // Appeler la fonction Firebase pour mettre à jour le statut
-    marquerCommandePrete(order.id);
-    
-    // Appeler ensuite la fonction onOrderReady pour mettre à jour l'état local
+    marquerCommandePrete(order);
     onOrderReady(order);
-    
     toast({
       title: "Notification envoyée",
       description: `La serveuse ${order.waitress} a été notifiée que la commande est prête.`,
     });
   };
 
-  // Improved grouping for meals by cooking style
   const countItemsByCooking = () => {
-    // Structure to store grouped items
     const groupedItems: Record<string, Record<string, number>> = {};
     
     sortedPendingOrders.forEach((order) => {
@@ -245,12 +231,10 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         const cookingStyle = meal.cooking || 'standard';
         const quantity = meal.quantity || 1;
         
-        // Create item category if it doesn't exist
         if (!groupedItems[itemName]) {
           groupedItems[itemName] = {};
         }
         
-        // Add or update cooking style count
         if (!groupedItems[itemName][cookingStyle]) {
           groupedItems[itemName][cookingStyle] = 0;
         }
@@ -264,11 +248,9 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const itemCounts = countItemsByCooking();
   
-  // Prepare the rows for display with grouped items
   const prepareTableRows = () => {
     const tableRows: { name: string; cooking: string; count: number }[] = [];
     
-    // Process all menu items
     Object.entries(itemCounts).forEach(([itemName, cookingCounts]) => {
       Object.entries(cookingCounts).forEach(([cooking, count]) => {
         if (count > 0) {
@@ -277,7 +259,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       });
     });
     
-    // Sort: Entrecôte first, then others by name
     return tableRows.sort((a, b) => {
       if (a.name.includes('Entrecôte') && !b.name.includes('Entrecôte')) {
         return -1;
@@ -291,7 +272,6 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const tableRows = prepareTableRows();
 
-  // Fonction pour basculer entre l'affichage horizontal et vertical
   const toggleLayout = () => {
     setIsHorizontalLayout(!isHorizontalLayout);
   };
@@ -316,7 +296,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
             {isHorizontalLayout ? <LayoutList size={18} /> : <LayoutGrid size={18} />}
           </Toggle>
         )}
-        {showOrders !== 'pending' && <div className="w-8"></div>} {/* Spacer pour garder le titre centré */}
+        {showOrders !== 'pending' && <div className="w-8"></div>}
       </nav>
       
       {menuOpen && (
