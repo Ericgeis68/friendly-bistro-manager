@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useRestaurant } from '../../../context/RestaurantContext';
@@ -14,7 +13,7 @@ const AddMenuItemScreen: React.FC<AddMenuItemScreenProps> = ({ handleCancelEdit 
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [needsCooking, setNeedsCooking] = useState(false);
-  const { menuItems, setMenuItems, saveMenuItemsToFirebase } = useRestaurant();
+  const { menuItems, setMenuItems, saveMenuItemsToSupabase } = useRestaurant();
   const [editCategory, setEditCategory] = useState<'drinks' | 'meals'>('meals');
   const [nextId, setNextId] = useState(1);
 
@@ -57,7 +56,7 @@ const AddMenuItemScreen: React.FC<AddMenuItemScreenProps> = ({ handleCancelEdit 
     
     // Sauvegarder le menu
     setMenuItems(updatedMenuItems);
-    saveMenuItemsToFirebase();
+    saveMenuItemsToSupabase();
     
     toast({
       title: "Élément ajouté",

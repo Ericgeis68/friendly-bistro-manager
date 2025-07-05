@@ -1,9 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Clock, CheckCircle2, Bell } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle2, Bell, ChefHat } from 'lucide-react';
 import type { Order } from '../../types/restaurant';
 import OrderDetailScreen from './OrderDetailScreen';
 import { useMobile } from '@/hooks/use-mobile';
+import { supabaseHelpers } from '../../utils/supabase';
+import { ScreenType } from '../../types/restaurant';
 
 interface WaitressHomeScreenProps {
   loggedInUser: string;
@@ -19,6 +20,15 @@ interface WaitressHomeScreenProps {
   darkMode: boolean;
 }
 
+interface KitchenNotification {
+  id: string;
+  waitress: string;
+  message: string;
+  status: string;
+  created_at: string;
+  read: boolean;
+}
+
 const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   loggedInUser,
   handleLogout,
@@ -29,23 +39,50 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
   onNotificationAcknowledge,
   pendingOrders,
   onOrderComplete,
-  onOrderCancel = () => {}, // Provide default implementation
-  darkMode
+  onOrderCancel = () => {},
+  darkMode,
 }) => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [kitchenNotifications, setKitchenNotifications] = useState<KitchenNotification[]>([]);
   const isMobile = useMobile();
   const [processedNotifications, setProcessedNotifications] = useState<Set<string>>(new Set());
 
+  // Charger les notifications d'appel cuisine
+  useEffect(() => {
+    const loadKitchenNotifications = async () => {
+      try {
+        const notifications = await supabaseHelpers.getNotifications();
+        const kitchenCalls = notifications.filter((notif: any) => 
+          notif.status === 'kitchen_call' && 
+          notif.waitress === loggedInUser && 
+          !notif.read
+        ) as KitchenNotification[];
+        
+        console.log(`Loaded ${kitchenCalls.length} kitchen notifications for ${loggedInUser}`);
+        setKitchenNotifications(kitchenCalls);
+      } catch (error) {
+        console.error('Erreur lors du chargement des notifications cuisine:', error);
+      }
+    };
+
+    loadKitchenNotifications();
+    
+    // Polling pour vérifier les nouvelles notifications toutes les 5 secondes
+    const interval = setInterval(loadKitchenNotifications, 5000);
+    
+    return () => clearInterval(interval);
+  }, [loggedInUser]);
+
   // Effet pour jouer un son de notification quand de nouvelles notifications arrivent
   useEffect(() => {
-    if (pendingNotifications.length > 0) {
+    if (pendingNotifications.length > 0 || kitchenNotifications.length > 0) {
       // Identifier les nouvelles notifications non traitées
       const newNotifications = pendingNotifications.filter(notification => {
         const notificationId = `${notification.id}-${Date.now()}`;
         return !processedNotifications.has(notificationId);
       });
       
-      if (newNotifications.length > 0) {
+      if (newNotifications.length > 0 || kitchenNotifications.length > 0) {
         // Jouer le son uniquement pour les nouvelles notifications
         try {
           const audio = new Audio('/notification-sound.mp3');
@@ -62,7 +99,7 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         setProcessedNotifications(updatedProcessed);
       }
     }
-  }, [pendingNotifications, processedNotifications]);
+  }, [pendingNotifications, kitchenNotifications, processedNotifications]);
 
   const handleViewOrderDetails = (orderId: string) => {
     console.log("Viewing order details for:", orderId);
@@ -75,6 +112,20 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
       onNotificationAcknowledge(orderId);
     } else {
       console.error("Order not found:", orderId);
+    }
+  };
+
+  const handleAcknowledgeKitchenCall = async (notificationId: string) => {
+    try {
+      // Marquer la notification comme lue dans la base de données
+      await supabaseHelpers.updateNotificationRead(notificationId);
+      
+      // Supprimer de la liste locale
+      setKitchenNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+      
+      console.log(`Notification cuisine ${notificationId} marquée comme lue`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la notification:', error);
     }
   };
 
@@ -105,6 +156,9 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
     return true;
   });
 
+  // Compter uniquement les notifications de commandes prêtes pour le bouton "Commandes en cours"
+  const orderReadyNotificationsCount = filteredNotifications.length;
+
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
       <div className={`p-4 flex justify-between items-center ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -114,6 +168,33 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         <div onClick={handleLogout} className="text-blue-500 cursor-pointer">Déconnexion</div>
       </div>
 
+      {/* Notifications d'appel cuisine */}
+      {kitchenNotifications.length > 0 && (
+        <div className="p-4">
+          {kitchenNotifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`${darkMode ? 'bg-orange-900' : 'bg-orange-100'} p-4 rounded-lg mb-4 flex justify-between items-center border-l-4 border-orange-500`}
+            >
+              <div className="flex items-center">
+                <ChefHat className={`${darkMode ? 'text-orange-300' : 'text-orange-600'} mr-2`} />
+                <div>
+                  <span className="font-semibold">Appel de la cuisine</span>
+                  <p className="text-sm opacity-75">{notification.message}</p>
+                </div>
+              </div>
+              <button
+                className={`${darkMode ? 'text-orange-300 hover:text-orange-100' : 'text-orange-600 hover:text-orange-800'} underline px-3 py-1`}
+                onClick={() => handleAcknowledgeKitchenCall(notification.id)}
+              >
+                OK
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Notifications de commandes prêtes */}
       {filteredNotifications.length > 0 && (
         <div className="p-4">
           {filteredNotifications.map((notification) => (
@@ -155,9 +236,9 @@ const WaitressHomeScreen: React.FC<WaitressHomeScreenProps> = ({
         >
           <Clock size={48} className={`mb-3 ${darkMode ? 'text-blue-300' : 'text-blue-500'}`} />
           <span className={`text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>Commandes en cours</span>
-          {filteredNotifications.length > 0 && (
+          {orderReadyNotificationsCount > 0 && (
             <div className="absolute top-4 right-4 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">
-              {filteredNotifications.length}
+              {orderReadyNotificationsCount}
             </div>
           )}
         </button>

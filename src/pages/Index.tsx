@@ -1,11 +1,23 @@
+
 import React from 'react';
 import RestaurantApp from '../components/RestaurantApp';
-import { RestaurantProvider } from '../context/RestaurantContext';
+import { RestaurantProvider, useRestaurant } from '../context/RestaurantContext';
+
+const IndexContent = () => {
+  const { cookingOptions, setCookingOptions } = useRestaurant();
+  
+  return (
+    <RestaurantApp 
+      cookingOptions={cookingOptions} 
+      setCookingOptions={setCookingOptions} 
+    />
+  );
+};
 
 const Index = () => {
   return (
     <RestaurantProvider>
-      <RestaurantApp />
+      <IndexContent />
     </RestaurantProvider>
   );
 };

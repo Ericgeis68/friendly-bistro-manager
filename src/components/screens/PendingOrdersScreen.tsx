@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import type { Order } from '../../types/restaurant';
@@ -7,8 +6,6 @@ import FilterBar from './pendingOrders/FilterBar';
 import SearchBar from './pendingOrders/SearchBar';
 import OrderCard from './pendingOrders/OrderCard';
 import { useFilteredOrders } from '@/hooks/useFilteredOrders';
-import { ref, onValue, update, get } from 'firebase/database';
-import { database, notificationsRef } from '@/utils/firebase';
 import { toast } from '@/hooks/use-toast';
 
 type FilterType = 'all' | 'drinks' | 'meals';
@@ -32,85 +29,10 @@ const PendingOrdersScreen: React.FC<PendingOrdersScreenProps> = ({
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedType, setSelectedType] = useState<'drinks' | 'meals' | 'both' | null>(null);
-  const processedNotificationsRef = useRef<Set<string>>(new Set());
-  
-  useEffect(() => {
-    // Listen for changes in the notifications collection
-    const unsubscribe = onValue(notificationsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const notificationsData = snapshot.val();
-        console.log("Notifications reçues:", notificationsData);
-        
-        // Traiter chaque notification
-        Object.entries(notificationsData).forEach(([key, notification]: [string, any]) => {
-          // Créer un ID unique pour cette notification
-          const notificationId = `${notification.orderId}-${notification.timestamp || Date.now()}`;
-          
-          // Traiter uniquement les notifications non lues, prêtes et non encore traitées
-          if (notification.status === 'ready' && !notification.read && 
-              !processedNotificationsRef.current.has(notificationId)) {
-            console.log("Traitement de la notification non lue:", notification);
-            
-            // Marquer la notification comme lue
-            const notificationRef = ref(database, `notifications/${key}`);
-            update(notificationRef, { read: true });
-            
-            // Marquer cette notification comme traitée localement pour éviter les doublons
-            processedNotificationsRef.current.add(notificationId);
-            
-            // Vérifier si l'ordre correspondant existe dans les ordres locaux
-            const matchingOrder = orders.find(order => order.id === notification.orderId);
-            
-            // Si l'ordre n'est pas trouvé localement, essayons de le récupérer de Firebase
-            if (!matchingOrder) {
-              console.log("Ordre non trouvé localement, tentative de récupération depuis Firebase");
-              get(ref(database, `pendingOrders/${notification.orderId}`))
-                .then(orderSnapshot => {
-                  if (orderSnapshot.exists()) {
-                    const order = orderSnapshot.val();
-                    console.log("Ordre récupéré depuis Firebase:", order);
-                    setPendingOrders(prevOrders => {
-                      if (!prevOrders.some(o => o.id === order.id)) {
-                        return [...prevOrders, order];
-                      }
-                      return prevOrders;
-                    });
-                  }
-                })
-                .catch(error => console.error("Erreur lors de la récupération de l'ordre:", error));
-            }
-            
-            // Afficher la notification toast
-            toast({
-              title: "Commande prête",
-              description: `La commande pour la table ${notification.table || notification.tableNumber} est prête à être servie.`,
-              variant: "default",
-              duration: 5000,
-            });
-            
-            // Jouer un son de notification
-            try {
-              const notificationSound = new Audio('/notification-sound.mp3');
-              notificationSound.play().catch(e => console.log('Erreur de lecture audio:', e));
-            } catch (error) {
-              console.error("Erreur lors de la lecture du son:", error);
-            }
-          }
-        });
-      }
-    });
-    
-    // Nettoyer l'écouteur lors du démontage du composant
-    return () => {
-      console.log("Nettoyage de l'écouteur de notifications");
-      unsubscribe();
-    };
-  }, [orders, setPendingOrders]);
 
   // Ensure we're handling orders that are passed from props correctly
   useEffect(() => {
     console.log("Orders passed to PendingOrdersScreen:", orders.length);
-    // We don't need to set pending orders here as they are passed as props
   }, [orders]);
 
   // Add the handleCompleteConfirm function

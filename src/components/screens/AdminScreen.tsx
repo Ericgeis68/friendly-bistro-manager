@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, LayoutDashboard, Coffee, Utensils, Settings } from 'lucide-react';
+import { X, ChevronRight, LayoutDashboard, Coffee, Utensils, Settings, Users } from 'lucide-react';
 import Sidebar from './admin/Sidebar';
 import MenuScreen from './admin/MenuScreen';
 import DashboardScreen from './admin/DashboardScreen';
@@ -10,15 +11,16 @@ import AddMenuItemScreen from './admin/AddMenuItemScreen';
 import EditItemScreen from './admin/EditItemScreen';
 import AddCookingOptionScreen from './admin/AddCookingOptionScreen';
 import DailySalesScreen from './admin/DailySalesScreen';
+import WaitressManagementScreen from './admin/WaitressManagementScreen';
+import FloorPlanManager from '../ui/FloorPlanManager'; // Utiliser FloorPlanManager au lieu d'AdminPage
 import MobileHeader from './admin/MobileHeader';
 import { useMobile } from '@/hooks/use-mobile';
 import { toast } from "@/hooks/use-toast";
-import { set, ref, get, onValue } from "firebase/database";
-import { database, cookingOptionsRef, pendingOrdersRef, completedOrdersRef } from '../../utils/firebase';
-import { useOrderManagement } from '@/hooks/useOrderManagement';
+import { supabaseHelpers } from '../../utils/supabase';
+import { useRestaurant } from '../../context/RestaurantContext';
 import { Order } from '../../types/restaurant';
 
-type AdminScreenType = 'dashboard' | 'menu' | 'cooking' | 'settings' | 'editMenu' | 'addMenuItem' | 'editItem' | 'dailySales' | 'addCookingOption' | 'editCooking';
+type AdminScreenType = 'dashboard' | 'menu' | 'cooking' | 'settings' | 'editMenu' | 'addMenuItem' | 'editItem' | 'dailySales' | 'addCookingOption' | 'editCooking' | 'waitresses' | 'floorplan';
 
 interface AdminScreenProps {
   onLogout: () => void;
@@ -41,62 +43,19 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
   const [selectedCookingOption, setSelectedCookingOption] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);
   const isMobile = useMobile();
-  const { setPendingOrders, setCompletedOrders, resetOrders } = useOrderManagement();
+  
+  // Get data from context instead of setting up subscriptions
+  const { 
+    pendingOrders, 
+    completedOrders, 
+    refreshOrders, 
+    resetOrders 
+  } = useRestaurant();
 
   useEffect(() => {
-    const fetchAllOrders = async () => {
-      try {
-        const pendingSnapshot = await get(pendingOrdersRef);
-        const completedSnapshot = await get(completedOrdersRef);
-        
-        const pendingOrders = pendingSnapshot.exists() ? Object.values(pendingSnapshot.val()) as Order[] : [];
-        const completedOrders = completedSnapshot.exists() ? Object.values(completedSnapshot.val()) as Order[] : [];
-        
-        setOrders([...pendingOrders, ...completedOrders]);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des commandes:", error);
-      }
-    };
-
-    fetchAllOrders();
-
-    const unsubscribePending = onValue(pendingOrdersRef, () => {
-      fetchAllOrders();
-    });
-    
-    const unsubscribeCompleted = onValue(completedOrdersRef, () => {
-      fetchAllOrders();
-    });
-    
-    return () => {
-      unsubscribePending();
-      unsubscribeCompleted();
-    };
-  }, []);
-
-  const refreshOrders = async () => {
-    try {
-      const pendingSnapshot = await get(pendingOrdersRef);
-      const completedSnapshot = await get(completedOrdersRef);
-      
-      const pendingOrders = pendingSnapshot.exists() ? Object.values(pendingSnapshot.val()) as Order[] : [];
-      const completedOrders = completedSnapshot.exists() ? Object.values(completedSnapshot.val()) as Order[] : [];
-      
-      setOrders([...pendingOrders, ...completedOrders]);
-      
-      toast({
-        title: "Actualisation",
-        description: "Les données ont été actualisées.",
-      });
-    } catch (error) {
-      console.error("Erreur lors de la récupération des commandes:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de récupérer les commandes.",
-        variant: "destructive",
-      });
-    }
-  };
+    // Combine pending and completed orders for admin view
+    setOrders([...pendingOrders, ...completedOrders]);
+  }, [pendingOrders, completedOrders]);
 
   const handleResetApplication = () => {
     resetOrders();
@@ -107,30 +66,29 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     onLogout();
   };
 
-  const saveCookingOptions = (options: string[]) => {
-    set(cookingOptionsRef, options)
-      .then(() => {
-        console.log("Cooking options saved to Firebase");
-        
-        try {
-          localStorage.setItem('cookingOptions', JSON.stringify(options));
-        } catch (e) {
-          console.error("Error saving to localStorage:", e);
-        }
-        
-        toast({
-          title: "Options enregistrées",
-          description: "Les options de cuisson ont été enregistrées avec succès.",
-        });
-      })
-      .catch(error => {
-        console.error("Error saving cooking options:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible d'enregistrer les options de cuisson.",
-          variant: "destructive",
-        });
+  const saveCookingOptions = async (options: string[]) => {
+    try {
+      await supabaseHelpers.updateCookingOptions(options);
+      console.log("Cooking options saved to Supabase");
+      
+      try {
+        localStorage.setItem('cookingOptions', JSON.stringify(options));
+      } catch (e) {
+        console.error("Error saving to localStorage:", e);
+      }
+      
+      toast({
+        title: "Options enregistrées",
+        description: "Les options de cuisson ont été enregistrées avec succès.",
       });
+    } catch (error) {
+      console.error("Error saving cooking options:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'enregistrer les options de cuisson.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddCookingOption = (newOption: string) => {
@@ -182,6 +140,8 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     { id: 'dashboard', label: 'Tableau de bord', icon: <LayoutDashboard /> },
     { id: 'menu', label: 'Menus', icon: <Coffee /> },
     { id: 'cooking', label: 'Cuisson', icon: <Utensils /> },
+    { id: 'floorplan', label: 'Plans de salle', icon: <Settings /> },
+    { id: 'waitresses', label: 'Serveuses', icon: <Users /> },
     { id: 'settings', label: 'Paramètres', icon: <Settings /> },
   ];
 
@@ -225,6 +185,11 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
             onDeleteOption={handleDeleteCookingOption}
           />
         );
+      case 'floorplan':
+        // Utiliser FloorPlanManager au lieu d'AdminPage pour avoir accès aux modèles prédéfinis
+        return <FloorPlanManager isDarkMode={true} />;
+      case 'waitresses':
+        return <WaitressManagementScreen />;
       case 'settings':
         return <SettingsScreen 
           serverIp="" 

@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Order } from '../../types/restaurant';
-import { groupMenuItems } from '../../utils/itemGrouping';
+import { Order, MenuItem } from '../../types/restaurant';
 import { Badge } from '../ui/badge';
 
 export interface OrderDetailScreenProps {
@@ -32,8 +30,43 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   const safeMeals = Array.isArray(meals) ? meals : [];
   const safeDrinks = Array.isArray(drinks) ? drinks : [];
 
-  const groupedMeals = safeMeals.length > 0 ? groupMenuItems(safeMeals) : {};
-  const groupedDrinks = safeDrinks.length > 0 ? groupMenuItems(safeDrinks, false) : {};
+  // Grouper manuellement pour préserver les commentaires
+  const groupDrinksWithComments = (drinks: MenuItem[]) => {
+    const grouped: { [key: string]: MenuItem } = {};
+    
+    drinks.forEach(drink => {
+      const key = drink.comment ? `${drink.name}-${drink.comment}` : drink.name;
+      
+      if (grouped[key]) {
+        grouped[key].quantity = (grouped[key].quantity || 1) + (drink.quantity || 1);
+      } else {
+        grouped[key] = { ...drink };
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const groupMealsWithComments = (meals: MenuItem[]) => {
+    const grouped: { [key: string]: MenuItem } = {};
+    
+    meals.forEach(meal => {
+      const cookingPart = meal.cooking ? `-${meal.cooking}` : '';
+      const commentPart = meal.comment ? `-${meal.comment}` : '';
+      const key = `${meal.name}${cookingPart}${commentPart}`;
+      
+      if (grouped[key]) {
+        grouped[key].quantity = (grouped[key].quantity || 1) + (meal.quantity || 1);
+      } else {
+        grouped[key] = { ...meal };
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const groupedMeals = safeMeals.length > 0 ? groupMealsWithComments(safeMeals) : [];
+  const groupedDrinks = safeDrinks.length > 0 ? groupDrinksWithComments(safeDrinks) : [];
 
   return (
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-800'}`}>
@@ -65,32 +98,46 @@ const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
           </div>
         </div>
 
-        {safeDrinks.length > 0 && (
+        {groupedDrinks.length > 0 && (
           <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-md p-4 mb-4`}>
             <h2 className={`font-bold mb-2 text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>Boissons</h2>
-            {Object.values(groupedDrinks).map((item, index) => (
-              <div key={index} className="flex justify-between mb-2">
-                <div>
-                  <span className="font-medium">{item.name}</span>
-                  <span className={isDarkMode ? 'text-gray-300 text-sm' : 'text-gray-600 text-sm'}> x{item.quantity}</span>
+            {groupedDrinks.map((item, index) => (
+              <div key={index} className="mb-2">
+                <div className="flex justify-between">
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    <span className={isDarkMode ? 'text-gray-300 text-sm' : 'text-gray-600 text-sm'}> x{item.quantity || 1}</span>
+                  </div>
+                  <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>
                 </div>
-                <span>{(item.price * item.quantity).toFixed(2)} €</span>
+                {item.comment && (
+                  <div className={`text-sm italic mt-1 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                    "{item.comment}"
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {safeMeals.length > 0 && (
+        {groupedMeals.length > 0 && (
           <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-md p-4 mb-4`}>
             <h2 className={`font-bold mb-2 text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>Repas</h2>
-            {Object.values(groupedMeals).map((item, index) => (
-              <div key={index} className="flex justify-between mb-2">
-                <div>
-                  <span className="font-medium">{item.name}</span>
-                  <span className={isDarkMode ? 'text-gray-300 text-sm' : 'text-gray-600 text-sm'}> x{item.quantity}</span>
-                  {item.cooking && <span className={isDarkMode ? 'text-gray-300 text-sm' : 'text-gray-600 text-sm'}> ({item.cooking})</span>}
+            {groupedMeals.map((item, index) => (
+              <div key={index} className="mb-2">
+                <div className="flex justify-between">
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    <span className={isDarkMode ? 'text-gray-300 text-sm' : 'text-gray-600 text-sm'}> x{item.quantity || 1}</span>
+                    {item.cooking && <span className={isDarkMode ? 'text-gray-300 text-sm' : 'text-gray-600 text-sm'}> ({item.cooking})</span>}
+                  </div>
+                  <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>
                 </div>
-                <span>{(item.price * item.quantity).toFixed(2)} €</span>
+                {item.comment && (
+                  <div className={`text-sm italic mt-1 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                    "{item.comment}"
+                  </div>
+                )}
               </div>
             ))}
           </div>

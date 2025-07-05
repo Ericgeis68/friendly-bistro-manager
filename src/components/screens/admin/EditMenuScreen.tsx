@@ -3,52 +3,50 @@ import { Edit, Plus, Trash2, X } from 'lucide-react';
 import { MenuItems, MenuItem } from '../../../types/restaurant';
 import { useRestaurant } from '../../../context/RestaurantContext';
 import { toast } from "../../../hooks/use-toast";
-import { ref, update } from 'firebase/database';
-import { database } from '../../../utils/firebase';
+import { supabaseHelpers } from '../../../utils/supabase';
 
 interface EditMenuScreenProps {
   setCurrentScreenLocal: (screen: string) => void;
 }
 
 const EditMenuScreen: React.FC<EditMenuScreenProps> = ({ setCurrentScreenLocal }) => {
-  const { menuItems, setMenuItems, saveMenuItemsToFirebase } = useRestaurant();
+  const { menuItems, setMenuItems, saveMenuItemsToSupabase } = useRestaurant();
 
   const handleAddItem = (category: 'drinks' | 'meals') => {
-    // Trouver le plus grand ID actuel pour ce type d'élément
-    const items = category === 'drinks' ? menuItems.drinks : menuItems.meals;
-    const maxId = items.length > 0 ? Math.max(...items.map(item => item.id)) : 0;
+    // Find the highest ID across ALL menu items (both drinks and meals)
+    const allItems = [...menuItems.drinks, ...menuItems.meals];
+    const maxId = allItems.length > 0 ? Math.max(...allItems.map(item => item.id)) : 0;
     
-    // Rediriger vers l'écran d'ajout avec les informations nécessaires
+    // Redirect to add screen with necessary information
     setCurrentScreenLocal('addMenuItem');
     
-    // Stocker les informations pour l'écran d'ajout
+    // Store information for the add screen
     localStorage.setItem('editCategory', category);
     localStorage.setItem('nextId', String(maxId + 1));
   };
 
   const handleEditItem = (item: MenuItem, category: 'drinks' | 'meals') => {
-    // Stocker l'élément à modifier et sa catégorie pour l'écran d'édition
+    // Store the item to edit and its category for the edit screen
     localStorage.setItem('editItem', JSON.stringify(item));
     localStorage.setItem('editCategory', category);
     
-    // Rediriger vers l'écran d'édition
+    // Redirect to edit screen
     setCurrentScreenLocal('editItem');
   };
 
   const handleDeleteItem = async (id: number, category: 'drinks' | 'meals') => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer cet élément ?`)) {
-      // Créer une copie des éléments actuels
+      // Create a copy of current items
       const updatedMenuItems = { ...menuItems };
       
-      // Filtrer les éléments pour retirer celui à supprimer
+      // Filter items to remove the one to delete
       updatedMenuItems[category] = updatedMenuItems[category].filter(item => item.id !== id);
       
       try {
-        // Mettre à jour dans Firebase
-        const menuRef = ref(database, 'menuItems');
-        await update(menuRef, updatedMenuItems);
+        // Update in Supabase
+        await supabaseHelpers.updateMenuItems(updatedMenuItems);
         
-        // Mettre à jour l'état local
+        // Update local state
         setMenuItems(updatedMenuItems);
         
         toast({
@@ -59,7 +57,6 @@ const EditMenuScreen: React.FC<EditMenuScreenProps> = ({ setCurrentScreenLocal }
         console.error("Erreur lors de la suppression:", error);
         toast({
           title: "Erreur",
-          
           description: "Une erreur est survenue lors de la suppression",
           variant: "destructive",
         });

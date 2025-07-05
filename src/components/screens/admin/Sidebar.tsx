@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowLeft, BarChart2, UtensilsCrossed, Settings, List, X } from 'lucide-react';
+import { ArrowLeft, BarChart2, UtensilsCrossed, Settings, List, X, Users, Map } from 'lucide-react';
 
 interface SidebarProps {
   currentScreenLocal: string;
@@ -57,6 +56,26 @@ const Sidebar = ({
         >
           <UtensilsCrossed size={20} className="mr-2" />
           Cuissons
+        </button>
+        <button
+          onClick={() => {
+            setCurrentScreenLocal('floorplan');
+            setSidebarOpen(false);
+          }}
+          className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'floorplan' ? 'bg-gray-700' : ''}`}
+        >
+          <Map size={20} className="mr-2" />
+          Plans de Salle
+        </button>
+        <button
+          onClick={() => {
+            setCurrentScreenLocal('waitresses');
+            setSidebarOpen(false);
+          }}
+          className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'waitresses' ? 'bg-gray-700' : ''}`}
+        >
+          <Users size={20} className="mr-2" />
+          Serveuses
         </button>
         <button
           onClick={() => {

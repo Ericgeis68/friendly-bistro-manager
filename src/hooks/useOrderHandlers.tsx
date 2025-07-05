@@ -1,8 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
 import type { Order, MenuItem, ScreenType, UserRole } from '../types/restaurant';
-import { ref, set, remove, get, update } from "firebase/database";
-import { database } from '../utils/firebase';
+import { supabaseHelpers } from '../utils/supabase';
 
 interface UseOrderHandlersProps {
   loggedInUser: string;
@@ -78,19 +77,16 @@ export const useOrderHandlers = ({
     console.log("Order drinks:", order.drinks.length, "Order meals:", order.meals.length);
     console.log("LoggedInUser:", loggedInUser);
     console.log("TableNumber:", tableNumber);
+    console.log("TableComment:", tableComment);
     
     if (order.drinks.length === 0 && order.meals.length === 0) {
       console.log("No items in order, returning");
       return;
     }
     
-    const pendingOrdersRef = ref(database, 'pendingOrders');
-    const existingOrdersSnapshot = await get(pendingOrdersRef);
-    const existingOrders = existingOrdersSnapshot.exists() ? Object.values(existingOrdersSnapshot.val()) as Order[] : [];
-    
-    const sameTableOrders = existingOrders.filter((existingOrder: Order) => 
-      existingOrder.table === tableNumber && 
-      existingOrder.waitress === loggedInUser
+    const existingOrders = await supabaseHelpers.getPendingOrders();
+    const sameTableOrders = existingOrders.filter((existingOrder: any) => 
+      existingOrder.table_number === tableNumber
     );
     
     console.log("Existing orders for this table:", sameTableOrders.length);
@@ -100,18 +96,23 @@ export const useOrderHandlers = ({
     if (order.drinks.length > 0) {
       console.log("Creating drinks order");
       
-      const existingDrinkOrder = sameTableOrders.find((existingOrder: Order) => 
+      // Vérifier s'il existe déjà une commande de boissons pour cette table et cette serveuse
+      // SANS commentaire ou avec le même commentaire
+      const existingDrinkOrder = sameTableOrders.find((existingOrder: any) => 
         existingOrder.drinks && existingOrder.drinks.length > 0 && 
-        (!existingOrder.meals || existingOrder.meals.length === 0)
+        (!existingOrder.meals || existingOrder.meals.length === 0) &&
+        existingOrder.waitress === loggedInUser &&
+        (!tableComment || existingOrder.table_comment === tableComment)
       );
       
-      if (existingDrinkOrder) {
-        console.log("A drink order already exists for this table");
+      if (existingDrinkOrder && !tableComment) {
+        console.log("A drink order already exists for this table and waitress without comment");
         toast({
           title: "Attention",
-          description: `Une commande de boissons existe déjà pour la table ${tableNumber}.`,
+          description: `Une commande de boissons existe déjà pour la table ${tableNumber}. Ajoutez un commentaire pour créer une nouvelle commande.`,
           variant: "destructive",
         });
+        return;
       } else {
         const drinksOrder: Order = {
           id: generateId(tableNumber, 'drinks'),
@@ -131,32 +132,31 @@ export const useOrderHandlers = ({
           existingOrder.table === drinksOrder.table && 
           existingOrder.waitress === drinksOrder.waitress &&
           existingOrder.drinks.length > 0 && 
-          existingOrder.meals.length === 0
+          existingOrder.meals.length === 0 &&
+          existingOrder.tableComment === drinksOrder.tableComment
         );
         
         if (!isDuplicate) {
-          const orderRef = ref(database, `pendingOrders/${drinksOrder.id}`);
-          set(orderRef, drinksOrder)
-            .then(() => {
-              console.log("Drink order saved to Firebase successfully");
-              
-              if (!pendingOrders.some(o => o.id === drinksOrder.id)) {
-                setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
-              }
-              
-              toast({
-                title: "Commande boissons envoyée",
-                description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
-              });
-            })
-            .catch(error => {
-              console.error("Error saving drink order to Firebase:", error);
-              toast({
-                title: "Erreur",
-                description: "Erreur lors de l'envoi de la commande de boissons.",
-                variant: "destructive",
-              });
+          try {
+            await supabaseHelpers.createOrder(drinksOrder);
+            console.log("Drink order saved to Supabase successfully");
+            
+            if (!pendingOrders.some(o => o.id === drinksOrder.id)) {
+              setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
+            }
+            
+            toast({
+              title: "Commande boissons envoyée",
+              description: `La commande de boissons pour la table ${tableNumber} a été envoyée.`,
             });
+          } catch (error) {
+            console.error("Error saving drink order to Supabase:", error);
+            toast({
+              title: "Erreur",
+              description: "Erreur lors de l'envoi de la commande de boissons.",
+              variant: "destructive",
+            });
+          }
         } else {
           console.log("Duplicate drink order detected, not saving");
         }
@@ -166,18 +166,23 @@ export const useOrderHandlers = ({
     if (order.meals.length > 0) {
       console.log("Creating meals order");
       
-      const existingMealOrder = sameTableOrders.find((existingOrder: Order) => 
+      // Vérifier s'il existe déjà une commande de repas pour cette table et cette serveuse
+      // SANS commentaire ou avec le même commentaire
+      const existingMealOrder = sameTableOrders.find((existingOrder: any) => 
         existingOrder.meals && existingOrder.meals.length > 0 && 
-        (!existingOrder.drinks || existingOrder.drinks.length === 0)
+        (!existingOrder.drinks || existingOrder.drinks.length === 0) &&
+        existingOrder.waitress === loggedInUser &&
+        (!tableComment || existingOrder.table_comment === tableComment)
       );
       
-      if (existingMealOrder) {
-        console.log("A meal order already exists for this table");
+      if (existingMealOrder && !tableComment) {
+        console.log("A meal order already exists for this table and waitress without comment");
         toast({
           title: "Attention",
-          description: `Une commande de repas existe déjà pour la table ${tableNumber}.`,
+          description: `Une commande de repas existe déjà pour la table ${tableNumber}. Ajoutez un commentaire pour créer une nouvelle commande.`,
           variant: "destructive",
         });
+        return;
       } else {
         const mealsOrder: Order = {
           id: generateId(tableNumber, 'meals'),
@@ -197,32 +202,31 @@ export const useOrderHandlers = ({
           existingOrder.table === mealsOrder.table && 
           existingOrder.waitress === mealsOrder.waitress &&
           existingOrder.meals.length > 0 && 
-          existingOrder.drinks.length === 0
+          existingOrder.drinks.length === 0 &&
+          existingOrder.tableComment === mealsOrder.tableComment
         );
         
         if (!isDuplicate) {
-          const orderRef = ref(database, `pendingOrders/${mealsOrder.id}`);
-          set(orderRef, mealsOrder)
-            .then(() => {
-              console.log("Meal order saved to Firebase successfully");
-              
-              if (!pendingOrders.some(o => o.id === mealsOrder.id)) {
-                setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
-              }
-              
-              toast({
-                title: "Commande repas envoyée",
-                description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
-              });
-            })
-            .catch(error => {
-              console.error("Error saving meal order to Firebase:", error);
-              toast({
-                title: "Erreur",
-                description: "Erreur lors de l'envoi de la commande de repas.",
-                variant: "destructive",
-              });
+          try {
+            await supabaseHelpers.createOrder(mealsOrder);
+            console.log("Meal order saved to Supabase successfully");
+            
+            if (!pendingOrders.some(o => o.id === mealsOrder.id)) {
+              setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
+            }
+            
+            toast({
+              title: "Commande repas envoyée",
+              description: `La commande de repas pour la table ${tableNumber} a été envoyée en cuisine.`,
             });
+          } catch (error) {
+            console.error("Error saving meal order to Supabase:", error);
+            toast({
+              title: "Erreur",
+              description: "Erreur lors de l'envoi de la commande de repas.",
+              variant: "destructive",
+            });
+          }
         } else {
           console.log("Duplicate meal order detected, not saving");
         }
@@ -244,19 +248,23 @@ export const useOrderHandlers = ({
   };
 
   const handleNotificationAcknowledge = async (orderId: string) => {
-    // Mettre à jour le statut de lecture dans Firebase
-    const notificationsSnapshot = await get(ref(database, 'notifications'));
-    if (notificationsSnapshot.exists()) {
-      const notifications = notificationsSnapshot.val();
-      Object.entries(notifications).forEach(async ([key, notification]: [string, any]) => {
-        if (notification.orderId === orderId) {
-          await update(ref(database, `notifications/${key}`), { read: true });
-        }
+    console.log("Acknowledging notification for order:", orderId);
+    
+    try {
+      await supabaseHelpers.deleteNotification(orderId);
+      console.log("Notification removed from Supabase:", orderId);
+      
+      // Mettre à jour l'état local des notifications
+      setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
+      
+    } catch (error) {
+      console.error("Error removing notification:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la suppression de la notification",
+        variant: "destructive",
       });
     }
-    
-    // Mettre à jour l'état local
-    setPendingNotifications(prev => prev.filter(order => order.id !== orderId));
   };
 
   const handleOrderCompleteWithType = (order: Order, type: 'drinks' | 'meals' | 'both') => {

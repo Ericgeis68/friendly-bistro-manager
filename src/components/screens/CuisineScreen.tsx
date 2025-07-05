@@ -3,11 +3,11 @@ import { Menu, LayoutGrid, LayoutList } from 'lucide-react';
 import type { MenuItem, Order } from '../../types/restaurant';
 import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
-import { ref, update, serverTimestamp, set, push, get } from 'firebase/database';
-import { database, notificationsRef } from '../../utils/firebase';
+import { supabaseHelpers } from '../../utils/supabase';
 import { sortOrdersByCreationTime } from '../../utils/orderUtils';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
+import WaitressSelectionDialog from '../ui/WaitressSelectionDialog';
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -19,14 +19,25 @@ interface CuisineScreenProps {
 }
 
 const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady: (order: Order) => void }) => {
-  const groupedMeals: Record<string, MenuItem> = {};
+  const groupedMeals: Record<string, MenuItem & { comments: string[] }> = {};
   
   order.meals.forEach((meal) => {
-    const key = `${meal.name}-${meal.cooking || 'standard'}`;
+    const cookingPart = meal.cooking ? `-${meal.cooking}` : '';
+    const key = `${meal.name}${cookingPart}`;
+    
     if (!groupedMeals[key]) {
-      groupedMeals[key] = { ...meal, quantity: 0 };
+      groupedMeals[key] = { 
+        ...meal, 
+        quantity: 0, 
+        comments: [] 
+      };
     }
+    
     groupedMeals[key].quantity = (groupedMeals[key].quantity || 0) + (meal.quantity || 1);
+    
+    if (meal.comment && !groupedMeals[key].comments.includes(meal.comment)) {
+      groupedMeals[key].comments.push(meal.comment);
+    }
   });
 
   const formatTime = (dateString: string | number) => {
@@ -53,8 +64,16 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
       </div>
       <ul className="list-disc pl-6">
         {Object.values(groupedMeals).map((meal, index) => (
-          <li key={`${order.id}-meal-${index}`}>
-            {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+          <li key={`${order.id}-meal-${index}`} className="mb-1">
+            <div>{meal.name} x{meal.quantity}</div>
+            {meal.cooking && <div className="text-sm text-gray-600 ml-2">({meal.cooking})</div>}
+            {meal.comments.length > 0 && (
+              <div className="text-sm italic text-blue-600 ml-2">
+                {meal.comments.map((comment, idx) => (
+                  <div key={idx}>"{comment}"</div>
+                ))}
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -160,26 +179,20 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
 
   const marquerCommandePrete = async (order: Order) => {
     const idCommande = order.id;
-    const refCommande = ref(database, `pendingOrders/${idCommande}`);
     
     try {
-      await update(refCommande, {
+      await supabaseHelpers.updateOrder(idCommande, {
         status: 'ready',
-        mealsStatus: 'ready',
-        readyTime: serverTimestamp(),
-        notified: false
+        meals_status: 'ready'
       });
       
       console.log(`Commande ${idCommande} marquée comme prête`);
       
-      const newNotificationRef = ref(database, `notifications/${idCommande}`);
-      await set(newNotificationRef, {
+      await supabaseHelpers.createNotification({
         orderId: idCommande,
         waitress: order.waitress,
         table: order.table,
-        status: 'ready',
-        read: false,
-        timestamp: Date.now()
+        status: 'ready'
       });
       
       console.log(`Notification créée pour la commande ${idCommande}`);
@@ -194,6 +207,33 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour le statut de la commande.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCallWaitresses = async (waitress: string | 'all') => {
+    try {
+      if (waitress === 'all') {
+        await supabaseHelpers.createKitchenCallNotification();
+        toast({
+          title: "Appel envoyé",
+          description: "Toutes les serveuses ont été notifiées.",
+        });
+      } else {
+        await supabaseHelpers.createKitchenCallNotification(waitress);
+        toast({
+          title: "Appel envoyé",
+          description: `${waitress} a été notifiée.`,
+        });
+      }
+      
+      setMenuOpen(false);
+    } catch (error) {
+      console.error("Erreur lors de l'appel des serveuses:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer l'appel aux serveuses.",
         variant: "destructive",
       });
     }
@@ -310,6 +350,9 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
           <button onClick={() => { setShowOrders('dashboard'); setMenuOpen(false); }} className="w-full text-left py-2 px-4 hover:bg-gray-100">
             Vue d'ensemble des plats
           </button>
+          <hr className="my-2" />
+          <WaitressSelectionDialog onCallWaitress={handleCallWaitresses} />
+          <hr className="my-2" />
           <button onClick={onLogout} className="w-full text-left py-2 px-4 hover:bg-gray-100">
             Déconnexion
           </button>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MenuItems } from '../../../types/restaurant';
 import { useRestaurant } from '../../../context/RestaurantContext';

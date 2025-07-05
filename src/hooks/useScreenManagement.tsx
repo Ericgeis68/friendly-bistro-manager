@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import type { ScreenType } from '../types/restaurant';
 

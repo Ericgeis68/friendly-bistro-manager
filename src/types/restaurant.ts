@@ -1,33 +1,34 @@
+export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'splitPayment' | 'cuisine' | 'admin' | 'floorPlanView';
 
-export type MenuItem = {
+export interface MenuItem {
   id: number;
   name: string;
   price: number;
-  quantity?: number;
+  category?: string; // Optionnel pour compatibilité
   cooking?: string;
-  needsCooking?: boolean; // New field to indicate if this item needs cooking options
-};
+  quantity?: number;
+  needsCooking?: boolean;
+  comment?: string;
+}
 
-export type Order = {
+export interface Order {
   id: string;
   table: string;
+  tableNumber?: string; // Optionnel pour compatibilité
   tableComment?: string;
   waitress: string;
   drinks: MenuItem[];
   meals: MenuItem[];
-  status: 'pending' | 'ready' | 'delivered' | 'cancelled';
-  createdAt: number | string;
+  status: 'pending' | 'in_progress' | 'ready' | 'delivered' | 'cancelled';
   drinksStatus?: 'pending' | 'ready' | 'delivered';
-  mealsStatus?: 'pending' | 'ready' | 'delivered';
-};
-
-export type MenuItems = {
-  drinks: MenuItem[];
-  meals: MenuItem[];
-};
-
-export type ScreenType = 'login' | 'waitress' | 'cuisine' | 'admin' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'splitPayment';
+  mealsStatus?: 'pending' | 'in_progress' | 'ready' | 'delivered';
+  createdAt: string;
+  updatedAt?: string;
+}
 
 export type UserRole = 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin';
 
-export type CookingOption = string;
+export interface MenuItems {
+  boissons: MenuItem[];
+  repas: MenuItem[];
+}

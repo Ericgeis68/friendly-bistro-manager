@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Menu } from 'lucide-react';
 import { useMobile } from '@/hooks/use-mobile';
@@ -21,6 +20,7 @@ const MobileHeader = ({
       case 'dashboard': return 'Tableau de Bord';
       case 'menu': return 'Menus';
       case 'cooking': return 'Cuissons';
+      case 'waitresses': return 'Serveuses';
       case 'dailySales': return 'Ventes du Jour';
       case 'settings': return 'Paramètres';
       case 'editMenu': return 'Modifier Menu';

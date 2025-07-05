@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { MenuItem } from '../../types/restaurant';
-import { groupMenuItems } from '../../utils/itemGrouping';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -38,6 +36,46 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   const { drinks = [], meals = [] } = order;
   const isDarkMode = document.documentElement.classList.contains('dark');
 
+  // Grouper les articles manuellement pour préserver les commentaires
+  const groupDrinksWithComments = (drinks: MenuItem[]) => {
+    const grouped: { [key: string]: MenuItem } = {};
+    
+    drinks.forEach(drink => {
+      // Créer une clé unique basée sur le nom et le commentaire
+      const key = drink.comment ? `${drink.name}-${drink.comment}` : drink.name;
+      
+      if (grouped[key]) {
+        grouped[key].quantity = (grouped[key].quantity || 1) + (drink.quantity || 1);
+      } else {
+        grouped[key] = { ...drink };
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const groupMealsWithComments = (meals: MenuItem[]) => {
+    const grouped: { [key: string]: MenuItem } = {};
+    
+    meals.forEach(meal => {
+      // Créer une clé unique basée sur le nom, la cuisson et le commentaire
+      const cookingPart = meal.cooking ? `-${meal.cooking}` : '';
+      const commentPart = meal.comment ? `-${meal.comment}` : '';
+      const key = `${meal.name}${cookingPart}${commentPart}`;
+      
+      if (grouped[key]) {
+        grouped[key].quantity = (grouped[key].quantity || 1) + (meal.quantity || 1);
+      } else {
+        grouped[key] = { ...meal };
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const groupedDrinks = groupDrinksWithComments(drinks);
+  const groupedMeals = groupMealsWithComments(meals);
+
   const drinkTotal = drinks.reduce((sum, item) => {
     return sum + (item.price * (item.quantity || 1));
   }, 0);
@@ -48,9 +86,6 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
   
   const totalAmount = drinkTotal + mealTotal;
   const change = amountReceived ? parseFloat(amountReceived) - totalAmount : 0;
-
-  const groupedMeals = groupMenuItems(meals);
-  const groupedDrinks = groupMenuItems(drinks, false);
 
   const hasItemsToSubmit = drinks.length > 0 || meals.length > 0;
 
@@ -83,16 +118,23 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
       <div className={`flex-1 overflow-auto`}>
         <ScrollArea className="h-full">
           <div className="p-4">
-            {drinks.length > 0 && (
+            {groupedDrinks.length > 0 && (
               <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-md p-4 mb-4`}>
                 <h2 className={`font-bold mb-2 text-lg border-b pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-800 border-gray-200'}`}>Boissons</h2>
-                {Object.values(groupedDrinks).map(item => (
-                  <div key={item.id} className={`flex justify-between mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                    <div>
-                      <span className="font-medium">{item.name}</span>
-                      <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}> x{item.quantity || 1}</span>
+                {groupedDrinks.map((item, index) => (
+                  <div key={index} className={`mb-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                    <div className="flex justify-between">
+                      <div>
+                        <span className="font-medium">{item.name}</span>
+                        <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}> x{item.quantity || 1}</span>
+                      </div>
+                      <span>{((item.price * (item.quantity || 1))).toFixed(2)} €</span>
                     </div>
-                    <span>{((item.price * (item.quantity || 1))).toFixed(2)} €</span>
+                    {item.comment && (
+                      <div className={`text-sm italic mt-1 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                        "{item.comment}"
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className={`text-right border-t pt-2 mt-2 ${isDarkMode ? 'text-gray-400 border-gray-700' : 'text-gray-600 border-gray-200'}`}>
@@ -100,17 +142,24 @@ const RecapOrderScreen: React.FC<RecapOrderScreenProps> = ({
                 </div>
               </div>
             )}
-            {Object.values(groupedMeals).length > 0 && (
+            {groupedMeals.length > 0 && (
               <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-md p-4 mb-4`}>
                 <h2 className={`font-bold mb-2 text-lg border-b pb-2 ${isDarkMode ? 'text-white border-gray-700' : 'text-gray-800 border-gray-200'}`}>Repas</h2>
-                {Object.values(groupedMeals).map(item => (
-                  <div key={`${item.id}-${item.cooking}`} className={`flex justify-between mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                    <div>
-                      <span className="font-medium">{item.name}</span>
-                      <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}> x{item.quantity || 1}</span>
-                      {item.cooking && <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}> ({item.cooking})</span>}
+                {groupedMeals.map((item, index) => (
+                  <div key={index} className={`mb-3 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                    <div className="flex justify-between">
+                      <div>
+                        <span className="font-medium">{item.name}</span>
+                        <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}> x{item.quantity || 1}</span>
+                        {item.cooking && <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}> ({item.cooking})</span>}
+                      </div>
+                      <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>
                     </div>
-                    <span>{(item.price * (item.quantity || 1)).toFixed(2)} €</span>
+                    {item.comment && (
+                      <div className={`text-sm italic mt-1 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
+                        "{item.comment}"
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className={`text-right border-t pt-2 mt-2 ${isDarkMode ? 'text-gray-400 border-gray-700' : 'text-gray-600 border-gray-200'}`}>

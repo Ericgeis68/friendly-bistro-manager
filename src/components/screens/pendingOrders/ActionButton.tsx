@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Trash2, CheckCircle } from 'lucide-react';
 import { Order } from '../../../types/restaurant';
@@ -49,6 +48,11 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   // Skip rendering if it's a cancel button for ready meals
   if (type === 'meals' && order.mealsStatus === 'ready' && action === 'cancel') {
+    return null;
+  }
+
+  // Skip rendering if it's a cancel button for meals when the order status is ready
+  if (type === 'meals' && order.status === 'ready' && action === 'cancel') {
     return null;
   }
 

@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import type { MenuItem, Order, ScreenType, UserRole } from '../types/restaurant';
@@ -17,9 +18,11 @@ import DrinkMenuScreen from './screens/DrinkMenuScreen';
 import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import SplitPaymentScreen from './screens/SplitPaymentScreen';
-import { DEFAULT_COOKING_OPTIONS } from '../utils/itemGrouping';
-import { onValue, ref } from 'firebase/database';
-import { cookingOptionsRef, database } from '../utils/firebase';
+
+interface RestaurantAppProps {
+  cookingOptions: string[];
+  setCookingOptions: (options: string[]) => void;
+}
 
 const WaitressScreens = ({
   loggedInUser,
@@ -36,7 +39,7 @@ const WaitressScreens = ({
   handleOrderCompleteWithType,
   handleOrderCancelWithType,
   setPendingOrders,
-  darkMode
+  darkMode,
 }: {
   loggedInUser: UserRole;
   showCompletedOrders: boolean;
@@ -114,7 +117,7 @@ const WaitressScreens = ({
   );
 };
 
-const RestaurantApp: React.FC = () => {
+const RestaurantApp: React.FC<RestaurantAppProps> = ({ cookingOptions, setCookingOptions }) => {
   const [tableNumber, setTableNumber] = useState('');
   const [tableComment, setTableComment] = useState('');
   const [order, setOrder] = useState<Omit<Order, 'waitress' | 'id' | 'status' | 'createdAt'>>({
@@ -123,29 +126,6 @@ const RestaurantApp: React.FC = () => {
     meals: []
   });
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
-  const [cookingOptions, setCookingOptions] = useState<string[]>(DEFAULT_COOKING_OPTIONS);
-
-  useEffect(() => {
-    const unsubscribe = onValue(cookingOptionsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        setCookingOptions(data);
-      } else {
-        const savedOptions = localStorage.getItem('cookingOptions');
-        if (savedOptions) {
-          try {
-            const parsedOptions = JSON.parse(savedOptions);
-            setCookingOptions(parsedOptions);
-          } catch (e) {
-            console.error("Error parsing cookingOptions from localStorage:", e);
-            setCookingOptions(DEFAULT_COOKING_OPTIONS);
-          }
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const {
     currentScreen,
@@ -187,6 +167,18 @@ const RestaurantApp: React.FC = () => {
     } else {
       setLoggedInUser(user as UserRole);
     }
+  };
+
+  // Function to reset the order state
+  const resetOrderState = () => {
+    setTableNumber('');
+    setTableComment('');
+    setOrder({
+      table: '',
+      drinks: [],
+      meals: []
+    });
+    setTempMeals([]);
   };
 
   const {
@@ -265,26 +257,25 @@ const RestaurantApp: React.FC = () => {
         handleLogout={handleLogout}
         setCurrentScreen={setCurrentScreen}
         darkMode={darkMode}
+        resetOrderState={resetOrderState}
       />
     ),
     boissons: (
       <DrinkMenuScreen 
         tableNumber={tableNumber}
         drinksMenu={drinksMenu}
-        setDrinksMenu={setDrinksMenu}
         setCurrentScreen={setCurrentScreen}
         setOrder={setOrder}
+        order={order}
       />
     ),
     repas: (
       <MealMenuScreen 
         tableNumber={tableNumber}
         mealsMenu={mealsMenu}
-        setMealsMenu={setMealsMenu}
-        tempMeals={tempMeals}
-        setTempMeals={setTempMeals}
         setCurrentScreen={setCurrentScreen}
         setOrder={setOrder}
+        order={order}
       />
     ),
     recap: (
@@ -320,7 +311,8 @@ const RestaurantApp: React.FC = () => {
         cookingOptions={cookingOptions}
         setCookingOptions={setCookingOptions}
       />
-    )
+    ),
+    floorPlanView: null,
   };
 
   return screenMap[currentScreen] || null;

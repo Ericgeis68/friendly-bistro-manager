@@ -1,9 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Beer, UtensilsCrossed, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Order } from '../../../types/restaurant';
-import { database, pendingOrdersRef, completedOrdersRef } from '../../../utils/firebase';
-import { onValue, get } from 'firebase/database';
 import { toast } from '@/hooks/use-toast';
 
 interface DashboardScreenProps {
@@ -13,56 +10,22 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ localOrders, refreshOrders }) => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchAllOrders();
-    // Mettre en place des écouteurs pour les mises à jour en temps réel
-    const unsubscribePending = onValue(pendingOrdersRef, () => {
-      fetchAllOrders();
-    });
-    
-    const unsubscribeCompleted = onValue(completedOrdersRef, () => {
-      fetchAllOrders();
-    });
-    
-    return () => {
-      unsubscribePending();
-      unsubscribeCompleted();
-    };
-  }, []);
-
-  const fetchAllOrders = async () => {
-    setLoading(true);
-    try {
-      // Récupérer toutes les commandes (en cours et terminées)
-      const pendingSnapshot = await get(pendingOrdersRef);
-      const completedSnapshot = await get(completedOrdersRef);
-      
-      const pendingOrders = pendingSnapshot.exists() ? Object.values(pendingSnapshot.val()) as Order[] : [];
-      const completedOrders = completedSnapshot.exists() ? Object.values(completedSnapshot.val()) as Order[] : [];
-      
-      // Combiner les commandes
-      const allOrders = [...pendingOrders, ...completedOrders];
-      setOrders(allOrders);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des commandes:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de récupérer les commandes.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    setOrders(localOrders);
+  }, [localOrders]);
 
   const handleRefresh = () => {
-    fetchAllOrders();
-    toast({
-      title: "Actualisation",
-      description: "Les données ont été actualisées.",
-    });
+    setLoading(true);
+    refreshOrders();
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Actualisation",
+        description: "Les données ont été actualisées.",
+      });
+    }, 1000);
   };
 
   // Calculer les statistiques
@@ -119,9 +82,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ localOrders, refreshO
             <tbody>
               {orders.length > 0 ? (
                 orders.slice(0, 10).map(order => {
-                  const orderTime = typeof order.createdAt === 'string'
-                    ? new Date(order.createdAt).toLocaleTimeString()
-                    : new Date(order.createdAt).toLocaleTimeString();
+                  const orderTime = new Date(order.createdAt).toLocaleTimeString();
                   
                   // Déterminer le type de commande
                   const orderType = order.drinks && order.drinks.length > 0 && (!order.meals || order.meals.length === 0)

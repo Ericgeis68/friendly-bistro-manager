@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { MenuItem } from '../../../types/restaurant';
@@ -6,8 +5,7 @@ import { useRestaurant } from '../../../context/RestaurantContext';
 import { toast } from "../../../hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ref, update } from 'firebase/database';
-import { database } from '../../../utils/firebase';
+import { supabaseHelpers } from '../../../utils/supabase';
 
 interface EditItemScreenProps {
   handleCancelEdit: () => void;
@@ -70,9 +68,8 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
         return item;
       });
       
-      // Mettre à jour dans Firebase
-      const menuRef = ref(database, 'menuItems');
-      await update(menuRef, updatedMenuItems);
+      // Mettre à jour dans Supabase
+      await supabaseHelpers.updateMenuItems(updatedMenuItems);
       
       // Mettre à jour l'état local
       setMenuItems(updatedMenuItems);

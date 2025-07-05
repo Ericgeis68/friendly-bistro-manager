@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { Bell } from 'lucide-react';
-import { Order } from '../../../types/restaurant';
+import { Order, MenuItem } from '../../../types/restaurant';
 import { Badge } from "../../../components/ui/badge";
 import ActionButton from './ActionButton';
-import { groupMenuItems } from '../../../utils/itemGrouping';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -30,9 +28,44 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
   const safeMeals = Array.isArray(order.meals) ? order.meals : [];
   const safeDrinks = Array.isArray(order.drinks) ? order.drinks : [];
   
+  // Grouper manuellement pour préserver les commentaires
+  const groupDrinksWithComments = (drinks: MenuItem[]) => {
+    const grouped: { [key: string]: MenuItem } = {};
+    
+    drinks.forEach(drink => {
+      const key = drink.comment ? `${drink.name}-${drink.comment}` : drink.name;
+      
+      if (grouped[key]) {
+        grouped[key].quantity = (grouped[key].quantity || 1) + (drink.quantity || 1);
+      } else {
+        grouped[key] = { ...drink };
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
+  const groupMealsWithComments = (meals: MenuItem[]) => {
+    const grouped: { [key: string]: MenuItem } = {};
+    
+    meals.forEach(meal => {
+      const cookingPart = meal.cooking ? `-${meal.cooking}` : '';
+      const commentPart = meal.comment ? `-${meal.comment}` : '';
+      const key = `${meal.name}${cookingPart}${commentPart}`;
+      
+      if (grouped[key]) {
+        grouped[key].quantity = (grouped[key].quantity || 1) + (meal.quantity || 1);
+      } else {
+        grouped[key] = { ...meal };
+      }
+    });
+    
+    return Object.values(grouped);
+  };
+
   // Group items only if arrays are not empty
-  const groupedMeals = safeMeals.length > 0 ? groupMenuItems(safeMeals) : {};
-  const groupedDrinks = safeDrinks.length > 0 ? groupMenuItems(safeDrinks, false) : {};
+  const groupedMeals = safeMeals.length > 0 ? groupMealsWithComments(safeMeals) : [];
+  const groupedDrinks = safeDrinks.length > 0 ? groupDrinksWithComments(safeDrinks) : [];
 
   // Determine the type of order for cancel action
   const orderType = () => {
@@ -57,6 +90,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
             </div>
           </div>
           <div className="flex gap-2">
+            {/* Button for drinks completion - always show if there are drinks */}
             {safeDrinks.length > 0 && (
               <ActionButton 
                 order={order} 
@@ -66,7 +100,8 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
                 onCancel={onOrderCancel}
               />
             )}
-            {safeMeals.length > 0 && order.mealsStatus === 'ready' && (
+            {/* Button for meals completion - show if there are meals AND they are ready */}
+            {safeMeals.length > 0 && (order.mealsStatus === 'ready' || order.status === 'ready') && (
               <ActionButton 
                 order={order} 
                 type="meals" 
@@ -86,25 +121,32 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
         </div>
       </div>
 
-      {safeDrinks.length > 0 && (
+      {groupedDrinks.length > 0 && (
         <div className="p-4 bg-blue-50 dark:bg-blue-900">
           <div className="flex justify-between items-center">
             <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Boissons</h3>
           </div>
-          {Object.values(groupedDrinks).map((drink, index) => (
-            <div key={index} className="text-gray-700 dark:text-gray-300 ml-2">
-              {drink.name} x{drink.quantity}
+          {groupedDrinks.map((drink, index) => (
+            <div key={index}>
+              <div className="text-gray-700 dark:text-gray-300 ml-2">
+                {drink.name} x{drink.quantity || 1}
+              </div>
+              {drink.comment && (
+                <div className="text-sm italic text-blue-600 dark:text-blue-300 ml-4">
+                  "{drink.comment}"
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {safeMeals.length > 0 && (
+      {groupedMeals.length > 0 && (
         <div className="p-4 bg-orange-50 dark:bg-orange-900">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <h3 className="font-medium text-orange-800 dark:text-orange-300 mb-2">Repas</h3>
-              {order.mealsStatus === 'ready' && (
+              {(order.mealsStatus === 'ready' || order.status === 'ready') && (
                 <Badge variant="secondary" className="ml-2 bg-green-500 text-white">
                   <Bell className="h-3 w-3 mr-1" />
                   Prêt
@@ -112,9 +154,16 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
               )}
             </div>
           </div>
-          {Object.values(groupedMeals).map((meal, index) => (
-            <div key={index} className="text-gray-700 dark:text-gray-300 ml-2">
-              {meal.name} x{meal.quantity} {meal.cooking && `(${meal.cooking})`}
+          {groupedMeals.map((meal, index) => (
+            <div key={index}>
+              <div className="text-gray-700 dark:text-gray-300 ml-2">
+                {meal.name} x{meal.quantity || 1} {meal.cooking && `(${meal.cooking})`}
+              </div>
+              {meal.comment && (
+                <div className="text-sm italic text-orange-600 dark:text-orange-300 ml-4">
+                  "{meal.comment}"
+                </div>
+              )}
             </div>
           ))}
         </div>

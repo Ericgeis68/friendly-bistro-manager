@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
 interface AddCookingOptionScreenProps {
@@ -17,6 +16,16 @@ const AddCookingOptionScreen: React.FC<AddCookingOptionScreenProps> = ({
   handleSaveCookingOption,
   handleCancelCookingEdit
 }) => {
+  // Use local state for the input value
+  const [localCookingOption, setLocalCookingOption] = useState(newCookingOption || editCookingOption || '');
+
+  const handleSave = () => {
+    if (localCookingOption.trim()) {
+      setNewCookingOption(localCookingOption.trim().toUpperCase());
+      handleSaveCookingOption();
+    }
+  };
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -32,19 +41,20 @@ const AddCookingOptionScreen: React.FC<AddCookingOptionScreenProps> = ({
           <label className="block text-gray-700 text-sm font-medium mb-2">Nom de la cuisson</label>
           <input
             type="text"
-            value={newCookingOption}
-            onChange={e => setNewCookingOption(e.target.value)}
+            value={localCookingOption}
+            onChange={e => setLocalCookingOption(e.target.value)}
             className="w-full border rounded-md h-12 px-3"
             placeholder="Ex: BLEU, SAIGNANT, etc."
+            autoFocus
           />
           <p className="text-gray-500 text-xs mt-1">
-            Le nom sera converti en majuscules et sauvegardé sur Firebase.
+            Le nom sera converti en majuscules et sauvegardé sur Supabase.
           </p>
         </div>
         <button 
-          onClick={handleSaveCookingOption} 
+          onClick={handleSave} 
           className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-md h-12 text-lg"
-          disabled={!newCookingOption.trim()}
+          disabled={!localCookingOption.trim()}
         >
           {editCookingOption ? 'Enregistrer' : 'Ajouter'}
         </button>
