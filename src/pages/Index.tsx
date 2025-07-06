@@ -1,4 +1,3 @@
-
 import React from 'react';
 import RestaurantApp from '../components/RestaurantApp';
 import { RestaurantProvider, useRestaurant } from '../context/RestaurantContext';

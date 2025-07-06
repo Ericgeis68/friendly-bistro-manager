@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import type { MenuItem, Order, ScreenType, UserRole } from '../types/restaurant';

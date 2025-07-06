@@ -18,7 +18,7 @@ const RoomPropertiesEditor: React.FC<RoomPropertiesEditorProps> = ({
   const [name, setName] = useState(floorPlan.name);
   const [width, setWidth] = useState(floorPlan.roomSize.width);
   const [height, setHeight] = useState(floorPlan.roomSize.height);
-  const [gridSize, setGridSize] = useState(floorPlan.gridSize || 50); // Default to 50cm
+  const [gridSize, setGridSize] = useState(floorPlan.gridSize || 100);
 
   const handleSave = () => {
     onSave({
@@ -28,6 +28,15 @@ const RoomPropertiesEditor: React.FC<RoomPropertiesEditorProps> = ({
     });
     onClose();
   };
+
+  // Calculer les dimensions en mètres pour l'affichage
+  const widthInMeters = (width / 100).toFixed(1);
+  const heightInMeters = (height / 100).toFixed(1);
+  const gridSizeInMeters = (gridSize / 100).toFixed(1);
+  
+  // Calcul exact du nombre de carreaux
+  const numHorizontalSquares = Math.round(width / gridSize);
+  const numVerticalSquares = Math.round(height / gridSize);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -59,39 +68,49 @@ const RoomPropertiesEditor: React.FC<RoomPropertiesEditorProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Largeur (cm)</label>
+              <label className="block text-sm font-medium mb-1">
+                Largeur (cm)
+              </label>
               <input
                 type="number"
                 value={width}
                 onChange={(e) => setWidth(Number(e.target.value))}
                 min="200"
-                max="2000"
+                max="50000"
+                step="100"
                 className={`w-full px-3 py-2 border rounded-md ${
                   isDarkMode 
                     ? 'bg-gray-700 border-gray-600 text-white' 
                     : 'bg-white border-gray-300 text-gray-800'
                 }`}
               />
+              <p className="text-xs text-gray-500 mt-1">{widthInMeters}m</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Hauteur (cm)</label>
+              <label className="block text-sm font-medium mb-1">
+                Hauteur (cm)
+              </label>
               <input
                 type="number"
                 value={height}
                 onChange={(e) => setHeight(Number(e.target.value))}
                 min="200"
-                max="2000"
+                max="50000"
+                step="100"
                 className={`w-full px-3 py-2 border rounded-md ${
                   isDarkMode 
                     ? 'bg-gray-700 border-gray-600 text-white' 
                     : 'bg-white border-gray-300 text-gray-800'
                 }`}
               />
+              <p className="text-xs text-gray-500 mt-1">{heightInMeters}m</p>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Taille de la grille (cm)</label>
+            <label className="block text-sm font-medium mb-1">
+              Taille de la grille (cm)
+            </label>
             <select
               value={gridSize}
               onChange={(e) => setGridSize(Number(e.target.value))}
@@ -101,13 +120,30 @@ const RoomPropertiesEditor: React.FC<RoomPropertiesEditorProps> = ({
                   : 'bg-white border-gray-300 text-gray-800'
               }`}
             >
-              <option value={50}>50cm</option>
-              <option value={100}>100cm (1m)</option>
-              <option value={150}>150cm (1.5m)</option>
-              <option value={200}>200cm (2m)</option>
-              <option value={250}>250cm (2.5m)</option>
-              <option value={300}>300cm (3m)</option>
+              <option value={50}>50cm (0.5m par carreau)</option>
+              <option value={100}>100cm (1m par carreau)</option>
+              <option value={200}>200cm (2m par carreau)</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Chaque carreau = {gridSizeInMeters}m × {gridSizeInMeters}m
+            </p>
+          </div>
+
+          {/* CORRECTION : Aperçu des dimensions exact */}
+          <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+            <h4 className="font-medium mb-2">Aperçu exact :</h4>
+            <ul className="text-sm space-y-1">
+              <li>• Salle : {widthInMeters}m × {heightInMeters}m</li>
+              <li>• Grille : {numHorizontalSquares} × {numVerticalSquares} carreaux</li>
+              <li>• Taille carreau : {gridSizeInMeters}m × {gridSizeInMeters}m</li>
+            </ul>
+            <div className="mt-2 text-xs text-gray-600">
+              <strong>Vérification :</strong>
+              <br />
+              {width}cm ÷ {gridSize}cm = {(width / gridSize).toFixed(1)} carreaux en largeur
+              <br />
+              {height}cm ÷ {gridSize}cm = {(height / gridSize).toFixed(1)} carreaux en hauteur
+            </div>
           </div>
         </div>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, LayoutDashboard, Coffee, Utensils, Settings, Users } from 'lucide-react';
 import Sidebar from './admin/Sidebar';

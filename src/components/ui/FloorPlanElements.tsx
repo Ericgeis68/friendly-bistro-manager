@@ -14,11 +14,82 @@ interface FloorPlanElementsProps {
   tablesWithOrders?: string[];
   selectedTable?: string;
   scale?: number;
+  pixelsPerCm?: number;
 }
 
-// Composant pour les poignées de redimensionnement
-const ResizeHandle: React.FC<{ direction: string; onMouseDown: (e: React.MouseEvent) => void; isDarkMode: boolean; scale: number }> = ({ direction, onMouseDown, isDarkMode, scale }) => {
-  const handleSize = Math.max(10, 10 / scale); // Taille minimum de 10px même avec échelle
+// Composant pour les poignées de redimensionnement avec rotation
+const ResizeHandle: React.FC<{ 
+  direction: string; 
+  onMouseDown: (e: React.MouseEvent) => void; 
+  isDarkMode: boolean; 
+  scale: number;
+  rotation: number;
+}> = ({ direction, onMouseDown, isDarkMode, scale, rotation }) => {
+  const handleSize = Math.max(10, 10 / scale);
+  
+  // Calculer la position de base selon la direction
+  const getBasePosition = (dir: string) => {
+    const offset = handleSize / 2;
+    switch (dir) {
+      case 'nw': return { top: -offset, left: -offset };
+      case 'n': return { top: -offset, left: `calc(50% - ${offset}px)` };
+      case 'ne': return { top: -offset, right: -offset };
+      case 'e': return { top: `calc(50% - ${offset}px)`, right: -offset };
+      case 'se': return { bottom: -offset, right: -offset };
+      case 's': return { bottom: -offset, left: `calc(50% - ${offset}px)` };
+      case 'sw': return { bottom: -offset, left: -offset };
+      case 'w': return { top: `calc(50% - ${offset}px)`, left: -offset };
+      default: return { top: 0, left: 0 };
+    }
+  };
+
+  // Calculer le curseur selon la direction et la rotation
+  const getCursor = (dir: string, rot: number) => {
+    // Normaliser la rotation entre 0 et 360
+    const normalizedRotation = ((rot % 360) + 360) % 360;
+    
+    // Mapping des curseurs de base
+    const baseCursors: { [key: string]: string } = {
+      'nw': 'nwse-resize',
+      'n': 'ns-resize',
+      'ne': 'nesw-resize',
+      'e': 'ew-resize',
+      'se': 'nwse-resize',
+      's': 'ns-resize',
+      'sw': 'nesw-resize',
+      'w': 'ew-resize'
+    };
+
+    // Calculer le nombre de quarts de tour (chaque 45°)
+    const eighthTurns = Math.round(normalizedRotation / 45) % 8;
+    
+    // Mapping des curseurs selon la rotation
+    const cursorMappings = [
+      // 0° (pas de rotation)
+      { nw: 'nwse-resize', n: 'ns-resize', ne: 'nesw-resize', e: 'ew-resize', se: 'nwse-resize', s: 'ns-resize', sw: 'nesw-resize', w: 'ew-resize' },
+      // 45°
+      { nw: 'ns-resize', n: 'nesw-resize', ne: 'ew-resize', e: 'nwse-resize', se: 'ns-resize', s: 'nesw-resize', sw: 'ew-resize', w: 'nwse-resize' },
+      // 90°
+      { nw: 'nesw-resize', n: 'ew-resize', ne: 'nwse-resize', e: 'ns-resize', se: 'nesw-resize', s: 'ew-resize', sw: 'nwse-resize', w: 'ns-resize' },
+      // 135°
+      { nw: 'ew-resize', n: 'nwse-resize', ne: 'ns-resize', e: 'nesw-resize', se: 'ew-resize', s: 'nwse-resize', sw: 'ns-resize', w: 'nesw-resize' },
+      // 180°
+      { nw: 'nwse-resize', n: 'ns-resize', ne: 'nesw-resize', e: 'ew-resize', se: 'nwse-resize', s: 'ns-resize', sw: 'nesw-resize', w: 'ew-resize' },
+      // 225°
+      { nw: 'ns-resize', n: 'nesw-resize', ne: 'ew-resize', e: 'nwse-resize', se: 'ns-resize', s: 'nesw-resize', sw: 'ew-resize', w: 'nwse-resize' },
+      // 270°
+      { nw: 'nesw-resize', n: 'ew-resize', ne: 'nwse-resize', e: 'ns-resize', se: 'nesw-resize', s: 'ew-resize', sw: 'nwse-resize', w: 'ns-resize' },
+      // 315°
+      { nw: 'ew-resize', n: 'nwse-resize', ne: 'ns-resize', e: 'nesw-resize', se: 'ew-resize', s: 'nwse-resize', sw: 'ns-resize', w: 'nesw-resize' }
+    ];
+    
+    const mapping = cursorMappings[eighthTurns];
+    return mapping[dir as keyof typeof mapping] || baseCursors[dir];
+  };
+
+  const basePosition = getBasePosition(direction);
+  const cursor = getCursor(direction, rotation);
+
   const style: React.CSSProperties = {
     position: 'absolute',
     width: `${handleSize}px`,
@@ -27,20 +98,9 @@ const ResizeHandle: React.FC<{ direction: string; onMouseDown: (e: React.MouseEv
     border: `1px solid ${isDarkMode ? '#171717' : '#FFFFFF'}`,
     borderRadius: '2px',
     zIndex: 20,
+    cursor,
+    ...basePosition
   };
-
-  const offset = handleSize / 2;
-
-  switch (direction) {
-    case 'nw': style.top = `-${offset}px`; style.left = `-${offset}px`; style.cursor = 'nwse-resize'; break;
-    case 'n': style.top = `-${offset}px`; style.left = `calc(50% - ${offset}px)`; style.cursor = 'ns-resize'; break;
-    case 'ne': style.top = `-${offset}px`; style.right = `-${offset}px`; style.cursor = 'nesw-resize'; break;
-    case 'e': style.top = `calc(50% - ${offset}px)`; style.right = `-${offset}px`; style.cursor = 'ew-resize'; break;
-    case 'se': style.bottom = `-${offset}px`; style.right = `-${offset}px`; style.cursor = 'nwse-resize'; break;
-    case 's': style.bottom = `-${offset}px`; style.left = `calc(50% - ${offset}px)`; style.cursor = 'ns-resize'; break;
-    case 'sw': style.bottom = `-${offset}px`; style.left = `-${offset}px`; style.cursor = 'nesw-resize'; break;
-    case 'w': style.top = `calc(50% - ${offset}px)`; style.left = `-${offset}px`; style.cursor = 'ew-resize'; break;
-  }
 
   return <div className="resize-handle" style={style} onMouseDown={onMouseDown} />;
 };
@@ -85,7 +145,8 @@ const FloorPlanElements: React.FC<FloorPlanElementsProps> = ({
   isDarkMode,
   tablesWithOrders = [],
   selectedTable,
-  scale = 1
+  scale = 1,
+  pixelsPerCm = 0.5
 }) => {
   const getElementStyle = (element: FloorPlanElement) => {
     const isSelected = selectedElement === element.id;
@@ -197,17 +258,19 @@ const FloorPlanElements: React.FC<FloorPlanElementsProps> = ({
     <>
       {elements.map((element) => {
         const isSelected = selectedElement === element.id;
+        const rotation = element.rotation || 0;
+        
         return (
           <div
             key={element.id}
             className={getElementStyle(element)}
             style={{
-              left: element.position.x,
-              top: element.position.y,
-              width: element.size.width,
-              height: element.size.height,
-              transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
-              fontSize: Math.max(10, 12 / scale) + 'px' // Ajuster la taille de police selon l'échelle
+              left: element.position.x * pixelsPerCm,
+              top: element.position.y * pixelsPerCm,
+              width: element.size.width * pixelsPerCm,
+              height: element.size.height * pixelsPerCm,
+              transform: rotation ? `rotate(${rotation}deg)` : undefined,
+              fontSize: Math.max(8, 10 / scale) + 'px'
             }}
             onClick={() => onElementClick(element.id)}
             onDoubleClick={() => onElementDoubleClick(element.id)}
@@ -216,14 +279,62 @@ const FloorPlanElements: React.FC<FloorPlanElementsProps> = ({
             {getElementContent(element)}
             {isSelected && (
               <>
-                <ResizeHandle direction="nw" onMouseDown={(e) => onResizeMouseDown(element.id, 'nw', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="n" onMouseDown={(e) => onResizeMouseDown(element.id, 'n', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="ne" onMouseDown={(e) => onResizeMouseDown(element.id, 'ne', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="e" onMouseDown={(e) => onResizeMouseDown(element.id, 'e', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="se" onMouseDown={(e) => onResizeMouseDown(element.id, 'se', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="s" onMouseDown={(e) => onResizeMouseDown(element.id, 's', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="sw" onMouseDown={(e) => onResizeMouseDown(element.id, 'sw', e)} isDarkMode={isDarkMode} scale={scale} />
-                <ResizeHandle direction="w" onMouseDown={(e) => onResizeMouseDown(element.id, 'w', e)} isDarkMode={isDarkMode} scale={scale} />
+                <ResizeHandle 
+                  direction="nw" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'nw', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="n" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'n', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="ne" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'ne', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="e" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'e', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="se" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'se', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="s" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 's', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="sw" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'sw', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
+                <ResizeHandle 
+                  direction="w" 
+                  onMouseDown={(e) => onResizeMouseDown(element.id, 'w', e)} 
+                  isDarkMode={isDarkMode} 
+                  scale={scale}
+                  rotation={rotation}
+                />
                 <RotationHandle onMouseDown={(e) => onRotateMouseDown(element.id, e)} isDarkMode={isDarkMode} scale={scale} />
               </>
             )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { FloorPlanElement } from '../../types/floorPlan';
@@ -16,15 +17,20 @@ const ElementPropertiesEditor: React.FC<ElementPropertiesEditorProps> = ({
   isDarkMode
 }) => {
   const [properties, setProperties] = useState<Partial<FloorPlanElement>>(element);
+  
+  // États séparés pour les valeurs d'affichage des champs de saisie
+  const [widthDisplay, setWidthDisplay] = useState(element.size?.width?.toString() || '');
+  const [heightDisplay, setHeightDisplay] = useState(element.size?.height?.toString() || '');
+  const [xDisplay, setXDisplay] = useState(element.position?.x?.toString() || '');
+  const [yDisplay, setYDisplay] = useState(element.position?.y?.toString() || '');
 
   useEffect(() => {
     setProperties(element);
+    setWidthDisplay(element.size?.width?.toString() || '');
+    setHeightDisplay(element.size?.height?.toString() || '');
+    setXDisplay(element.position?.x?.toString() || '');
+    setYDisplay(element.position?.y?.toString() || '');
   }, [element]);
-
-  const handleSave = () => {
-    onSave(properties);
-    onClose();
-  };
 
   const handleChange = (field: string, value: any) => {
     setProperties(prev => ({
@@ -34,25 +40,83 @@ const ElementPropertiesEditor: React.FC<ElementPropertiesEditorProps> = ({
   };
 
   const handleSizeChange = (dimension: 'width' | 'height', value: string) => {
-    const numValue = value === '' ? 0 : parseInt(value) || 0;
-    setProperties(prev => ({
-      ...prev,
-      size: {
-        ...prev.size!,
-        [dimension]: Math.max(10, numValue)
-      }
-    }));
+    // Mettre à jour l'affichage immédiatement
+    if (dimension === 'width') {
+      setWidthDisplay(value);
+    } else {
+      setHeightDisplay(value);
+    }
+
+    // Si le champ est vide, ne pas mettre à jour les propriétés pour l'instant
+    if (value === '') {
+      return;
+    }
+    
+    // Convertir en nombre et valider
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 10) {
+      setProperties(prev => ({
+        ...prev,
+        size: {
+          ...prev.size!,
+          [dimension]: numValue
+        }
+      }));
+    }
   };
 
   const handlePositionChange = (axis: 'x' | 'y', value: string) => {
-    const numValue = value === '' ? 0 : parseInt(value) || 0;
-    setProperties(prev => ({
-      ...prev,
-      position: {
-        ...prev.position!,
-        [axis]: Math.max(0, numValue)
-      }
-    }));
+    // Mettre à jour l'affichage immédiatement
+    if (axis === 'x') {
+      setXDisplay(value);
+    } else {
+      setYDisplay(value);
+    }
+
+    // Si le champ est vide, ne pas mettre à jour les propriétés pour l'instant
+    if (value === '') {
+      return;
+    }
+    
+    // Convertir en nombre et valider
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 0) {
+      setProperties(prev => ({
+        ...prev,
+        position: {
+          ...prev.position!,
+          [axis]: numValue
+        }
+      }));
+    }
+  };
+
+  // Fonction pour valider et corriger les valeurs avant la sauvegarde
+  const validateAndSave = () => {
+    const validatedProperties = { ...properties };
+    
+    // Valider et corriger la taille
+    if (validatedProperties.size) {
+      // Utiliser les valeurs d'affichage pour la validation finale
+      const finalWidth = widthDisplay === '' ? 20 : parseInt(widthDisplay);
+      const finalHeight = heightDisplay === '' ? 20 : parseInt(heightDisplay);
+      
+      validatedProperties.size.width = isNaN(finalWidth) || finalWidth < 10 ? 20 : finalWidth;
+      validatedProperties.size.height = isNaN(finalHeight) || finalHeight < 10 ? 20 : finalHeight;
+    }
+    
+    // Valider et corriger la position
+    if (validatedProperties.position) {
+      // Utiliser les valeurs d'affichage pour la validation finale
+      const finalX = xDisplay === '' ? 0 : parseInt(xDisplay);
+      const finalY = yDisplay === '' ? 0 : parseInt(yDisplay);
+      
+      validatedProperties.position.x = isNaN(finalX) || finalX < 0 ? 0 : finalX;
+      validatedProperties.position.y = isNaN(finalY) || finalY < 0 ? 0 : finalY;
+    }
+    
+    onSave(validatedProperties);
+    onClose();
   };
 
   return (
@@ -73,18 +137,20 @@ const ElementPropertiesEditor: React.FC<ElementPropertiesEditorProps> = ({
               <div>
                 <label className="block text-xs text-gray-500 mb-1">X (cm)</label>
                 <input
-                  type="number"
-                  value={properties.position?.x || 0}
+                  type="text"
+                  value={xDisplay}
                   onChange={(e) => handlePositionChange('x', e.target.value)}
+                  placeholder="0"
                   className={`w-full px-2 py-1 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Y (cm)</label>
                 <input
-                  type="number"
-                  value={properties.position?.y || 0}
+                  type="text"
+                  value={yDisplay}
                   onChange={(e) => handlePositionChange('y', e.target.value)}
+                  placeholder="0"
                   className={`w-full px-2 py-1 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
                 />
               </div>
@@ -98,20 +164,20 @@ const ElementPropertiesEditor: React.FC<ElementPropertiesEditorProps> = ({
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Largeur (cm)</label>
                 <input
-                  type="number"
-                  value={properties.size?.width || 200}
+                  type="text"
+                  value={widthDisplay}
                   onChange={(e) => handleSizeChange('width', e.target.value)}
-                  min="10"
+                  placeholder="200"
                   className={`w-full px-2 py-1 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
                 />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Hauteur (cm)</label>
                 <input
-                  type="number"
-                  value={properties.size?.height || 80}
+                  type="text"
+                  value={heightDisplay}
                   onChange={(e) => handleSizeChange('height', e.target.value)}
-                  min="10"
+                  placeholder="150"
                   className={`w-full px-2 py-1 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}
                 />
               </div>
@@ -203,7 +269,7 @@ const ElementPropertiesEditor: React.FC<ElementPropertiesEditorProps> = ({
             Annuler
           </button>
           <button
-            onClick={handleSave}
+            onClick={validateAndSave}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
           >
             <Save size={16} />

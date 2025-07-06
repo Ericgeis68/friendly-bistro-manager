@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { FloorPlan, FloorPlanElement, ElementType, Position, Size } from '../types/floorPlan';
 
@@ -8,7 +7,7 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
       id: 'default',
       name: 'Plan de salle',
       elements: [],
-      roomSize: { width: 1400, height: 1000 }, // 14m x 10m en cm
+      roomSize: { width: 1000, height: 800 }, // 10m x 8m en cm
       gridSize: 100 // 100cm = 1m
     }
   );
@@ -17,11 +16,14 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
 
-  // Fonction pour aligner sur la grille
+  // Fonction pour aligner sur la grille en centimètres - MODIFIÉE pour grille plus fine
   const snapToGrid = useCallback((position: Position, gridSize: number): Position => {
+    // Utiliser une grille 4 fois plus fine pour permettre un positionnement précis
+    const fineGridSize = gridSize / 4;
+    
     return {
-      x: Math.round(position.x / gridSize) * gridSize,
-      y: Math.round(position.y / gridSize) * gridSize
+      x: Math.round(position.x / fineGridSize) * fineGridSize,
+      y: Math.round(position.y / fineGridSize) * fineGridSize
     };
   }, []);
 
@@ -37,10 +39,10 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
           id,
           type: 'table',
           position: snappedPosition,
-          size: { width: 200, height: 80 }, // Taille standard 200cm x 80cm
+          size: { width: 200, height: 80 }, // 200cm x 80cm
           number: String(floorPlan.elements.filter(e => e.type === 'table').length + 1),
           seats: 4,
-          shape: 'rectangle' // Toujours rectangulaire pour correspondre à TableInputScreen
+          shape: 'rectangle'
         };
         break;
       case 'bar':
@@ -48,7 +50,7 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
           id,
           type: 'bar',
           position: snappedPosition,
-          size: { width: 120, height: 40 },
+          size: { width: 300, height: 60 }, // 300cm x 60cm
           name: 'Bar'
         };
         break;
@@ -57,7 +59,7 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
           id,
           type: 'pillar',
           position: snappedPosition,
-          size: { width: 20, height: 20 },
+          size: { width: 40, height: 40 }, // 40cm x 40cm
           name: 'Poteau',
           shape: 'round'
         };
@@ -67,8 +69,8 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
           id,
           type: 'stage',
           position: snappedPosition,
-          size: { width: 120, height: 80 }, // Peut servir pour représenter la cuisine
-          name: 'Scène/Cuisine'
+          size: { width: 200, height: 150 }, // 200cm x 150cm
+          name: 'Scène'
         };
         break;
       case 'wall':
@@ -76,7 +78,7 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
           id,
           type: 'wall',
           position: snappedPosition,
-          size: { width: 100, height: 20 },
+          size: { width: 200, height: 20 }, // 200cm x 20cm
           name: 'Mur',
           thickness: 20
         };
@@ -86,8 +88,8 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
           id,
           type: 'dancefloor',
           position: snappedPosition,
-          size: { width: 100, height: 100 },
-          name: 'Zone libre'
+          size: { width: 300, height: 300 }, // 300cm x 300cm
+          name: 'Piste de danse'
         };
         break;
       default:
@@ -120,10 +122,10 @@ export const useFloorPlan = (initialPlan?: FloorPlan) => {
   }, [selectedElement]);
 
   const moveElement = useCallback((id: string, newPosition: Position) => {
-    const gridSize = floorPlan.gridSize || 100;
-    const snappedPosition = snapToGrid(newPosition, gridSize);
-    updateElement(id, { position: snappedPosition });
-  }, [updateElement, floorPlan.gridSize, snapToGrid]);
+    // Ne pas appliquer de snap automatique lors du déplacement
+    // Le snap est déjà appliqué dans FloorPlanEditor
+    updateElement(id, { position: newPosition });
+  }, [updateElement]);
 
   const updateFloorPlan = useCallback((updates: Partial<FloorPlan>) => {
     setFloorPlan(prev => ({

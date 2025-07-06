@@ -293,7 +293,7 @@ export const supabaseHelpers = {
     if (error) throw error;
   },
 
-  // Floor Plan Management
+  // Floor Plan Management - CORRECTION CRITIQUE
   async getFloorPlan(planId: string = 'main_floor_plan'): Promise<FloorPlan | null> {
     console.log(`Fetching floor plan with ID: ${planId}`);
     const { data, error } = await supabase
@@ -313,7 +313,8 @@ export const supabaseHelpers = {
         id: data.id,
         name: data.name,
         roomSize: data.room_size,
-        elements: data.elements
+        elements: data.elements,
+        gridSize: data.grid_size || 100 // CORRECTION : Inclure gridSize
       } as FloorPlan;
     }
     console.log("No floor plan found with ID:", planId);
@@ -322,15 +323,22 @@ export const supabaseHelpers = {
 
   async upsertFloorPlan(floorPlan: FloorPlan) {
     console.log("Upserting floor plan:", floorPlan);
+    
+    // CORRECTION CRITIQUE : Mapper correctement les propriétés
+    const dataToSave = {
+      id: floorPlan.id,
+      name: floorPlan.name,
+      room_size: floorPlan.roomSize, // Mapper roomSize vers room_size
+      elements: floorPlan.elements,
+      grid_size: floorPlan.gridSize || 100, // Mapper gridSize vers grid_size
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log("Data to save:", dataToSave);
+    
     const { error } = await supabase
       .from('floor_plans')
-      .upsert({
-        id: floorPlan.id,
-        name: floorPlan.name,
-        room_size: floorPlan.roomSize,
-        elements: floorPlan.elements,
-        updated_at: new Date().toISOString() // Update timestamp
-      }, { onConflict: 'id' }); // Conflict on 'id' will update existing row
+      .upsert(dataToSave, { onConflict: 'id' });
 
     if (error) {
       console.error("Error upserting floor plan:", error);

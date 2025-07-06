@@ -20,11 +20,13 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
   const [floorPlans, setFloorPlans] = useState<FloorPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const loadFloorPlans = async () => {
       try {
         setLoading(true);
+        console.log("Loading floor plans for waitress interface...");
         
         // Récupérer tous les plans depuis la base de données
         const { data, error } = await supabaseHelpers.supabase
@@ -38,11 +40,14 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
           id: plan.id,
           name: plan.name,
           roomSize: plan.room_size,
-          elements: plan.elements
+          elements: plan.elements,
+          gridSize: plan.grid_size || 100
         })) || [];
         
+        console.log("Floor plans loaded for waitress:", validPlans);
+        
         setFloorPlans(validPlans);
-        if (validPlans.length > 0) {
+        if (validPlans.length > 0 && !selectedPlanId) {
           setSelectedPlanId(validPlans[0].id);
         }
       } catch (error) {
@@ -54,6 +59,28 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
     };
 
     loadFloorPlans();
+  }, [refreshKey]);
+
+  // Ajouter un subscription pour les mises à jour en temps réel
+  useEffect(() => {
+    console.log("Setting up floor plans subscription for waitress interface...");
+    
+    const subscription = supabaseHelpers.supabase
+      .channel('floor_plans_changes_waitress')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'floor_plans' }, 
+        (payload) => {
+          console.log('Floor plan change detected in waitress interface:', payload);
+          // Forcer le rechargement des plans
+          setRefreshKey(prev => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log("Cleaning up floor plans subscription for waitress interface");
+      subscription.unsubscribe();
+    };
   }, []);
 
   const currentPlan = floorPlans.find(plan => plan.id === selectedPlanId);
@@ -72,6 +99,12 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
         <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           Aucun plan de salle disponible. Veuillez en créer un dans l'interface d'administration.
         </p>
+        <button 
+          onClick={() => setRefreshKey(prev => prev + 1)}
+          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Actualiser
+        </button>
       </div>
     );
   }
@@ -112,10 +145,19 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
       {/* Plan de salle */}
       {currentPlan && (
         <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 shadow`}>
-          <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-            {currentPlan.name}
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+              {currentPlan.name}
+            </h3>
+            <button 
+              onClick={() => setRefreshKey(prev => prev + 1)}
+              className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Actualiser
+            </button>
+          </div>
           <FloorPlanEditor
+            key={`${currentPlan.id}-${refreshKey}`}
             initialPlan={currentPlan}
             isDarkMode={isDarkMode}
             tablesWithOrders={tablesWithOrders}
