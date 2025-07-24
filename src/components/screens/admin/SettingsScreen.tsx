@@ -15,6 +15,8 @@ import { Switch } from "@/components/ui/switch"; // Import Switch component
 import { Label } from "@/components/ui/label"; // Import Label component
 import { useRestaurant } from '../../../context/RestaurantContext'; // Import useRestaurant
 import { isLocalBackupSupported } from '../../../utils/localBackup';
+import { useDistributedPrinting } from '../../../hooks/useDistributedPrinting';
+import { testPrinter } from '../../../utils/printingUtils';
 
 interface SettingsScreenProps {
   serverIp: string;
@@ -41,8 +43,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     saveLocalBackupMealsSetting,
     saveLocalBackupDrinksSetting,
     localBackupListening,
-    setLocalBackupListening
+    setLocalBackupListening,
+    autoPrintEnabled,
+    autoPrintMealsEnabled,
+    autoPrintDrinksEnabled,
+    setAutoPrintEnabled,
+    setAutoPrintMealsEnabled,
+    setAutoPrintDrinksEnabled
   } = useRestaurant(); // Get settings from context
+
+  const {
+    isConnected: printingConnected,
+    isListening: printingListening,
+    isPrintingDevice,
+    printQueue,
+    errors: printingErrors,
+    setAssPrintingDevice,
+    clearPrintQueue
+  } = useDistributedPrinting();
 
   const handleResetInitiate = () => {
     setShowConfirmDialog(true);
@@ -99,6 +117,42 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   const handleLocalBackupDrinksToggle = async (checked: boolean) => {
     await saveLocalBackupDrinksSetting(checked);
+  };
+
+  const handleTestPrinter = async () => {
+    try {
+      await testPrinter();
+      toast({
+        title: "Test d'impression",
+        description: "Ticket de test envoyé à l'imprimante",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur d'impression",
+        description: error instanceof Error ? error.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAutoPrintToggle = async (checked: boolean) => {
+    await setAutoPrintEnabled(checked);
+    
+    if (checked) {
+      await setAutoPrintMealsEnabled(true);
+      await setAutoPrintDrinksEnabled(true);
+    } else {
+      await setAutoPrintMealsEnabled(false);
+      await setAutoPrintDrinksEnabled(false);
+    }
+  };
+
+  const handleAutoPrintMealsToggle = async (checked: boolean) => {
+    await setAutoPrintMealsEnabled(checked);
+  };
+
+  const handleAutoPrintDrinksToggle = async (checked: boolean) => {
+    await setAutoPrintDrinksEnabled(checked);
   };
   
   return (
@@ -206,6 +260,151 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
               onCheckedChange={handleLocalBackupDrinksToggle}
               disabled={!isLocalBackupSupported()}
             />
+          </div>
+        </div>
+
+        {/* Impression distribuée */}
+        <div className="mt-8 border-t pt-6">
+          <h3 className="text-gray-700 text-lg font-medium mb-3">Impression distribuée</h3>
+          
+          {/* Status de connexion */}
+          <div className="mb-4 p-3 bg-gray-50 rounded-md border">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-700">Status de connexion</span>
+                <span className={`text-xs ${printingConnected ? 'text-green-600' : 'text-red-600'}`}>
+                  {printingConnected ? 'Connecté à la base de données' : 'Connexion impossible'}
+                </span>
+              </div>
+              <div className={`w-3 h-3 rounded-full ${printingConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            </div>
+          </div>
+
+          {/* Désignation de l'appareil d'impression */}
+          <div className="flex items-center justify-between space-x-2 mb-4 p-3 bg-yellow-50 rounded-md border border-yellow-200">
+            <div className="flex flex-col">
+              <Label htmlFor="printing-device" className="text-sm font-medium text-yellow-800">
+                Cet appareil est l'imprimante
+              </Label>
+              <p className="text-xs text-yellow-700 mt-1">
+                {isPrintingDevice 
+                  ? "Cet appareil imprimera automatiquement les nouvelles commandes" 
+                  : "Seul l'appareil désigné imprimera les commandes"
+                }
+              </p>
+            </div>
+            <Switch
+              id="printing-device"
+              checked={isPrintingDevice}
+              onCheckedChange={setAssPrintingDevice}
+            />
+          </div>
+
+          {/* Queue d'impression */}
+          {isPrintingDevice && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-blue-700">Queue d'impression</span>
+                  <span className="text-xs text-blue-600">
+                    {printQueue.length} tâches en attente
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearPrintQueue}
+                  className="text-blue-600 border-blue-200"
+                >
+                  Vider la queue
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Erreurs d'impression */}
+          {printingErrors.length > 0 && (
+            <div className="mb-4 p-3 bg-red-50 rounded-md border border-red-200">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-red-700">Erreurs d'impression</span>
+                  <span className="text-xs text-red-600">
+                    {printingErrors.length} erreur(s) récente(s)
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {}}
+                  className="text-red-600 border-red-200"
+                >
+                  Voir les erreurs
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Test d'impression */}
+          <div className="mb-4">
+            <Button
+              onClick={handleTestPrinter}
+              variant="outline"
+              className="w-full"
+              disabled={!isPrintingDevice}
+            >
+              Tester l'impression
+            </Button>
+          </div>
+
+          {/* Paramètres d'impression automatique */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex flex-col">
+                <Label htmlFor="auto-print" className="text-sm font-medium">
+                  Impression automatique (toutes commandes)
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Imprime automatiquement chaque commande validée
+                </p>
+              </div>
+              <Switch
+                id="auto-print"
+                checked={autoPrintEnabled}
+                onCheckedChange={handleAutoPrintToggle}
+              />
+            </div>
+
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex flex-col">
+                <Label htmlFor="auto-print-meals" className="text-sm font-medium">
+                  Impression automatique repas uniquement
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Imprime seulement les commandes de repas
+                </p>
+              </div>
+              <Switch
+                id="auto-print-meals"
+                checked={autoPrintMealsEnabled}
+                onCheckedChange={handleAutoPrintMealsToggle}
+              />
+            </div>
+
+            <div className="flex items-center justify-between space-x-2">
+              <div className="flex flex-col">
+                <Label htmlFor="auto-print-drinks" className="text-sm font-medium">
+                  Impression automatique boissons uniquement
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Imprime seulement les commandes de boissons
+                </p>
+              </div>
+              <Switch
+                id="auto-print-drinks"
+                checked={autoPrintDrinksEnabled}
+                onCheckedChange={handleAutoPrintDrinksToggle}
+              />
+            </div>
           </div>
         </div>
         

@@ -18,7 +18,7 @@ import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import SplitPaymentScreen from './screens/SplitPaymentScreen';
 import { PrintingServiceScreen } from './screens/PrintingServiceScreen';
-import { usePrintingService } from '@/hooks/usePrintingService';
+import { useDistributedPrinting } from '@/hooks/useDistributedPrinting';
 import { useLocalBackupService } from '@/hooks/useLocalBackupService';
 
 interface RestaurantAppProps {
@@ -129,8 +129,8 @@ const RestaurantApp: React.FC<RestaurantAppProps> = ({ cookingOptions, setCookin
   });
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
 
-  // Initialize printing service globally to enable automatic printing
-  usePrintingService();
+  // Initialize distributed printing service globally to enable automatic printing
+  useDistributedPrinting();
   
   // Initialize local backup service globally to enable automatic backup
   useLocalBackupService();
