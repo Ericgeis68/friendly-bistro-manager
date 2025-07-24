@@ -1,8 +1,8 @@
 import React from 'react';
 import RestaurantApp from '../components/RestaurantApp';
-import { RestaurantProvider, useRestaurant } from '../context/RestaurantContext';
+import { useRestaurant } from '../context/RestaurantContext';
 
-const IndexContent = () => {
+const Index = () => {
   const { cookingOptions, setCookingOptions } = useRestaurant();
   
   return (
@@ -10,14 +10,6 @@ const IndexContent = () => {
       cookingOptions={cookingOptions} 
       setCookingOptions={setCookingOptions} 
     />
-  );
-};
-
-const Index = () => {
-  return (
-    <RestaurantProvider>
-      <IndexContent />
-    </RestaurantProvider>
   );
 };
 

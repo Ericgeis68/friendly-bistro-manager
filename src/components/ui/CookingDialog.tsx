@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react'; // Import X icon
 
 interface CookingDialogProps {
   onSelect: (cooking: string) => void;
   options: string[];
   title: string;
   allowCustom?: boolean;
+  onClose?: () => void; // Make onClose prop optional
 }
 
 const CookingDialog: React.FC<CookingDialogProps> = ({ 
   onSelect, 
   options, 
   title,
-  allowCustom = true 
+  allowCustom = true,
+  onClose // Destructure onClose
 }) => {
   const [customCooking, setCustomCooking] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+
+  const handleCloseClick = () => {
+    console.log("Close button clicked in CookingDialog!");
+    if (onClose) { // Check if onClose is defined before calling it
+      onClose();
+    } else {
+      console.warn("onClose function is not provided to CookingDialog.");
+    }
+  };
 
   const handleCustomSubmit = () => {
     if (customCooking.trim()) {
@@ -27,7 +38,14 @@ const CookingDialog: React.FC<CookingDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+      <div className="bg-white rounded-lg p-6 w-full max-w-sm relative"> {/* Add relative positioning */}
+        <button
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+          onClick={handleCloseClick} // Call handleCloseClick
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
         <h2 className="text-lg font-bold mb-4 text-gray-800">{title}</h2>
         <div className="space-y-2">
           {options.map((option) => (

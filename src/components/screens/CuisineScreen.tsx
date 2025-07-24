@@ -5,9 +5,10 @@ import { toast } from "@/hooks/use-toast";
 import CompletedOrdersScreen from './CompletedOrdersScreen';
 import { supabaseHelpers } from '../../utils/supabase';
 import { sortOrdersByCreationTime } from '../../utils/orderUtils';
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
 import WaitressSelectionDialog from '../ui/WaitressSelectionDialog';
+import { useRestaurant } from '../../context/RestaurantContext';
 
 interface CuisineScreenProps {
   pendingOrders: Order[];
@@ -19,6 +20,7 @@ interface CuisineScreenProps {
 }
 
 const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady: (order: Order) => void }) => {
+  const { floorPlanSettings } = useRestaurant();
   const groupedMeals: Record<string, MenuItem & { comments: string[] }> = {};
   
   order.meals.forEach((meal) => {
@@ -51,6 +53,7 @@ const OrderCard = ({ order, handleOrderReady }: { order: Order, handleOrderReady
       <div className="flex justify-between items-start mb-2">
         <div>
           <h3 className="text-lg font-medium">
+            {order.room && floorPlanSettings.showRoomSelector && <span className="text-blue-600 mr-2">{order.room} -</span>}
             Table {order.table}
             {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
           </h3>
@@ -158,7 +161,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
       order.status === 'pending' && 
       order.meals && 
       order.meals.length > 0 &&
-      (!order.id.includes('-drinks'))
+      (!order.id.includes('-boissons'))
     );
     
     const uniqueOrderIds = new Set();
@@ -245,7 +248,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         orders={completedOrders.filter(order => 
           order.meals && 
           order.meals.length > 0 && 
-          !order.id.includes('-drinks')
+          !order.id.includes('-boissons')
         )}
         onBack={() => setShowOrders('pending')}
         userRole="cuisine"
@@ -363,7 +366,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
         <div className="flex-1 p-4 overflow-auto">
           {isHorizontalLayout ? (
             <ScrollArea className="w-full h-[calc(100vh-5rem)]">
-              <div className="flex gap-4 p-2">
+              <div className="flex gap-4 p-2" style={{ width: `${sortedPendingOrders.length * 280}px` }}>
                 {sortedPendingOrders.length === 0 ? (
                   <div className="text-center text-gray-500 w-full py-10">
                     Aucune commande en attente
@@ -378,6 +381,7 @@ const CuisineScreen: React.FC<CuisineScreenProps> = ({
                   ))
                 )}
               </div>
+              <ScrollBar orientation="horizontal" />
             </ScrollArea>
           ) : (
             <div className="flex flex-col gap-4 items-center">

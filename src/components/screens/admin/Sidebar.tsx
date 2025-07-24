@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, BarChart2, UtensilsCrossed, Settings, List, X, Users, Map } from 'lucide-react';
+import { ArrowLeft, BarChart2, UtensilsCrossed, Settings, List, X, Users, Map, Printer } from 'lucide-react';
 
 interface SidebarProps {
   currentScreenLocal: string;
@@ -19,14 +19,14 @@ const Sidebar = ({
   onLogout
 }: SidebarProps) => {
   return (
-    <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block bg-gray-800 text-white w-full md:w-64 p-4 md:h-screen md:fixed md:left-0 md:top-0 z-50`}>
+    <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block bg-gray-800 text-white w-full md:w-64 p-4 md:h-screen md:fixed md:left-0 md:top-0 z-50 overflow-y-auto`}>
       <div className="flex justify-between items-center mb-4">
         <div className="text-2xl font-bold text-center">Admin Panel</div>
         <button onClick={() => setSidebarOpen(false)} className="md:hidden text-white">
           <X size={20} />
         </button>
       </div>
-      <div className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4 pb-4">
         <button
           onClick={() => {
             setCurrentScreenLocal('dashboard');
@@ -69,6 +69,16 @@ const Sidebar = ({
         </button>
         <button
           onClick={() => {
+            setCurrentScreenLocal('floorplansettings');
+            setSidebarOpen(false);
+          }}
+          className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'floorplansettings' ? 'bg-gray-700' : ''}`}
+        >
+          <Settings size={20} className="mr-2" />
+          Config. Plan de Salle
+        </button>
+        <button
+          onClick={() => {
             setCurrentScreenLocal('waitresses');
             setSidebarOpen(false);
           }}
@@ -86,6 +96,17 @@ const Sidebar = ({
         >
           <List size={20} className="mr-2" />
           Ventes du Jour
+        </button>
+        {/* New Printing Service Button */}
+        <button
+          onClick={() => {
+            setCurrentScreenLocal('printing');
+            setSidebarOpen(false);
+          }}
+          className={`flex items-center py-2 px-4 rounded-md hover:bg-gray-700 ${currentScreenLocal === 'printing' ? 'bg-gray-700' : ''}`}
+        >
+          <Printer size={20} className="mr-2" />
+          Service d'impression
         </button>
         <button
           onClick={() => {

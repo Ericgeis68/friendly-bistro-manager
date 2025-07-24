@@ -52,7 +52,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
 
   // Initialize local states from existing order when component mounts or order changes
   useEffect(() => {
-    console.log("MealMenuScreen: useEffect - order prop:", order); // ADDED LOG
+    console.log("MealMenuScreen: useEffect - order prop:", order);
     const newNormalQuantities = new Map<number, number>();
     const newCookedMeals: MenuItem[] = [];
     const newCommentedMeals: MenuItem[] = [];
@@ -262,7 +262,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
       allOrderedMeals.push(meal);
     });
     
-    console.log("MealMenuScreen: Validating meals order with all items:", allOrderedMeals); // ADDED LOG
+    console.log("MealMenuScreen: Validating meals order with all items:", allOrderedMeals);
     
     if (allOrderedMeals.length === 0) {
       setOrder(prev => ({ ...prev, meals: [] })); // Clear meals if none selected
@@ -343,52 +343,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
           </div>
         ))}
 
-        {cookedMeals.length > 0 && (
-          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-3 shadow`}>
-            <h3 className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Avec cuisson:</h3>
-            {cookedMeals.map((meal, index) => (
-              <div key={meal.id} className="flex justify-between items-center mb-2">
-                <div className="flex-1">
-                  <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {meal.name} ({meal.cooking})
-                  </div>
-                  <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{meal.price.toFixed(2)} €</div>
-                </div>
-                <button
-                  onClick={() => handleRemoveSpecificItem(meal)}
-                  className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-500'} flex items-center justify-center text-lg font-medium`}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {commentedMeals.length > 0 && (
-          <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl p-4 mb-3 shadow`}>
-            <h3 className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Avec commentaires:</h3>
-            {commentedMeals.map((meal, index) => (
-              <div key={meal.id} className="flex justify-between items-center mb-2">
-                <div className="flex-1">
-                  <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {meal.name} {meal.cooking && `(${meal.cooking})`}
-                  </div>
-                  <div className={`text-sm italic ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>
-                    "{meal.comment}"
-                  </div>
-                  <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{meal.price.toFixed(2)} €</div>
-                </div>
-                <button
-                  onClick={() => removeCommentedMeal(index)}
-                  className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-500'} flex items-center justify-center text-lg font-medium`}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Removed the explicit rendering of cookedMeals and commentedMeals */}
       </div>
 
       {showCookingDialog && selectedMealIdForCooking && (
@@ -397,6 +352,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
           options={cookingOptions}
           onSelect={handleCookingChoice}
           allowCustom={true}
+          onClose={() => setShowCookingDialog(false)}
         />
       )}
 
@@ -406,6 +362,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
           options={cookingOptions}
           onSelect={handleCookingForComment}
           allowCustom={true}
+          onClose={() => setShowCookingCommentDialog(false)}
         />
       )}
 
@@ -422,6 +379,7 @@ const MealMenuScreen: React.FC<MealMenuScreenProps> = ({
             setSelectedMealToRemoveId(null);
           }}
           allowCustom={false}
+          onClose={() => setShowRemoveCookingDialog(false)}
         />
       )}
 

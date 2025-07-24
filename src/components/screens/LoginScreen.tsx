@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, AlertCircle } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { supabaseHelpers } from '../../utils/supabase';
+import { useRestaurant } from '../../context/RestaurantContext'; // Import useRestaurant
+import type { UserRole } from '../../types/restaurant'; // Import UserRole
 
 interface LoginScreenProps {
   onLogin: (user: 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin' | string) => void;
@@ -12,7 +14,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, darkMode, toggleDarkMode }) => {
   const [waitresses, setWaitresses] = useState<{id: string, name: string}[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { setCurrentUser } = useRestaurant(); // Use the context
 
   useEffect(() => {
     loadWaitresses();
@@ -20,21 +22,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, darkMode, toggleDark
 
   const loadWaitresses = async () => {
     try {
-      setError(null);
       const data = await supabaseHelpers.getWaitresses();
-      setWaitresses(data);
+      setWaitresses(data || []);
     } catch (error) {
       console.error('Erreur lors du chargement des serveuses:', error);
-      setError('Impossible de se connecter à la base de données. Vérifiez que le serveur Supabase est démarré.');
+      // Ne pas bloquer l'application, juste continuer avec un tableau vide
       setWaitresses([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRetry = () => {
-    setLoading(true);
-    loadWaitresses();
+  const handleLogin = (name: string, role: UserRole) => {
+    setCurrentUser({ id: name, name: name, role: role }); // Set the current user in context
+    onLogin(name);
   };
 
   return (
@@ -45,7 +46,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, darkMode, toggleDark
           <button 
             onClick={toggleDarkMode} 
             className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-            aria-label={darkMode ? "Activer le mode clair" : "Activer le mode sombre"}
+            aria-label={darkMode ? "Activer mode clair" : "Activer mode sombre"}
           >
             {darkMode ? 
               <Sun size={20} className="text-yellow-400" /> : 
@@ -57,54 +58,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, darkMode, toggleDark
         <div className="space-y-3">
           {loading ? (
             <div className="text-center py-4">
-              <span className="animate-pulse">Chargement des serveuses...</span>
-            </div>
-          ) : error ? (
-            <div className="text-center py-4 space-y-4">
-              <div className={`flex items-center justify-center p-4 rounded-lg ${darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'}`}>
-                <AlertCircle className="mr-2" size={20} />
-                <span className="text-sm">{error}</span>
-              </div>
-              <Button 
-                onClick={handleRetry}
-                variant="outline"
-                className={`w-full ${darkMode ? 'border-gray-700 hover:bg-gray-700' : ''}`}
-              >
-                Réessayer
-              </Button>
-            </div>
-          ) : waitresses.length === 0 ? (
-            <div className="text-center py-4">
-              <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Aucune serveuse enregistrée dans la base de données.
-              </span>
+              <span className="animate-pulse">Chargement...</span>
             </div>
           ) : (
             <>
               {waitresses.map((waitress) => (
                 <Button 
                   key={waitress.id}
-                  onClick={() => onLogin(waitress.name)}
-                  className="w-full h-12 text-lg"
+                  onClick={() => handleLogin(waitress.name, waitress.name as UserRole)} // Pass role based on name for waitresses
+                  className="w-full h-12 text-lg bg-blue-500 hover:bg-blue-600 text-white"
                 >
                   {waitress.name}
                 </Button>
               ))}
               
-              <div className="border-t border-gray-200 my-4"></div>
-              
               <Button 
-                onClick={() => onLogin('cuisine')}
-                variant="outline"
-                className={`w-full h-12 text-lg ${darkMode ? 'border-gray-700 hover:bg-gray-700' : ''}`}
+                onClick={() => handleLogin('cuisine', 'cuisine')}
+                className="w-full h-12 text-lg bg-white hover:bg-gray-100 text-gray-800 border border-gray-300"
               >
                 Grillade
               </Button>
               
               <Button 
-                onClick={() => onLogin('admin')}
-                variant="outline"
-                className={`w-full h-12 text-lg ${darkMode ? 'border-gray-700 hover:bg-gray-700' : ''}`}
+                onClick={() => handleLogin('admin', 'admin')}
+                className="w-full h-12 text-lg bg-white hover:bg-gray-100 text-gray-800 border border-gray-300"
               >
                 Admin
               </Button>

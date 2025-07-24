@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Textarea } from "../ui/textarea";
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { supabaseHelpers } from '../../utils/supabase';
+import { useRestaurant } from '../../context/RestaurantContext';
 import SavedFloorPlanSelector from '../ui/SavedFloorPlanSelector';
 
 interface TableInputScreenProps {
@@ -23,6 +24,7 @@ const TableInputScreen: React.FC<TableInputScreenProps> = ({
   const [isChecking, setIsChecking] = useState(false);
   const [hasExistingOrders, setHasExistingOrders] = useState(false);
   const [tablesWithOrders, setTablesWithOrders] = useState<string[]>([]);
+  const { floorPlanSettings, setSelectedRoom } = useRestaurant();
   const isDarkMode = document.documentElement.classList.contains('dark');
 
   // Check for existing orders when table number changes
@@ -181,13 +183,18 @@ const TableInputScreen: React.FC<TableInputScreenProps> = ({
           </button>
         </div>
 
-        {/* Plans de salle sauvegardés */}
-        <SavedFloorPlanSelector
-          selectedTable={localTableNumber}
-          onTableSelect={handleTableSelect}
-          tablesWithOrders={tablesWithOrders}
-          isDarkMode={isDarkMode}
-        />
+        {/* Plans de salle sauvegardés - seulement si activé */}
+        {(floorPlanSettings.showRoomSelector || floorPlanSettings.showFloorPlan) && (
+          <SavedFloorPlanSelector
+            selectedTable={localTableNumber}
+            onTableSelect={handleTableSelect}
+            tablesWithOrders={tablesWithOrders}
+            isDarkMode={isDarkMode}
+            showRoomSelector={floorPlanSettings.showRoomSelector}
+            showFloorPlan={floorPlanSettings.showFloorPlan}
+            onRoomSelect={setSelectedRoom}
+          />
+        )}
       </div>
     </div>
   );

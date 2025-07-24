@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronRight, LayoutDashboard, Coffee, Utensils, Settings, Users } from 'lucide-react';
+import { X, ChevronRight, LayoutDashboard, Coffee, Utensils, Settings, Users, Printer } from 'lucide-react';
 import Sidebar from './admin/Sidebar';
 import MenuScreen from './admin/MenuScreen';
 import DashboardScreen from './admin/DashboardScreen';
@@ -12,14 +12,17 @@ import AddCookingOptionScreen from './admin/AddCookingOptionScreen';
 import DailySalesScreen from './admin/DailySalesScreen';
 import WaitressManagementScreen from './admin/WaitressManagementScreen';
 import FloorPlanManager from '../ui/FloorPlanManager'; // Utiliser FloorPlanManager au lieu d'AdminPage
+import FloorPlanSettingsScreen from './admin/FloorPlanSettingsScreen';
 import MobileHeader from './admin/MobileHeader';
 import { useMobile } from '@/hooks/use-mobile';
 import { toast } from "@/hooks/use-toast";
 import { supabaseHelpers } from '../../utils/supabase';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { Order } from '../../types/restaurant';
+import { PrintingServiceScreen } from '../screens/PrintingServiceScreen'; // Import the PrintingServiceScreen
 
-type AdminScreenType = 'dashboard' | 'menu' | 'cooking' | 'settings' | 'editMenu' | 'addMenuItem' | 'editItem' | 'dailySales' | 'addCookingOption' | 'editCooking' | 'waitresses' | 'floorplan';
+
+type AdminScreenType = 'dashboard' | 'menu' | 'cooking' | 'settings' | 'editMenu' | 'addMenuItem' | 'editItem' | 'dailySales' | 'addCookingOption' | 'editCooking' | 'waitresses' | 'floorplan' | 'floorplansettings' | 'printing';
 
 interface AdminScreenProps {
   onLogout: () => void;
@@ -140,7 +143,9 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
     { id: 'menu', label: 'Menus', icon: <Coffee /> },
     { id: 'cooking', label: 'Cuisson', icon: <Utensils /> },
     { id: 'floorplan', label: 'Plans de salle', icon: <Settings /> },
+    { id: 'floorplansettings', label: 'Config. plan de salle', icon: <Settings /> },
     { id: 'waitresses', label: 'Serveuses', icon: <Users /> },
+    { id: 'printing', label: 'Service d\'impression', icon: <Printer /> },
     { id: 'settings', label: 'Paramètres', icon: <Settings /> },
   ];
 
@@ -187,8 +192,13 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
       case 'floorplan':
         // Utiliser FloorPlanManager au lieu d'AdminPage pour avoir accès aux modèles prédéfinis
         return <FloorPlanManager isDarkMode={true} />;
+      case 'floorplansettings':
+        return <FloorPlanSettingsScreen />;
       case 'waitresses':
         return <WaitressManagementScreen />;
+      case 'printing':
+        // Render the PrintingServiceScreen directly within AdminScreen
+        return <PrintingServiceScreen onBack={() => setActiveScreen('dashboard')} />;
       case 'settings':
         return <SettingsScreen 
           serverIp="" 
@@ -272,20 +282,22 @@ const AdminScreen: React.FC<AdminScreenProps> = ({
         )}
         
         {isMobile && showMobileMenu && (
-          <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-40" onClick={toggleMobileMenu}>
-            <div className="w-64 h-full bg-white shadow-md" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 flex" onClick={toggleMobileMenu}>
+            <div className="w-64 h-full bg-white shadow-md overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="p-4 border-b flex justify-between items-center">
                 <h1 className="text-xl font-bold text-blue-600">Menu</h1>
                 <X className="cursor-pointer" onClick={toggleMobileMenu} />
               </div>
-              <Sidebar 
-                currentScreenLocal={activeScreen}
-                setCurrentScreenLocal={handleNavigation}
-                sidebarOpen={showMobileMenu}
-                setSidebarOpen={setShowMobileMenu}
-                handleLogoutAdmin={handleLogoutAdmin}
-                onLogout={onLogout}
-              />
+              <div className="flex-1 overflow-y-auto">
+                <Sidebar 
+                  currentScreenLocal={activeScreen}
+                  setCurrentScreenLocal={handleNavigation}
+                  sidebarOpen={showMobileMenu}
+                  setSidebarOpen={setShowMobileMenu}
+                  handleLogoutAdmin={handleLogoutAdmin}
+                  onLogout={onLogout}
+                />
+              </div>
             </div>
           </div>
         )}

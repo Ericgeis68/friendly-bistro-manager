@@ -6,6 +6,7 @@ import { fr } from 'date-fns/locale';
 import { groupMenuItems } from '../../utils/itemGrouping';
 import SearchBar from './pendingOrders/SearchBar';
 import { useFilteredOrders } from '@/hooks/useFilteredOrders';
+import { useRestaurant } from '../../context/RestaurantContext';
 
 interface CompletedOrdersScreenProps {
   orders: Order[];
@@ -19,6 +20,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
   userRole = 'waitress'
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { floorPlanSettings } = useRestaurant();
   
   const formatOrderDate = (date: string | number) => {
     try {
@@ -92,7 +94,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
 
   const getOrderType = (order: Order) => {
     // Add null checks for drinks
-    if (order.id.includes('-drinks') || (Array.isArray(order.drinks) && order.drinks.length > 0)) {
+    if (order.id.includes('-boissons') || (Array.isArray(order.drinks) && order.drinks.length > 0)) {
       return 'Boissons';
     } else {
       return 'Repas';
@@ -145,8 +147,8 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
           {filteredOrders.map((order) => {
             const orderType = getOrderType(order);
             const orderId = order.id
-              .replace('-drinks', '')
-              .replace('-meals', '');
+              .replace('-boissons', '')
+              .replace('-repas', '');
               
             // Group meals and drinks by name and cooking style with null checks
             const groupedMeals = Array.isArray(order.meals) && order.meals.length > 0 
@@ -162,6 +164,7 @@ const CompletedOrdersScreen: React.FC<CompletedOrdersScreenProps> = ({
                 <div className="flex justify-between items-center mb-2">
                   <div>
                     <div className="font-medium text-lg">
+                      {order.room && floorPlanSettings.showRoomSelector && <span className="text-blue-600 mr-2">{order.room} -</span>}
                       Table {order.table}
                       {order.tableComment && <span className="text-gray-600 text-sm ml-2">({order.tableComment})</span>}
                     </div>

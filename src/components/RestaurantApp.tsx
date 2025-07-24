@@ -17,6 +17,9 @@ import DrinkMenuScreen from './screens/DrinkMenuScreen';
 import MealMenuScreen from './screens/MealMenuScreen';
 import RecapOrderScreen from './screens/RecapOrderScreen';
 import SplitPaymentScreen from './screens/SplitPaymentScreen';
+import { PrintingServiceScreen } from './screens/PrintingServiceScreen';
+import { usePrintingService } from '@/hooks/usePrintingService';
+import { useLocalBackupService } from '@/hooks/useLocalBackupService';
 
 interface RestaurantAppProps {
   cookingOptions: string[];
@@ -125,6 +128,12 @@ const RestaurantApp: React.FC<RestaurantAppProps> = ({ cookingOptions, setCookin
     meals: []
   });
   const [tempMeals, setTempMeals] = useState<MenuItem[]>([]);
+
+  // Initialize printing service globally to enable automatic printing
+  usePrintingService();
+  
+  // Initialize local backup service globally to enable automatic backup
+  useLocalBackupService();
 
   const {
     currentScreen,
@@ -280,6 +289,7 @@ const RestaurantApp: React.FC<RestaurantAppProps> = ({ cookingOptions, setCookin
     recap: (
       <RecapOrderScreen 
         tableNumber={tableNumber}
+        tableComment={tableComment}
         order={order}
         handleSubmitOrder={handleSubmitOrder}
         setCurrentScreen={setCurrentScreen}
@@ -309,6 +319,11 @@ const RestaurantApp: React.FC<RestaurantAppProps> = ({ cookingOptions, setCookin
         setCurrentScreen={(screen: ScreenType) => setCurrentScreen(screen)}
         cookingOptions={cookingOptions}
         setCookingOptions={setCookingOptions}
+      />
+    ),
+    printing: (
+      <PrintingServiceScreen 
+        onBack={() => setCurrentScreen('admin')}
       />
     ),
     floorPlanView: null,

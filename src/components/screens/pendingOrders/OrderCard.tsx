@@ -5,6 +5,7 @@ import { Badge } from "../../../components/ui/badge";
 import ActionButton from './ActionButton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useRestaurant } from '../../../context/RestaurantContext';
 
 interface OrderCardProps {
   order: Order;
@@ -24,6 +25,7 @@ const formatOrderDate = (date: string | number) => {
 };
 
 const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCancel }) => {
+  const { floorPlanSettings } = useRestaurant();
   // Ensure meals and drinks are arrays before accessing them
   const safeMeals = Array.isArray(order.meals) ? order.meals : [];
   const safeDrinks = Array.isArray(order.drinks) ? order.drinks : [];
@@ -80,6 +82,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onOrderComplete, onOrderCa
         <div className="flex justify-between items-center">
           <div>
             <div className="font-medium text-lg dark:text-white">
+              {order.room && floorPlanSettings.showRoomSelector && <span className="text-blue-600 dark:text-blue-400 mr-2">{order.room} -</span>}
               Table {order.table}
               {order.tableComment && (
                 <span className="text-gray-600 dark:text-gray-400 text-sm ml-2">({order.tableComment})</span>

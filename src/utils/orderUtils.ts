@@ -8,7 +8,8 @@ export const generateOrderId = () => {
   
   // Format: CMD-YYMMDD-HHMM-TABLE-TYPE
   return (tableNumber: string, type: 'meals' | 'drinks') => {
-    return `CMD-${year}${month}${day}-${hours}${minutes}-${tableNumber}-${type}`;
+    const frenchType = type === 'meals' ? 'repas' : 'boissons';
+    return `CMD-${year}${month}${day}-${hours}${minutes}-${tableNumber}-${frenchType}`;
   };
 };
 

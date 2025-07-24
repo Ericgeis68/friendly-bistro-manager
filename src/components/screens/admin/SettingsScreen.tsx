@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { supabaseHelpers } from '../../../utils/supabase';
 import { toast } from "@/hooks/use-toast";
@@ -11,6 +11,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch"; // Import Switch component
+import { Label } from "@/components/ui/label"; // Import Label component
+import { useRestaurant } from '../../../context/RestaurantContext'; // Import useRestaurant
+import { isLocalBackupSupported } from '../../../utils/localBackup';
 
 interface SettingsScreenProps {
   serverIp: string;
@@ -29,6 +33,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
 }) => {
   const [isResetting, setIsResetting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const { 
+    localBackupEnabled,
+    localBackupMealsEnabled,
+    localBackupDrinksEnabled,
+    saveLocalBackupSetting,
+    saveLocalBackupMealsSetting,
+    saveLocalBackupDrinksSetting,
+    localBackupListening,
+    setLocalBackupListening
+  } = useRestaurant(); // Get settings from context
 
   const handleResetInitiate = () => {
     setShowConfirmDialog(true);
@@ -64,11 +78,35 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setIsResetting(false);
     }
   };
+
+  const handleLocalBackupToggle = async (checked: boolean) => {
+    await saveLocalBackupSetting(checked);
+    
+    if (checked) {
+      // When enabling global backup, also enable both detailed options
+      await saveLocalBackupMealsSetting(true);
+      await saveLocalBackupDrinksSetting(true);
+    } else {
+      // When disabling global backup, also disable both detailed options
+      await saveLocalBackupMealsSetting(false);
+      await saveLocalBackupDrinksSetting(false);
+    }
+  };
+
+  const handleLocalBackupMealsToggle = async (checked: boolean) => {
+    await saveLocalBackupMealsSetting(checked);
+  };
+
+  const handleLocalBackupDrinksToggle = async (checked: boolean) => {
+    await saveLocalBackupDrinksSetting(checked);
+  };
   
   return (
     <div className="p-4">
       <h2 className="text-xl md:text-2xl font-bold mb-4">Paramètres</h2>
       <div className="bg-white rounded-xl p-6 shadow max-w-xl">
+        {/* The server IP input is removed as per user request */}
+        {/*
         <div className="mb-4">
           <label className="block text-gray-700 text-sm font-medium mb-2">Adresse IP du serveur</label>
           <input
@@ -78,6 +116,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
             className="w-full border rounded-md h-12 px-3"
           />
         </div>
+        */}
         <div className="mb-4">
           <h3 className="text-gray-700 text-sm font-medium mb-2">Appareils connectés</h3>
           <p className="text-lg">{connectedDevices}</p>
@@ -85,6 +124,89 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
         <div className="mb-4">
           <h3 className="text-gray-700 text-sm font-medium mb-2">Version de l'application</h3>
           <p className="text-lg">1.0.0</p>
+        </div>
+
+
+        {/* Local Backup Setting */}
+        <div className="mt-8 border-t pt-6">
+          <h3 className="text-gray-700 text-lg font-medium mb-3">Sauvegarde locale</h3>
+          
+          {/* Service d'écoute pour sauvegarde locale */}
+          <div className="flex items-center justify-between space-x-2 mb-6 p-3 bg-blue-50 rounded-md border border-blue-200">
+            <div className="flex flex-col">
+              <Label htmlFor="local-backup-listening" className="text-sm font-medium text-blue-700">
+                Service d'écoute sauvegarde locale
+              </Label>
+              <p className="text-xs text-blue-600 mt-1">
+                {localBackupListening ? "Actif - Écoute les nouvelles commandes" : "En pause - Aucune sauvegarde automatique"}
+              </p>
+            </div>
+            <Switch
+              id="local-backup-listening"
+              checked={localBackupListening}
+              onCheckedChange={setLocalBackupListening}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between space-x-2 mb-4">
+            <div className="flex flex-col">
+              <Label htmlFor="local-backup" className="text-sm font-medium">
+                Sauvegarde automatique (toutes commandes)
+              </Label>
+              <p className="text-xs text-gray-500 mt-1">
+                {isLocalBackupSupported() 
+                  ? "Télécharge un fichier de sauvegarde pour chaque commande validée"
+                  : "Non supporté par ce navigateur"
+                }
+              </p>
+            </div>
+            <Switch
+              id="local-backup"
+              checked={localBackupEnabled}
+              onCheckedChange={handleLocalBackupToggle}
+              disabled={!isLocalBackupSupported()}
+            />
+          </div>
+
+          <div className="flex items-center justify-between space-x-2 mb-4">
+            <div className="flex flex-col">
+              <Label htmlFor="local-backup-meals" className="text-sm font-medium">
+                Sauvegarde automatique repas uniquement
+              </Label>
+              <p className="text-xs text-gray-500 mt-1">
+                {isLocalBackupSupported() 
+                  ? "Télécharge seulement les commandes de repas"
+                  : "Non supporté par ce navigateur"
+                }
+              </p>
+            </div>
+            <Switch
+              id="local-backup-meals"
+              checked={localBackupMealsEnabled}
+              onCheckedChange={handleLocalBackupMealsToggle}
+              disabled={!isLocalBackupSupported()}
+            />
+          </div>
+
+          <div className="flex items-center justify-between space-x-2 mb-4">
+            <div className="flex flex-col">
+              <Label htmlFor="local-backup-drinks" className="text-sm font-medium">
+                Sauvegarde automatique boissons uniquement
+              </Label>
+              <p className="text-xs text-gray-500 mt-1">
+                {isLocalBackupSupported() 
+                  ? "Télécharge seulement les commandes de boissons"
+                  : "Non supporté par ce navigateur"
+                }
+              </p>
+            </div>
+            <Switch
+              id="local-backup-drinks"
+              checked={localBackupDrinksEnabled}
+              onCheckedChange={handleLocalBackupDrinksToggle}
+              disabled={!isLocalBackupSupported()}
+            />
+          </div>
         </div>
         
         <div className="mt-8 border-t pt-6">

@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/toaster';
 import { Sonner } from '@/components/ui/sonner';
 import AppRoutes from '@/routes';
+import { RestaurantProvider } from '@/context/RestaurantContext'; // Import RestaurantProvider
 
 const queryClient = new QueryClient();
 
@@ -37,13 +38,13 @@ const App = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <TooltipProvider>
+        <TooltipProvider>
+          <RestaurantProvider> {/* Wrap AppRoutes with RestaurantProvider */}
             <AppRoutes />
-            <Toaster />
-            <Sonner />
-          </TooltipProvider>
-        </BrowserRouter>
+          </RestaurantProvider>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

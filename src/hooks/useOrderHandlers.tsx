@@ -2,6 +2,11 @@ import { toast } from "@/hooks/use-toast";
 import { generateOrderId } from '../utils/orderUtils';
 import type { Order, MenuItem, ScreenType, UserRole } from '../types/restaurant';
 import { supabaseHelpers } from '../utils/supabase';
+import { useRestaurant } from '../context/RestaurantContext';
+
+import { saveOrderToLocalFile, isLocalBackupSupported } from '../utils/localBackup';
+import { generateSimpleTextTicket } from '@/utils/escPosFormatter';
+import { sendToPrinter } from '@/utils/printingUtils';
 
 interface UseOrderHandlersProps {
   loggedInUser: string;
@@ -46,6 +51,16 @@ export const useOrderHandlers = ({
   handleDrinksComplete,
   setCompletedOrders
 }: UseOrderHandlersProps) => {
+  const { 
+    selectedRoom, 
+    localBackupEnabled, 
+    localBackupMealsEnabled, 
+    localBackupDrinksEnabled,
+    autoPrintEnabled,
+    autoPrintMealsEnabled,
+    autoPrintDrinksEnabled
+  } = useRestaurant();
+
   const handleLogin = (user: string) => {
     setLoggedInUser(user);
     if (user === 'cuisine') {
@@ -78,6 +93,7 @@ export const useOrderHandlers = ({
     console.log("LoggedInUser:", loggedInUser);
     console.log("TableNumber:", tableNumber);
     console.log("TableComment:", tableComment);
+    console.log("SelectedRoom:", selectedRoom);
     
     if (order.drinks.length === 0 && order.meals.length === 0) {
       console.log("No items in order, returning");
@@ -121,6 +137,7 @@ export const useOrderHandlers = ({
           drinks: [...order.drinks],
           table: tableNumber,
           tableComment: tableComment || '',
+          room: selectedRoom || '', // CORRECTION: Inclure le nom de la salle
           status: 'pending',
           drinksStatus: 'pending',
           createdAt: new Date().toISOString()
@@ -143,6 +160,62 @@ export const useOrderHandlers = ({
             
             if (!pendingOrders.some(o => o.id === drinksOrder.id)) {
               setPendingOrders(prevOrders => [...prevOrders, drinksOrder]);
+            }
+
+
+            // Note: Local backup is handled automatically by RestaurantContext
+            // No manual backup needed here to avoid duplicates
+
+            // Auto-print if enabled
+            const shouldAutoPrintDrinks = autoPrintEnabled || autoPrintDrinksEnabled;
+            if (shouldAutoPrintDrinks) {
+              try {
+                console.log('🖨️ Auto-impression activée pour commande boissons:', drinksOrder.id);
+                // Convert to the format expected by generateEscPosTicket
+                const printOrder = {
+                  id: drinksOrder.id,
+                  table_number: drinksOrder.table,
+                  table_comment: drinksOrder.tableComment || '',
+                  room_name: drinksOrder.room || '',
+                  waitress: drinksOrder.waitress,
+                  status: drinksOrder.status,
+                  drinks_status: drinksOrder.drinksStatus || null,
+                  meals_status: drinksOrder.mealsStatus || null,
+                  drinks: drinksOrder.drinks.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity || 1,
+                    cooking: item.cooking,
+                    comment: item.comment,
+                    needsCooking: item.needsCooking
+                  })),
+                  meals: drinksOrder.meals.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity || 1,
+                    cooking: item.cooking,
+                    comment: item.comment,
+                    needsCooking: item.needsCooking
+                  })),
+                  created_at: drinksOrder.createdAt,
+                  updated_at: drinksOrder.createdAt
+                };
+                const ticketContent = generateSimpleTextTicket(printOrder);
+                await sendToPrinter(ticketContent);
+                console.log('🖨️ Auto-impression réussie pour commande boissons:', drinksOrder.id);
+              } catch (printError) {
+                console.error("🖨️ Erreur lors de l'auto-impression:", printError);
+                // Don't fail the order creation if printing fails
+                toast({
+                  title: "Avertissement",
+                  description: "Commande créée mais l'impression automatique a échoué.",
+                  variant: "destructive",
+                });
+              }
+            } else {
+              console.log('🖨️ Auto-impression désactivée - pas d\'impression automatique');
             }
             
             toast({
@@ -191,6 +264,7 @@ export const useOrderHandlers = ({
           drinks: [],
           table: tableNumber,
           tableComment: tableComment || '',
+          room: selectedRoom || '', // CORRECTION: Inclure le nom de la salle
           status: 'pending',
           mealsStatus: 'pending',
           createdAt: new Date().toISOString()
@@ -213,6 +287,62 @@ export const useOrderHandlers = ({
             
             if (!pendingOrders.some(o => o.id === mealsOrder.id)) {
               setPendingOrders(prevOrders => [...prevOrders, mealsOrder]);
+            }
+
+
+            // Note: Local backup is handled automatically by RestaurantContext
+            // No manual backup needed here to avoid duplicates
+
+            // Auto-print if enabled
+            const shouldAutoPrintMeals = autoPrintEnabled || autoPrintMealsEnabled;
+            if (shouldAutoPrintMeals) {
+              try {
+                console.log('🖨️ Auto-impression activée pour commande repas:', mealsOrder.id);
+                // Convert to the format expected by generateEscPosTicket
+                const printOrder = {
+                  id: mealsOrder.id,
+                  table_number: mealsOrder.table,
+                  table_comment: mealsOrder.tableComment || '',
+                  room_name: mealsOrder.room || '',
+                  waitress: mealsOrder.waitress,
+                  status: mealsOrder.status,
+                  drinks_status: mealsOrder.drinksStatus || null,
+                  meals_status: mealsOrder.mealsStatus || null,
+                  drinks: mealsOrder.drinks.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity || 1,
+                    cooking: item.cooking,
+                    comment: item.comment,
+                    needsCooking: item.needsCooking
+                  })),
+                  meals: mealsOrder.meals.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity || 1,
+                    cooking: item.cooking,
+                    comment: item.comment,
+                    needsCooking: item.needsCooking
+                  })),
+                  created_at: mealsOrder.createdAt,
+                  updated_at: mealsOrder.createdAt
+                };
+                const ticketContent = generateSimpleTextTicket(printOrder);
+                await sendToPrinter(ticketContent);
+                console.log('🖨️ Auto-impression réussie pour commande repas:', mealsOrder.id);
+              } catch (printError) {
+                console.error("🖨️ Erreur lors de l'auto-impression:", printError);
+                // Don't fail the order creation if printing fails
+                toast({
+                  title: "Avertissement",
+                  description: "Commande créée mais l'impression automatique a échoué.",
+                  variant: "destructive",
+                });
+              }
+            } else {
+              console.log('🖨️ Auto-impression désactivée - pas d\'impression automatique');
             }
             
             toast({

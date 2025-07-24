@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { FloorPlan } from '../types/floorPlan'; // Assurez-vous que ce chemin est correct
+import { AppSettings } from '../types/restaurant';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -23,7 +24,7 @@ export const supabaseHelpers = {
   async getMenuItems() {
     const { data, error } = await supabase
       .from('menu_items')
-      .select('id, name, price, needs_cooking, category')
+      .select('id, name, price, needs_cooking, category, variants')
       .order('id');
     
     if (error) throw error;
@@ -34,21 +35,23 @@ export const supabaseHelpers = {
     // Clear existing items
     await supabase.from('menu_items').delete().neq('id', 0);
     
-    // Insert new items with proper column mapping
+    // Insert new items with proper column mapping including variants
     const allItems = [
       ...menuItems.drinks.map((item: any) => ({ 
         id: item.id,
         name: item.name,
         price: item.price,
         needs_cooking: item.needsCooking, // Map camelCase to snake_case
-        category: 'drinks' 
+        category: 'drinks',
+        variants: item.variants || null // Inclure les variantes
       })),
       ...menuItems.meals.map((item: any) => ({ 
         id: item.id,
         name: item.name,
         price: item.price,
         needs_cooking: item.needsCooking, // Map camelCase to snake_case
-        category: 'meals' 
+        category: 'meals',
+        variants: null // Les repas n'ont pas de variantes
       }))
     ];
     
@@ -83,19 +86,20 @@ export const supabaseHelpers = {
   },
 
   async createOrder(order: any) {
-    const { error } = await supabase
-      .from('orders')
-      .insert({
-        id: order.id,
-        table_number: order.table,
-        table_comment: order.tableComment || '',
-        waitress: order.waitress,
-        status: order.status,
-        drinks_status: order.drinksStatus,
-        meals_status: order.mealsStatus,
-        drinks: order.drinks || [],
-        meals: order.meals || []
-      });
+      const { error } = await supabaseHelpers.supabase
+        .from('orders')
+        .insert({
+          id: order.id,
+          table_number: order.table,
+          table_comment: order.tableComment || '',
+          room_name: order.room || null,
+          waitress: order.waitress,
+          status: order.status,
+          drinks_status: order.drinksStatus,
+          meals_status: order.mealsStatus,
+          drinks: order.drinks || [],
+          meals: order.meals || []
+        });
     
     if (error) throw error;
   },
@@ -258,13 +262,23 @@ export const supabaseHelpers = {
 
   // Waitresses management
   async getWaitresses() {
-    const { data, error } = await supabase
-      .from('waitresses')
-      .select('*')
-      .order('name');
-    
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('waitresses')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Supabase error fetching waitresses:', error);
+        return []; // Retourner un tableau vide au lieu de throw
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error in getWaitresses:', error);
+      // Retourner un tableau vide au lieu de throw pour éviter le crash
+      return [];
+    }
   },
 
   async createWaitress(name: string) {
@@ -402,6 +416,134 @@ export const supabaseHelpers = {
         callback
       )
       .subscribe();
+  },
+
+  // Settings management
+  async getSettings(settingId: string) {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('data')
+      .eq('id', settingId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data?.data || null;
+  },
+
+  async updateSettings(settingId: string, data: any) {
+    const { error } = await supabase
+      .from('settings')
+      .upsert({
+        id: settingId,
+        data: data
+      });
+    
+    if (error) throw error;
+  },
+
+  // Specific setting for auto print
+  async getAutoPrintSetting(): Promise<boolean> {
+    try {
+      const settings = await this.getSettings('app_settings');
+      console.log('getAutoPrintSetting - settings loaded:', settings);
+      const result = settings?.autoPrintEnabled ?? true; // Default to true if not found
+      console.log('getAutoPrintSetting result:', result);
+      return result;
+    } catch (error) {
+      console.error("Error getting auto print setting:", error);
+      return true; // Default to true on error to enable auto-print
+    }
+  },
+
+  async saveAutoPrintSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, autoPrintEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving auto print setting:", error);
+      throw error;
+    }
+  },
+
+  // Specific setting for auto email
+  async getAutoEmailSetting(): Promise<boolean> {
+    try {
+      const settings = await this.getSettings('app_settings');
+      return settings?.autoEmailEnabled ?? false; // Default to false if not found
+    } catch (error) {
+      console.error("Error getting auto email setting:", error);
+      return false; // Default to false on error
+    }
+  },
+
+  async saveAutoEmailSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, autoEmailEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving auto email setting:", error);
+      throw error;
+    }
+  },
+
+  async saveLocalBackupSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, localBackupEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving local backup setting:", error);
+      throw error;
+    }
+  },
+
+  async saveAutoPrintMealsSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, autoPrintMealsEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving auto print meals setting:", error);
+      throw error;
+    }
+  },
+
+  async saveAutoPrintDrinksSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, autoPrintDrinksEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving auto print drinks setting:", error);
+      throw error;
+    }
+  },
+
+  async saveLocalBackupMealsSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, localBackupMealsEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving local backup meals setting:", error);
+      throw error;
+    }
+  },
+
+  async saveLocalBackupDrinksSetting(enabled: boolean) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, localBackupDrinksEnabled: enabled });
+    } catch (error) {
+      console.error("Error saving local backup drinks setting:", error);
+      throw error;
+    }
+  },
+
+  // Generic settings save method
+  async saveSettings(settingId: string, data: any) {
+    try {
+      await this.updateSettings(settingId, data);
+    } catch (error) {
+      console.error(`Error saving settings for ${settingId}:`, error);
+      throw error;
+    }
   },
 
   // Cleanup functions

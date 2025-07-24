@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FloorPlanEditor from './FloorPlanEditor';
 import { FloorPlan } from '../../types/floorPlan';
 import { supabaseHelpers } from '../../utils/supabase';
-import { Plus, Edit3, Trash2, Copy } from 'lucide-react';
+import { Plus, Edit3, Trash2, Copy, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface FloorPlanManagerProps {
@@ -18,6 +18,8 @@ const FloorPlanManager: React.FC<FloorPlanManagerProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingPlanName, setEditingPlanName] = useState<string | null>(null);
+  const [tempPlanName, setTempPlanName] = useState('');
 
   // Charger tous les plans depuis la base de données
   useEffect(() => {
@@ -145,6 +147,11 @@ const FloorPlanManager: React.FC<FloorPlanManagerProps> = ({
       await supabaseHelpers.upsertFloorPlan(newPlan);
       setFloorPlans(prev => [...prev, newPlan]);
       setSelectedPlan(newPlan.id);
+      
+      // Démarrer l'édition du nom immédiatement
+      setEditingPlanName(newPlan.id);
+      setTempPlanName(newPlan.name);
+      
       toast({
         title: "Nouveau plan créé",
         description: "Un nouveau plan de salle a été créé",
@@ -157,6 +164,60 @@ const FloorPlanManager: React.FC<FloorPlanManagerProps> = ({
         variant: "destructive",
       });
     }
+  };
+
+  const startEditingPlanName = (planId: string, currentName: string) => {
+    setEditingPlanName(planId);
+    setTempPlanName(currentName);
+  };
+
+  const savePlanName = async (planId: string) => {
+    if (!tempPlanName.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le nom de la salle ne peut pas être vide",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const planToUpdate = floorPlans.find(plan => plan.id === planId);
+      if (!planToUpdate) return;
+
+      const updatedPlan = {
+        ...planToUpdate,
+        name: tempPlanName.trim()
+      };
+
+      await supabaseHelpers.upsertFloorPlan(updatedPlan);
+      
+      setFloorPlans(prev => 
+        prev.map(plan => 
+          plan.id === planId ? updatedPlan : plan
+        )
+      );
+
+      setEditingPlanName(null);
+      setTempPlanName('');
+
+      toast({
+        title: "Nom modifié",
+        description: "Le nom de la salle a été modifié avec succès",
+      });
+    } catch (error) {
+      console.error("Erreur lors de la modification du nom:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le nom de la salle",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelEditingPlanName = () => {
+    setEditingPlanName(null);
+    setTempPlanName('');
   };
 
   const duplicatePlan = async (planId: string) => {
@@ -274,20 +335,66 @@ const FloorPlanManager: React.FC<FloorPlanManagerProps> = ({
           <div className="flex flex-wrap gap-2 mb-4">
             {floorPlans.map((plan) => (
               <div key={plan.id} className="flex items-center">
-                <button
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className={`px-4 py-2 rounded-l-md transition-colors ${
-                    selectedPlan === plan.id
-                      ? 'bg-blue-500 text-white'
-                      : isDarkMode
-                      ? 'bg-gray-700 text-white hover:bg-gray-600'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {plan.name}
-                </button>
-                {isEditing && (
+                <div className="flex items-center">
+                  {editingPlanName === plan.id ? (
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        value={tempPlanName}
+                        onChange={(e) => setTempPlanName(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            savePlanName(plan.id);
+                          } else if (e.key === 'Escape') {
+                            cancelEditingPlanName();
+                          }
+                        }}
+                        className={`px-3 py-2 rounded-l-md border ${
+                          isDarkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-800'
+                        }`}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => savePlanName(plan.id)}
+                        className="px-2 py-2 bg-green-500 text-white hover:bg-green-600"
+                        title="Sauvegarder"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={cancelEditingPlanName}
+                        className="px-2 py-2 bg-gray-500 text-white hover:bg-gray-600"
+                        title="Annuler"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`px-4 py-2 rounded-l-md transition-colors ${
+                        selectedPlan === plan.id
+                          ? 'bg-blue-500 text-white'
+                          : isDarkMode
+                          ? 'bg-gray-700 text-white hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {plan.name}
+                    </button>
+                  )}
+                </div>
+                {isEditing && editingPlanName !== plan.id && (
                   <div className="flex">
+                    <button
+                      onClick={() => startEditingPlanName(plan.id, plan.name)}
+                      className="px-2 py-2 bg-blue-500 text-white hover:bg-blue-600"
+                      title="Modifier le nom"
+                    >
+                      <Edit size={14} />
+                    </button>
                     <button
                       onClick={() => duplicatePlan(plan.id)}
                       className="px-2 py-2 bg-green-500 text-white hover:bg-green-600"

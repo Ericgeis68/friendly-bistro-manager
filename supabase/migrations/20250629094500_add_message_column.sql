@@ -1,4 +1,3 @@
-
 -- Ajouter la colonne message à la table notifications
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message TEXT;
 

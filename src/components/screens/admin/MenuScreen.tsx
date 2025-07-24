@@ -1,6 +1,7 @@
 import React from 'react';
 import { MenuItems } from '../../../types/restaurant';
 import { useRestaurant } from '../../../context/RestaurantContext';
+import { Button } from '../../ui/button'; // Import Button component
 
 interface MenuScreenProps {
   handleEditMenu: () => void;
@@ -9,23 +10,40 @@ interface MenuScreenProps {
 const MenuScreen: React.FC<MenuScreenProps> = ({ handleEditMenu }) => {
   const { menuItems } = useRestaurant();
   
+  const handlePrintMenu = () => {
+    window.print();
+  };
+
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 no-print">
         <h2 className="text-xl md:text-2xl font-bold">Gestion du Menu</h2>
-        <button onClick={handleEditMenu} className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2">Modifier</button>
+        <div className="flex space-x-2">
+          <Button onClick={handlePrintMenu} className="bg-gray-500 hover:bg-gray-600 text-white rounded-md p-2">Imprimer</Button>
+          <Button onClick={handleEditMenu} className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-2">Modifier</Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
           <h3 className="text-lg md:text-xl font-medium mb-2">Boissons</h3>
           {menuItems.drinks && menuItems.drinks.length > 0 ? (
-            menuItems.drinks.map(drink => (
-              <div key={drink.id} className="bg-white rounded-xl p-4 shadow flex justify-between mb-2">
-                <div>
-                  <div className="font-medium text-lg">{drink.name}</div>
-                  <div className="text-gray-600">{drink.price.toFixed(2)} €</div>
-                </div>
-              </div>
+             menuItems.drinks.map(drink => (
+               <div key={drink.id} className="bg-white rounded-xl p-4 shadow flex justify-between mb-2">
+                 <div className="w-full">
+                   <div className="font-medium text-lg">{drink.name}</div>
+                   {drink.variants && drink.variants.length > 0 ? (
+                     // Afficher les variantes sur des lignes séparées
+                     drink.variants.map((variant, index) => (
+                       <div key={index} className="text-gray-600 text-sm">
+                         {variant.name}: {variant.price.toFixed(2)} €
+                       </div>
+                     ))
+                   ) : (
+                     // Afficher le prix simple s'il n'y a pas de variantes
+                     <div className="text-gray-600">{drink.price.toFixed(2)} €</div>
+                   )}
+                 </div>
+               </div>
             ))
           ) : (
             <div className="bg-white rounded-xl p-4 shadow mb-2 text-gray-500">

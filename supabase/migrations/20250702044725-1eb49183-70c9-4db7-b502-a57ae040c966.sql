@@ -1,4 +1,3 @@
-
 -- Create a table for floor plans
 CREATE TABLE IF NOT EXISTS public.floor_plans (
   id TEXT NOT NULL PRIMARY KEY,

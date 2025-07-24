@@ -15,6 +15,8 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [needsCooking, setNeedsCooking] = useState(false);
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState([{ name: 'verre', price: '' }, { name: 'bouteille', price: '' }]);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [editCategory, setEditCategory] = useState<'drinks' | 'meals'>('meals');
   const { menuItems, setMenuItems } = useRestaurant();
@@ -31,6 +33,12 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
         setName(item.name || '');
         setPrice(item.price?.toString() || '');
         setNeedsCooking(item.needsCooking || false);
+        
+        // Gérer les variantes pour les boissons
+        if (item.variants && Array.isArray(item.variants)) {
+          setHasVariants(true);
+          setVariants(item.variants.map(v => ({ name: v.name, price: v.price.toString() })));
+        }
       } catch (e) {
         console.error("Erreur lors du parsing de l'élément à modifier:", e);
       }
@@ -42,10 +50,13 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
   }, []);
 
   const handleSubmit = async () => {
-    if (!editItem || !name || !price) {
+    // Vérifier si c'est une boisson avec variantes
+    const isVariantDrink = editCategory === 'drinks' && hasVariants && variants.some(v => v.price.trim() !== '');
+    
+    if (!editItem || !name || (!price && !isVariantDrink)) {
       toast({
         title: "Erreur",
-        description: "Veuillez remplir tous les champs",
+        description: isVariantDrink ? "Veuillez remplir le nom et au moins une variante" : "Veuillez remplir tous les champs",
         variant: "destructive",
       });
       return;
@@ -58,12 +69,38 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
       // Mettre à jour l'élément
       updatedMenuItems[editCategory] = updatedMenuItems[editCategory].map(item => {
         if (item.id === editItem.id) {
-          return { 
+          const updatedItem: any = { 
             ...item, 
             name, 
-            price: parseFloat(price),
             needsCooking: editCategory === 'meals' ? needsCooking : false
           };
+          
+          // Gérer les variantes pour les boissons
+          if (editCategory === 'drinks') {
+            if (hasVariants) {
+              const validVariants = variants.filter(v => v.price.trim() !== '').map(v => ({
+                name: v.name,
+                price: parseFloat(v.price)
+              }));
+              if (validVariants.length > 0) {
+                updatedItem.variants = validVariants;
+                // Pour les articles avec variantes, on met le prix à 0 ou on utilise le premier prix de variante
+                updatedItem.price = 0;
+              } else {
+                updatedItem.price = parseFloat(price);
+                delete updatedItem.variants;
+              }
+            } else {
+              // Pas de variantes, utiliser le prix normal
+              updatedItem.price = parseFloat(price);
+              delete updatedItem.variants;
+            }
+          } else {
+            // Pour les repas, toujours utiliser le prix normal
+            updatedItem.price = parseFloat(price);
+          }
+          
+          return updatedItem;
         }
         return item;
       });
@@ -113,16 +150,18 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
             className="w-full border rounded-md h-12 px-3"
           />
         </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-medium mb-2">Prix (€)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={price}
-            onChange={e => setPrice(e.target.value)}
-            className="w-full border rounded-md h-12 px-3"
-          />
-        </div>
+        {(!hasVariants || editCategory === 'meals') && (
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-medium mb-2">Prix (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={price}
+              onChange={e => setPrice(e.target.value)}
+              className="w-full border rounded-md h-12 px-3"
+            />
+          </div>
+        )}
         {editCategory === 'meals' && (
           <div className="mb-6 flex items-center space-x-2">
             <Switch 
@@ -133,6 +172,71 @@ const EditItemScreen: React.FC<EditItemScreenProps> = ({ handleCancelEdit }) => 
             <Label htmlFor="cooking-option">
               Demander la cuisson lors de la commande
             </Label>
+          </div>
+        )}
+        {editCategory === 'drinks' && (
+          <div className="mb-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Switch 
+                id="variants-option" 
+                checked={hasVariants}
+                onCheckedChange={setHasVariants}
+              />
+              <Label htmlFor="variants-option">
+                Proposer des variantes (verre/bouteille)
+              </Label>
+            </div>
+            {hasVariants && (
+              <div className="space-y-3 bg-gray-50 p-4 rounded-md">
+                <h4 className="font-medium text-gray-700">Variantes</h4>
+                {variants.map((variant, index) => (
+                  <div key={index} className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={variant.name}
+                      onChange={(e) => {
+                        const newVariants = [...variants];
+                        newVariants[index].name = e.target.value;
+                        setVariants(newVariants);
+                      }}
+                      className="flex-1 border rounded-md h-10 px-3"
+                      placeholder="Nom de la variante"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={variant.price}
+                      onChange={(e) => {
+                        const newVariants = [...variants];
+                        newVariants[index].price = e.target.value;
+                        setVariants(newVariants);
+                      }}
+                      className="w-24 border rounded-md h-10 px-3"
+                      placeholder="Prix"
+                    />
+                    {variants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newVariants = variants.filter((_, i) => i !== index);
+                          setVariants(newVariants);
+                        }}
+                        className="text-red-500 hover:text-red-600 px-2"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setVariants([...variants, { name: '', price: '' }])}
+                  className="text-blue-500 text-sm hover:text-blue-600"
+                >
+                  + Ajouter une variante
+                </button>
+              </div>
+            )}
           </div>
         )}
         <button 

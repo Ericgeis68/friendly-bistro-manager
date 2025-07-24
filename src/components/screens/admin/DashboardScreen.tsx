@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Beer, UtensilsCrossed, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Order } from '../../../types/restaurant';
 import { toast } from '@/hooks/use-toast';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DashboardScreenProps {
   localOrders: Order[];
@@ -67,21 +68,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ localOrders, refreshO
       </div>
       <div className="bg-white rounded-xl p-4 shadow mb-6">
         <h3 className="text-lg font-medium mb-4">Dernières commandes</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">ID</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Type</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Table</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Serveuse</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Heure</th>
-                <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length > 0 ? (
-                orders.slice(0, 10).map(order => {
+        <ScrollArea className="h-[60vh] w-full">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">ID</th>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Type</th>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Table</th>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Serveuse</th>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Heure</th>
+                  <th className="px-2 md:px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.length > 0 ? (
+                  orders.map(order => {
                   const orderTime = new Date(order.createdAt).toLocaleTimeString();
                   
                   // Déterminer le type de commande
@@ -156,6 +158,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ localOrders, refreshO
             </tbody>
           </table>
         </div>
+        </ScrollArea>
       </div>
     </div>
   );

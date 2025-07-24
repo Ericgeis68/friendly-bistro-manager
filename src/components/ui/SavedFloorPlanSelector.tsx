@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FloorPlan } from '../../types/floorPlan';
 import { supabaseHelpers } from '../../utils/supabase';
@@ -9,13 +8,19 @@ interface SavedFloorPlanSelectorProps {
   onTableSelect: (tableNumber: string) => void;
   tablesWithOrders: string[];
   isDarkMode: boolean;
+  showRoomSelector?: boolean;
+  showFloorPlan?: boolean;
+  onRoomSelect?: (roomName: string) => void;
 }
 
 const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
   selectedTable,
   onTableSelect,
   tablesWithOrders,
-  isDarkMode
+  isDarkMode,
+  showRoomSelector = true,
+  showFloorPlan = true,
+  onRoomSelect
 }) => {
   const [floorPlans, setFloorPlans] = useState<FloorPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
@@ -48,7 +53,12 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
         
         setFloorPlans(validPlans);
         if (validPlans.length > 0 && !selectedPlanId) {
-          setSelectedPlanId(validPlans[0].id);
+          const firstPlan = validPlans[0];
+          setSelectedPlanId(firstPlan.id);
+          // Notifier le changement de salle si callback fourni
+          if (onRoomSelect) {
+            onRoomSelect(firstPlan.name);
+          }
         }
       } catch (error) {
         console.error("Erreur lors du chargement des plans:", error);
@@ -83,6 +93,14 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
     };
   }, []);
 
+  const handleRoomSelection = (plan: FloorPlan) => {
+    setSelectedPlanId(plan.id);
+    if (onRoomSelect) {
+      console.log("Room selected:", plan.name); // Log pour debug
+      onRoomSelect(plan.name);
+    }
+  };
+
   const currentPlan = floorPlans.find(plan => plan.id === selectedPlanId);
 
   if (loading) {
@@ -112,7 +130,7 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
   return (
     <div className="space-y-4">
       {/* Sélecteur de salle */}
-      {floorPlans.length > 1 && (
+      {floorPlans.length > 1 && showRoomSelector && (
         <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 shadow`}>
           <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
             Choisir une salle
@@ -121,7 +139,7 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
             {floorPlans.map((plan) => (
               <button
                 key={plan.id}
-                onClick={() => setSelectedPlanId(plan.id)}
+                onClick={() => handleRoomSelection(plan)}
                 className={`
                   p-3 rounded-lg border-2 transition-all duration-200
                   ${selectedPlanId === plan.id 
@@ -139,15 +157,24 @@ const SavedFloorPlanSelector: React.FC<SavedFloorPlanSelectorProps> = ({
               </button>
             ))}
           </div>
+          
+          {/* Affichage de la salle sélectionnée */}
+          {currentPlan && (
+            <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'}`}>
+              <div className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-800'}`}>
+                <strong>Salle sélectionnée :</strong> {currentPlan.name}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Plan de salle */}
-      {currentPlan && (
+      {currentPlan && showFloorPlan && (
         <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 shadow`}>
           <div className="flex justify-between items-center mb-4">
             <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              {currentPlan.name}
+              Plan de {currentPlan.name}
             </h3>
             <button 
               onClick={() => setRefreshKey(prev => prev + 1)}

@@ -1,8 +1,8 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 const IndexPage = lazy(() => import('@/pages/Index'));
-const SafeIndexPage = lazy(() => import('@/pages/SafeIndex'));
+// const SafeIndexPage = lazy(() => import('@/pages/SafeIndex')); // Removed SafeIndexPage
 
 const Fallback = () => (
   <div className="p-4 text-center">
@@ -12,10 +12,12 @@ const Fallback = () => (
 
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<Fallback />}>
-      <Routes>
-        <Route path="/" element={<SafeIndexPage />} />
-      </Routes>
-    </Suspense>
+    <BrowserRouter>
+      <Suspense fallback={<Fallback />}>
+        <Routes>
+          <Route path="/" element={<IndexPage />} /> {/* Render IndexPage directly */}
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 }

@@ -1,4 +1,4 @@
-export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'splitPayment' | 'cuisine' | 'admin' | 'floorPlanView';
+export type ScreenType = 'login' | 'waitress' | 'table' | 'category' | 'boissons' | 'repas' | 'recap' | 'splitPayment' | 'cuisine' | 'admin' | 'printing' | 'floorPlanView';
 
 export interface MenuItem {
   id: number;
@@ -9,6 +9,8 @@ export interface MenuItem {
   quantity?: number;
   needsCooking?: boolean;
   comment?: string;
+  variants?: { name: string; price: number }[]; // Pour verre/bouteille
+  selectedVariant?: string; // Variante sélectionnée (verre/bouteille)
 }
 
 export interface Order {
@@ -16,6 +18,7 @@ export interface Order {
   table: string;
   tableNumber?: string; // Optionnel pour compatibilité
   tableComment?: string;
+  room?: string; // Nom de la salle
   waitress: string;
   drinks: MenuItem[];
   meals: MenuItem[];
@@ -28,7 +31,17 @@ export interface Order {
 
 export type UserRole = 'Celine' | 'Audrey' | 'Stephanie' | 'cuisine' | 'admin';
 
+export interface User {
+  id: string;
+  name: string;
+  role?: UserRole;
+}
+
 export interface MenuItems {
   boissons: MenuItem[];
   repas: MenuItem[];
+}
+
+export interface AppSettings {
+  autoPrintEnabled: boolean;
 }
