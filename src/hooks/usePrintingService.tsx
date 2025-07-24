@@ -54,21 +54,12 @@ export const usePrintingService = () => {
   const [printedOrders, setPrintedOrders] = useState<PrintedOrder[]>([]);
   const [lastPrintTime, setLastPrintTime] = useState<string | null>(null);
   const [errors, setErrors] = useState<PrintError[]>([]);
-  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
-  const [isPrinterDevice, setIsPrinterDevice] = useState(false); // New state to know if this device is the printer
-  const [deviceId] = useState(() => {
-    let id = localStorage.getItem('device_id');
-    if (!id) {
-      id = 'device_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('device_id', id);
-    }
-    return id;
-  });
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false); // New state for auto-print setting
   
   const subscriptionRef = useRef<any>(null);
   const processedOrdersRef = useRef(new Set<string>());
 
-  // Check Supabase connection and load settings
+  // Check Supabase connection and load auto-print setting
   useEffect(() => {
     const initializeService = async () => {
       try {
@@ -79,12 +70,6 @@ export const usePrintingService = () => {
         console.log('Auto-print setting loaded:', autoPrint);
         setAutoPrintEnabled(autoPrint);
 
-        // Check if this device is the designated printer
-        const printerDeviceId = await supabaseHelpers.getPrinterDeviceId();
-        const isThisPrinter = printerDeviceId === deviceId;
-        setIsPrinterDevice(isThisPrinter);
-        console.log('📱 Device ID:', deviceId, 'Is printer:', isThisPrinter, 'Printer device ID:', printerDeviceId);
-
       } catch (error) {
         setIsConnected(false);
         addError('Erreur de connexion à Supabase');
@@ -92,7 +77,7 @@ export const usePrintingService = () => {
     };
 
     initializeService();
-  }, [deviceId]);
+  }, []);
 
   // Load initial data when connected
   useEffect(() => {
@@ -252,36 +237,26 @@ export const usePrintingService = () => {
         (hasMeals && autoPrintMealsEnabled);
       
       if (shouldAutoPrint && newOrder.status === 'pending') {
-        // Only print if this device is designated as the printer
-        if (isPrinterDevice) {
-          console.log('🖨️ Cet appareil est l\'imprimante désignée - début impression');
-          // Wait a bit to ensure state is updated, then print directly with the order data
-          setTimeout(async () => {
-            try {
-              // Generate ticket content directly from the order data - use simple text format
-              const ticketContent = generateSimpleTextTicket(newOrder);
-              
-              // Send to printer
-              await sendToPrinter(ticketContent);
-              
-              // Remove from queue and save to printed orders
-              setPendingOrders(prev => prev.filter(o => o.id !== newOrder.id));
-              savePrintedOrder(newOrder);
-              setLastPrintTime(new Date().toISOString());
-              
-              console.log('🖨️ Commande', newOrder.id, 'imprimée automatiquement avec succès');
-            } catch (error) {
-              console.error('🖨️ Erreur impression automatique:', newOrder.id, error);
-              addError(`Erreur d'impression automatique: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, newOrder.id);
-            }
-          }, 100);
-        } else {
-          console.log('🖨️ Commande', newOrder.id, 'détectée mais cet appareil n\'est pas l\'imprimante désignée');
-          // Still remove from pending queue even if not printing
-          setTimeout(() => {
+        // Wait a bit to ensure state is updated, then print directly with the order data
+        setTimeout(async () => {
+          try {
+            // Generate ticket content directly from the order data - use simple text format
+            const ticketContent = generateSimpleTextTicket(newOrder);
+            
+            // Send to printer
+            await sendToPrinter(ticketContent);
+            
+            // Remove from queue and save to printed orders
             setPendingOrders(prev => prev.filter(o => o.id !== newOrder.id));
-          }, 100);
-        }
+            savePrintedOrder(newOrder);
+            setLastPrintTime(new Date().toISOString());
+            
+            console.log('🖨️ Commande', newOrder.id, 'imprimée automatiquement avec succès');
+          } catch (error) {
+            console.error('🖨️ Erreur impression automatique:', newOrder.id, error);
+            addError(`Erreur d'impression automatique: ${error instanceof Error ? error.message : 'Erreur inconnue'}`, newOrder.id);
+          }
+        }, 100);
       }
     }
     
@@ -374,25 +349,6 @@ export const usePrintingService = () => {
     await supabaseHelpers.saveAutoPrintSetting(enabled);
   }, []);
 
-  const togglePrinterDevice = useCallback(async (enabled: boolean) => {
-    try {
-      if (enabled) {
-        // Set this device as the printer
-        await supabaseHelpers.setPrinterDeviceId(deviceId);
-        setIsPrinterDevice(true);
-        console.log('🖨️ Cet appareil est maintenant désigné comme imprimante');
-      } else {
-        // Remove printer designation
-        await supabaseHelpers.setPrinterDeviceId(null);
-        setIsPrinterDevice(false);
-        console.log('🖨️ Appareil retiré de la désignation d\'imprimante');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la désignation d\'imprimante:', error);
-      addError('Erreur lors de la désignation d\'imprimante');
-    }
-  }, [deviceId, addError]);
-
   return {
     isConnected,
     isListening,
@@ -400,15 +356,12 @@ export const usePrintingService = () => {
     printedOrders,
     lastPrintTime,
     errors,
-    autoPrintEnabled,
-    isPrinterDevice,
-    deviceId,
+    autoPrintEnabled, // Expose autoPrintEnabled
     startListening,
     stopListening,
     printOrder,
     markAsPrinted,
     clearErrors,
-    toggleAutoPrint,
-    togglePrinterDevice
+    toggleAutoPrint // Expose toggleAutoPrint
   };
 };

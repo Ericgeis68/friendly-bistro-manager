@@ -24,16 +24,13 @@ export const PrintingServiceScreen: React.FC<PrintingServiceScreenProps> = ({ on
     printedOrders,
     lastPrintTime,
     errors,
-    autoPrintEnabled,
-    isPrinterDevice,
-    deviceId,
-    startListening,
-    stopListening,
+    autoPrintEnabled, // Get autoPrintEnabled from hook
+    startListening, // Keep for internal use if needed by hook, but not exposed via button
+    stopListening,  // Keep for internal use if needed by hook, but not exposed via button
     printOrder,
     markAsPrinted,
     clearErrors,
-    toggleAutoPrint,
-    togglePrinterDevice
+    toggleAutoPrint // Get toggleAutoPrint from hook
   } = usePrintingService();
 
   // Enhanced toggle function that also controls detailed settings
@@ -168,46 +165,7 @@ export const PrintingServiceScreen: React.FC<PrintingServiceScreenProps> = ({ on
                     Impression automatique globale
                   </Label>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="printer-device"
-                    checked={isPrinterDevice}
-                    onCheckedChange={togglePrinterDevice}
-                  />
-                  <Label htmlFor="printer-device" className="text-sm font-medium">
-                    Désigner comme imprimante
-                  </Label>
-                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Device Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informations de l'appareil</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">ID de l'appareil:</span>
-                <span className="text-sm text-muted-foreground font-mono">{deviceId}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Statut imprimante:</span>
-                <Badge variant={isPrinterDevice ? "default" : "secondary"}>
-                  {isPrinterDevice ? "Imprimante désignée" : "Appareil normal"}
-                </Badge>
-              </div>
-              {isPrinterDevice && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-md">
-                  <p className="text-xs text-blue-700">
-                    ✅ Cet appareil est désigné pour imprimer les commandes automatiquement
-                  </p>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
