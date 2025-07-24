@@ -777,32 +777,21 @@ export const RestaurantProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [currentUser]);
 
-  // Configuration de la sauvegarde automatique et impression automatique
+  // Configuration de la sauvegarde automatique
   useEffect(() => {
-    const initAutoBackupAndPrint = async () => {
+    const initAutoBackup = async () => {
       try {
         const generalSettings = await supabaseHelpers.getSettings('app_settings');
         console.log('Paramètres sauvegarde auto chargés:', generalSettings);
         setLocalBackupEnabled(generalSettings.localBackupEnabled || false);
         setLocalBackupDrinksEnabled(generalSettings.localBackupDrinksEnabled || false);
         setLocalBackupMealsEnabled(generalSettings.localBackupMealsEnabled || false);
-        
-        // Charger les paramètres d'impression automatique
-        setAutoPrintEnabled(generalSettings.autoPrintEnabled || false);
-        setAutoPrintDrinksEnabled(generalSettings.autoPrintDrinksEnabled || false);
-        setAutoPrintMealsEnabled(generalSettings.autoPrintMealsEnabled || false);
-        
-        console.log('Paramètres impression auto chargés:', {
-          autoPrintEnabled: generalSettings.autoPrintEnabled || false,
-          autoPrintDrinksEnabled: generalSettings.autoPrintDrinksEnabled || false,
-          autoPrintMealsEnabled: generalSettings.autoPrintMealsEnabled || false
-        });
       } catch (error) {
         console.error('Erreur chargement paramètres sauvegarde auto:', error);
       }
     };
 
-    initAutoBackupAndPrint();
+    initAutoBackup();
   }, []);
 
   // Le service d'impression automatique est maintenant géré par usePrintingService
