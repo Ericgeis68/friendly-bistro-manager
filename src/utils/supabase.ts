@@ -536,6 +536,27 @@ export const supabaseHelpers = {
     }
   },
 
+  // Printer device designation
+  async getPrinterDeviceId(): Promise<string | null> {
+    try {
+      const settings = await this.getSettings('app_settings');
+      return settings?.printerDeviceId || null;
+    } catch (error) {
+      console.error("Error getting printer device ID:", error);
+      return null;
+    }
+  },
+
+  async setPrinterDeviceId(deviceId: string | null) {
+    try {
+      const currentSettings = await this.getSettings('app_settings') || {};
+      await this.updateSettings('app_settings', { ...currentSettings, printerDeviceId: deviceId });
+    } catch (error) {
+      console.error("Error saving printer device ID:", error);
+      throw error;
+    }
+  },
+
   // Generic settings save method
   async saveSettings(settingId: string, data: any) {
     try {
